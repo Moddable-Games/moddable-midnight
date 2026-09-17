@@ -6,6 +6,8 @@ import wasm from "vite-plugin-wasm";
 import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 export default defineConfig({
+  // GitHub Pages serves the site from /moddable-midnight/; local dev uses /.
+  base: process.env.VITE_BASE ?? "/",
   plugins: [
     react(),
     tailwindcss(),

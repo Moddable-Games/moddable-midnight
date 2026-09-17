@@ -2,13 +2,12 @@ import { ExternalLink, RefreshCw } from "lucide-react";
 import { ActivityFeed } from "@/components/activity-feed";
 import { PrivacyPanel } from "@/components/privacy-panel";
 import { StatCard } from "@/components/stat-card";
+import { REPO, WriteUp } from "@/components/write-up";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTournament } from "@/hooks/use-tournament";
 import { formatTime, shortHex } from "@/lib/format";
 import { CONTRACT_ADDRESS, EXPLORER, NETWORK } from "@/lib/tournament";
-
-const REPO = "https://github.com/Moddable-Games/moddable-midnight";
 
 export function App() {
   const { snapshot, error, loading, refresh } = useTournament();
@@ -20,7 +19,7 @@ export function App() {
         <div className="mg-hero-hex -z-10" />
         <div className="container mx-auto px-4">
           <nav className="flex flex-wrap items-center justify-between gap-3 py-5">
-            <img src="/img/moddable-logo-white.png" alt="Moddable" className="h-7 w-auto" />
+            <img src={`${import.meta.env.BASE_URL}img/moddable-logo-white.png`} alt="Moddable" className="h-7 w-auto" />
             <div className="flex items-center gap-2">
               <Badge className="rounded-full border-white/30 bg-white/10 text-white">
                 Midnight {NETWORK}
@@ -54,6 +53,15 @@ export function App() {
                 Contract {shortHex(CONTRACT_ADDRESS, 6, 6)}
                 <ExternalLink className="size-4" />
               </a>
+              <a
+                href={REPO}
+                target="_blank"
+                rel="noopener"
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-white/40 px-5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+              >
+                Source and notes
+                <ExternalLink className="size-4" />
+              </a>
               <Button
                 variant="outline"
                 onClick={refresh}
@@ -80,6 +88,8 @@ export function App() {
         )}
 
         {snapshot && <Dashboard snapshot={snapshot} />}
+
+        <WriteUp />
       </main>
 
       <footer className="border-t">

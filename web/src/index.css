@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 /* Moddable design tokens, from moddable-web css/_mg.css */
-@font-face { font-family: "Rajdhani"; font-weight: 600; font-display: swap; src: url("/fonts/rajdhani-600.woff2") format("woff2"); }
-@font-face { font-family: "Rajdhani"; font-weight: 700; font-display: swap; src: url("/fonts/rajdhani-700.woff2") format("woff2"); }
-@font-face { font-family: "Barlow"; font-weight: 400; font-display: swap; src: url("/fonts/barlow-400.woff2") format("woff2"); }
-@font-face { font-family: "Barlow"; font-weight: 500; font-display: swap; src: url("/fonts/barlow-500.woff2") format("woff2"); }
-@font-face { font-family: "Barlow"; font-weight: 600; font-display: swap; src: url("/fonts/barlow-600.woff2") format("woff2"); }
-@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("/fonts/jetbrains-mono-400.woff2") format("woff2"); }
-@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("/fonts/jetbrains-mono-500.woff2") format("woff2"); }
-@font-face { font-family: "Press Start 2P"; font-weight: 400; font-display: swap; src: url("/fonts/press-start-2p.woff2") format("woff2"); }
+@font-face { font-family: "Rajdhani"; font-weight: 600; font-display: swap; src: url("./assets/fonts/rajdhani-600.woff2") format("woff2"); }
+@font-face { font-family: "Rajdhani"; font-weight: 700; font-display: swap; src: url("./assets/fonts/rajdhani-700.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 400; font-display: swap; src: url("./assets/fonts/barlow-400.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 500; font-display: swap; src: url("./assets/fonts/barlow-500.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 600; font-display: swap; src: url("./assets/fonts/barlow-600.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("./assets/fonts/jetbrains-mono-400.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("./assets/fonts/jetbrains-mono-500.woff2") format("woff2"); }
+@font-face { font-family: "Press Start 2P"; font-weight: 400; font-display: swap; src: url("./assets/fonts/press-start-2p.woff2") format("woff2"); }
 
 @theme inline {
   --font-sans: "Barlow", system-ui, sans-serif;
@@ -108,7 +108,7 @@
   .mg-hero-hex {
     position: absolute;
     inset: -20% 0;
-    background-image: url("/img/hex-grid-blue.svg");
+    background-image: url("./assets/hex-grid-blue.svg");
     background-size: 56px 64px;
     opacity: 0.5;
     animation: hex-float 30s linear infinite;

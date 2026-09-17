@@ -2,6 +2,11 @@ node_modules/
 dist/
 build/
 managed/
+# Commit only the compiled contract's JavaScript, which the front end imports.
+# Keys and circuits stay local.
+!src/managed/
+src/managed/*/*
+!src/managed/*/contract/
 target/
 .env
 .env.local
