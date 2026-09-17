@@ -423,5 +423,6 @@ fail loudly instead of falling back to `{}` when a factory exists but throws.
 
 The preview faucet accepted the request at 12:55 and returned a drip id with
 status `PENDING` and task status `scheduled`, and no transaction hash. Ten
-minutes later nothing had reached the wallet. There is no queue position or
+minutes later nothing had reached the wallet. The 5,000 tNIGHT arrived at
+13:21, 27 minutes after the request. There is no queue position or
 expected wait, so neither a person nor an agent can tell slow from stuck.

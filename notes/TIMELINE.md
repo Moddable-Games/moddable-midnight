@@ -20,7 +20,7 @@ memory. Anything estimated says so.
 | 8 | Kapa MCP connected; four research queries run (see `KAPA-QUERIES.md`) | 17 Sep 12:45 | +42m |
 | 9 | Agent wallet created with `midnight-wallet-cli` 0.5.2, preview address derived | 17 Sep 12:54 | +51m |
 | 10 | **Human step:** tNIGHT requested at the preview faucet (captcha); drip queued as `PENDING` / `scheduled` | 17 Sep 12:55 | +52m |
-| 10a | Faucet drip lands in the agent wallet | still pending at 13:05 | |
+| 10a | Faucet drip lands in the agent wallet: 5,000 tNIGHT, one unshielded UTXO | 17 Sep 13:21 | queue wait 27m, during the pause |
 | 11 | Agent registers tNIGHT for DUST generation | pending | |
 | 12 | Agent deploys the contract to `preview` | pending | |
 | 13 | Contract visible in a public explorer | pending | |
