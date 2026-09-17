@@ -13,7 +13,7 @@ Nothing is illustrative.
 - [Reading: no wallet needed](#reading-no-wallet-needed)
 - [Writing: wallet, proof server and SDK](#writing-wallet-proof-server-and-sdk)
 - [Versions that work together](#versions-that-work-together)
-- [Caveats](#caveats)
+- [Limits and caveats](#limits-and-caveats)
 
 ## Deployment
 
@@ -46,7 +46,7 @@ zero-knowledge proof locally, and never leaves their machine.
 | `organiser`: hash of the organiser's secret key | Public ledger (sealed at deploy) | Anyone | Indexer |
 | `prizePerClaim`, `prizePool` | Public ledger | Anyone | Indexer |
 | `passCount`, `claimCount` | Public ledger | Anyone | Indexer |
-| `passes`: pass commitments in a historic Merkle tree | Public ledger | Anyone (root and each inserted commitment) | Indexer |
+| `passes`: a historic Merkle tree of pass commitments | Public ledger | Anyone sees the root and a hash of each leaf, not the commitment itself ([verified](#what-an-observer-can-see)) | Indexer |
 | `spentPasses`: spent nullifiers | Public ledger | Anyone | Indexer |
 | Contract activity: transaction hash, block, circuit name | Chain | Anyone | Indexer |
 | Secret key (32 bytes) | Player's device | The player only | Wallet tooling or the app's private state store |
@@ -325,19 +325,86 @@ Packages the wallet CLI needs installed in the project: `compact-js`,
 `midnight-js-level-private-state-provider` and
 `midnight-js-node-zk-config-provider`.
 
-## Caveats
+## Limits and caveats
 
-- **One key plays both roles.** The agent wallet is organiser and player, so on
-  this deployment the issuing and claiming transactions come from the same
-  wallet. The contract's privacy holds between different players; this demo does
-  not show that.
-- **One pass per secret key.** The pass nonce is derived from the secret key to
-  survive the CLI's private state handling. Two passes for one player need
-  separate keys.
-- **The pool tracks entitlement, not value.** `prizePool` is a counter. Paying
-  real tokens would use Midnight's shielded token operations.
-- **Fee payment was not analysed.** Whether DUST spending links transactions to a
-  wallet is outside what this proof of concept examined.
-- **Issuance is public.** Each `issuePass` transaction discloses the commitment it
-  adds, and when. Anonymity rests on commitments being unlinkable to claims, and
-  weakens with few passes issued.
+Checked against the live chain and Midnight's documentation on 17 September
+2026. Each point says how it was established.
+
+### What an observer can see
+
+Established by searching the raw transactions and contract state served by the
+indexer for the values involved.
+
+| Value | In the `issuePass` transaction | In the `claimPrize` transaction | In contract state |
+|---|---|---|---|
+| Pass commitment (`829c777b…`) | No | No | No |
+| Leaf hash of that commitment (`ad1c069f…`) | Yes | Not checked | Yes |
+| Nullifier (`fb90e17a…`) | n/a | Yes | Yes |
+
+So the chain records that a pass was issued, when, and a hash of its commitment.
+Someone who already knows a commitment can find its leaf. Linking the nullifier
+back to a leaf needs the player's secret key and nonce, which never leave their
+device. The claim transaction created and spent no unshielded outputs (explorer,
+transaction `c2d1cfd9…`).
+
+### Privacy
+
+- **One wallet played every role.** The agent wallet deployed, funded, issued and
+  claimed. The contract's privacy is between different players, and this
+  deployment has only one, so it demonstrates the mechanism rather than the
+  outcome. *Source: how the demo was run.*
+- **Anonymity is only as large as the set.** A membership proof hides the player
+  among the passes in the tree. Midnight's security guide: "a tree with three
+  leaves gives almost no privacy. Grow the set before you rely on it." This tree
+  has two leaves. *Source: [security best
+  practices](https://docs.midnight.network/guides/security-best-practices#restricting-a-circuit-to-a-group).*
+- **Old roots narrow the set.** `HistoricMerkleTree.checkRoot` accepts any past
+  root, and the claim discloses the root it proved against. A claim against an
+  old root hides the player only among passes issued before it. The witness here
+  uses the current tree, so claims prove against the latest root. *Source: [ledger
+  data types](https://docs.midnight.network/compact/reference/ledger-adt#historicmerkletreenat-value_type)
+  and `src/witnesses.ts`.*
+- **Timing is public.** Each issue and claim has a block and timestamp. With few
+  passes, a claim soon after an issue is a strong hint. *Source: the activity
+  query above.*
+- **Fees are paid in shielded DUST.** Midnight documents DUST as shielded, with
+  spends that prove ownership in zero knowledge and publish only the fee paid.
+  Whether patterns of DUST use can still link transactions was not analysed
+  here. *Source: [DUST
+  architecture](https://docs.midnight.network/concepts/dust-architecture) and the
+  tokenomics whitepaper.* A sponsor wallet can also pay a user's fees, which would
+  separate the claimant from the fee payer. *Source: [DUST
+  sponsorship](https://docs.midnight.network/guides/dust-sponsorship).*
+
+### Design
+
+- **One pass per secret key.** The pass nonce is derived from the secret key so
+  it survives the wallet CLI's private state handling (friction log, finding 26).
+  A second pass for the same player needs a second key.
+- **The prize pool is a number, not money.** `prizePool` is a `Uint<64>` counter
+  of entitlement. Paying out would need token operations in `claimPrize`. An
+  unshielded payout (`sendUnshielded`) names the recipient's address publicly,
+  which would undo the private claim. A shielded payout sent to the caller in the
+  same transaction (`mintShieldedToken` with `sendImmediateShielded`) fits the
+  design; the docs note `sendShielded` does not yet notify recipients other than
+  the caller. Not built or tested. *Source: [token
+  transfers](https://docs.midnight.network/examples/contracts/token-transfers) and
+  [shielded token tutorial](https://docs.midnight.network/tokens/shielded-token).*
+- **The organiser is fixed.** `organiser` is sealed at deployment and cannot be
+  changed or recovered if its secret key is lost.
+
+### Network and tooling
+
+- **Preview can be reset.** Preview was reset in June 2026 to regenerate its
+  genesis state. A future reset would remove this contract and every link above.
+  Midnight also reserves the right to reset DUST allocations. *Source:
+  [midnight-node change
+  note](https://github.com/midnightntwrk/midnight-node/blob/main/changes/node/changed/backport-preview-chain-spec.md)
+  and the [DUST
+  specification](https://github.com/midnightntwrk/midnight-ledger/blob/ledger-8/spec/dust.md).*
+- **The CLI's private state password is public.** `midnight-wallet-cli` encrypts
+  `midnight-level-db/` with a password hard-coded in its published source, so the
+  store is only as safe as the file. Acceptable for a testnet agent, not for real
+  value. *Source: friction log, finding 27.*
+- **Testnet only.** Nothing here has been audited, and the compiler and SDK
+  versions are pinned to what the networks supported on the day.

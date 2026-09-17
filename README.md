@@ -81,10 +81,11 @@ A tournament pass and a prize pool:
 **Out of scope:** transfers, secondary markets, multi-round tournaments, a front
 end. This is an experiment, not a product.
 
-**A caveat on the pool:** the prize pool is a `Uint<64>` ledger counter that
-tracks entitlement. It does not move value. Real payouts would use Midnight's
-shielded token operations, which are a natural next step rather than part of
-this test.
+**Limits:** the prize pool counts entitlement rather than moving tokens, one
+wallet played every role, and two passes make a very small anonymity set. The
+[limits and caveats](docs/INTEGRATION.md#limits-and-caveats) section covers
+these and what an observer can actually see on-chain, each point with its
+source.
 
 ## Quick start
 

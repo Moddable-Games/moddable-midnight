@@ -27,7 +27,7 @@ export function PrivacyPanel({ snapshot }: { snapshot: TournamentSnapshot }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
-          <Field label="Pass commitments (Merkle root)">
+          <Field label="Passes (Merkle root of commitment hashes)">
             {shortHex(snapshot.merkleRoot, 12, 10)}
           </Field>
           <Field label={`Spent nullifiers (${snapshot.spentNullifiers.length})`}>
@@ -70,7 +70,7 @@ export function PrivacyPanel({ snapshot }: { snapshot: TournamentSnapshot }) {
             The claim proves membership of the Merkle tree without naming a leaf.
           </Field>
           <Field label="Who claimed" muted>
-            The contract call carries no address or public key. Fee payment was not analysed.
+            The claim publishes only a nullifier and a Merkle root. Fees are paid in shielded DUST.
           </Field>
         </CardContent>
       </Card>

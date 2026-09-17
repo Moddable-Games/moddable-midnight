@@ -126,6 +126,33 @@ wallet SDK developer guide, and the React and Next.js wallet-connect guides.
 **What it changed:** the front end starts read-only, decoding state in the
 browser, rather than asking anyone to install a wallet extension.
 
+### 6. Checking the documentation's caveats
+
+**Asked (17 Sep, ~18:05), four queries:** DUST fee privacy and wallet linkage;
+`HistoricMerkleTree` historic roots and anonymity; whether the preview network is
+reset; paying tokens out of a contract.
+
+**Came back from:** the tokens overview, DUST architecture page, ledger DUST
+specification and tokenomics whitepaper; the ledger data types reference,
+security best practices guide and a ledger VM test; a midnight-node change note on
+the June 2026 preview reset; the standard library reference, token transfer
+example and shielded token tutorial.
+
+**What it established:**
+
+- DUST is shielded; spends publish the fee, not the owner; sponsorship exists
+- `checkRoot` on a historic tree accepts any past root; the docs warn that small
+  trees give almost no privacy
+- Preview was reset in June 2026
+- `sendUnshielded` names a public recipient; shielded delivery works reliably
+  only to the caller
+
+**What it changed:** four caveats went from "not analysed" or assumption to
+sourced statements in `docs/INTEGRATION.md`. One claim on the front end
+("no address appears") was replaced with what the evidence supports. The claim
+that issued commitments are visible was checked directly against the chain and
+corrected: a hash of each commitment is visible, not the commitment.
+
 ## Assessment so far
 
 **Strong:**
