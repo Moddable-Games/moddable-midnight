@@ -22,3 +22,6 @@ midnight-level-db/
 # Front end build output
 web/dist/
 api/dist/
+
+# TypeScript incremental build state
+*.tsbuildinfo

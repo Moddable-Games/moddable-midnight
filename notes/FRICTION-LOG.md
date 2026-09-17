@@ -700,8 +700,9 @@ Checked on 17 September 2026:
 - A person looking for 1AM in Firefox could not find it.
 - Searching the Mozilla add-ons API for "1am", "1AM wallet", "1am.xyz" and the
   developer name "webisoft" returned no 1AM extension.
-- 1am.xyz mentions Firefox in its copy, but the only extension download link on
-  the page is to the Chrome Web Store.
+- 1am.xyz's FAQ says "Currently available for Chrome and Firefox. Safari and
+  mobile coming soon." The only extension download link on the page is to the
+  Chrome Web Store; there is no Firefox link.
 - The Lace add-on on Firefox is 1.33.3, without Midnight (finding 35).
 - SubWallet, listed among wallets announcing Midnight support, is on Firefox as
   version 1.2.32, last updated October 2024, before Midnight's launch.
