@@ -35,6 +35,7 @@ memory. Anything estimated says so.
 | 18 | Scaffold fixed to typecheck, test and build (findings 30 to 33) | 17 Sep 17:52 | +94m |
 | 19 | **Read-only front end decodes live contract state in the browser**, in Moddable styling | 17 Sep 17:56 | **+98m** |
 | 20 | Integration guide written from captured responses | 17 Sep 17:59 | +101m |
+| 21 | Caveats researched (Kapa, four queries) and checked against raw chain data; documented with sources | 17 Sep 18:05 | +106m |
 
 **The only human step is the faucet captcha.** Everything else, from wallet
 creation to deployment, is driven by the agent through the community wallet
@@ -88,8 +89,8 @@ API, which returned the `ContractDeploy` action and block above.
   public Midnight network; **+84 minutes** to the full lifecycle (fund, issue,
   private claim) on-chain. The break between sessions is excluded.
 - **+98 minutes** to a read-only front end showing that state live.
-- **Clock paused at +101m** (17 Sep ~18:00) while the front end is reviewed and
-  next steps are chosen.
+- **Clock paused at +106m** (17 Sep 18:05) while next steps are chosen. The
+  caveat research was requested during review, so it is counted.
 - **Next:** browser writes, through Lace and through the wallet CLI's local
   connector.
 
@@ -98,7 +99,7 @@ API, which returned the `ContractDeploy` action and block above.
 - **Paused 17 Sep ~13:06** at the end of a working session (usage limit reached),
   with the faucet drip still queued, and resumed at 17:21. Time between
   sessions is excluded from the elapsed total.
-- **Paused 17 Sep ~18:00** at +101m for review of the read-only front end.
+- **Paused 17 Sep 18:05** at +106m, after the caveat research.
 
 - The clock starts at the repository, not at the idea, because everything before
   that is thinking rather than building.
