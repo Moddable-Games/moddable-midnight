@@ -25,3 +25,6 @@ api/dist/
 
 # TypeScript incremental build state
 *.tsbuildinfo
+
+# Local assistant instructions
+CLAUDE.md

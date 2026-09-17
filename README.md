@@ -128,6 +128,16 @@ reviewed as reference points and are the route to real token behaviour:
   (MIT): token, access, security, multisig, crypto and utils modules
 - [Midnight example NFT contracts](https://github.com/midnightntwrk/example-nft-contracts)
 
+## Changelog
+
+#### 2026-09-17
+- Tournament pass contract with Merkle membership, nullifiers and in-circuit organiser checks; 14 tests including an adversarial witness
+- Deployed to the `preview` testnet by an agent wallet, then funded, a pass issued and a prize claimed privately on-chain
+- Moved to the supported toolchain (compiler 0.31.1, Midnight.js 4.1.1) after 0.34.0 failed at deploy
+- Read-only front end decoding live state from the indexer, published on GitHub Pages with links to three explorers
+- Integration guide with real indexer responses, pinned versions, and caveats checked against chain data
+- Friction log (37 findings), timeline and Kapa query record
+
 ## Licence
 
 [MIT](LICENSE)
