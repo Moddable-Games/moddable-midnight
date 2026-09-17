@@ -16,10 +16,17 @@ memory. Anything estimated says so.
 | 4 | Environment verified, two doctors run, blockers fixed | 17 Sep 12:35 | +32m |
 | 5 | First contract compiles (2 attempts, full ZK pipeline) | 17 Sep 12:36 | +33m |
 | 6 | Tests pass: 14 assertions, including an adversarial witness case | 17 Sep 12:36 | +33m |
-| 7 | Proof server running locally | pending | |
-| 8 | Wallet funded from the preview faucet, tNIGHT registered for tDUST | pending | |
-| 9 | Deployed to `preview` | pending | |
-| 10 | Contract visible in a public explorer | pending | |
+| 7 | Proof server running locally (`proof-server:8.1.0`, health ok) | 17 Sep 12:51 | +48m |
+| 8 | Kapa MCP connected; four research queries run (see `KAPA-QUERIES.md`) | 17 Sep 12:45 | +42m |
+| 9 | Agent wallet created with `midnight-wallet-cli` 0.5.2, preview address derived | 17 Sep 12:54 | +51m |
+| 10 | **Human step:** tNIGHT requested at the preview faucet (captcha) | pending | |
+| 11 | Agent registers tNIGHT for DUST generation | pending | |
+| 12 | Agent deploys the contract to `preview` | pending | |
+| 13 | Contract visible in a public explorer | pending | |
+
+**The only human step is the faucet captcha.** Everything else, from wallet
+creation to deployment, is driven by the agent through the community wallet
+CLI, which also ships an MCP server so the same flow can run without a terminal.
 
 ## Target
 
