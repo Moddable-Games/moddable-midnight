@@ -578,3 +578,65 @@ checked against screenshots taken at 17:45.
 
 A contract-specific front end is the only way to show a reader what the state
 means, which is the case for building one.
+
+## Building the front end with `midnight-dapp-dev`
+
+Started 17:48 by invoking the `midnight-dapp-dev:init` skill with
+`--ui-name web --api-name api --contract-package moddable-midnight`. The script
+ran in under a second and wrote 33 files: a Vite, React 19, shadcn and Tailwind
+v4 app in `web/`, and a TypeScript API package in `api/`.
+
+### 30. The scaffold assumes a monorepo that this project is not
+
+- Contract detection looks for `*/src/managed/*/` with a `package.json` beside
+  it, so a single-package project (contract at the root) is not found.
+- The API package gets a `peerDependency` on the contract package by name. When
+  that is the root package, `npm install` fails with a 404: npm looks for it on
+  the public registry.
+- The skill says it "updates root package.json workspaces if applicable". The
+  script only does so when `workspaces` already exists, and says nothing when it
+  does not, so `web/` and `api/` were left outside the install.
+
+Fix applied: add `workspaces` by hand, drop the peer dependency, import the
+compiled contract by relative path.
+
+### 31. Caret ranges walk straight into findings 21 and 25
+
+The API package declares `"@midnight-ntwrk/compact-js": "^2.5.1"`, which
+resolves to the uninstallable 2.5.3, and `"@midnight-ntwrk/ledger-v8": "^8.1.0"`,
+which invites the duplicate-package failure. Every Midnight dependency was
+pinned to the exact versions that deployed (Midnight.js 4.1.1, compact-js 2.5.1,
+runtime 0.16.0, ledger 8.1.2). Given how sensitive the stack is to mismatches,
+the template should pin exact versions from the compatibility matrix.
+
+### 32. The untouched scaffold does not typecheck, test or build
+
+Straight after install:
+
+- `tsc -b` reported errors: an unused import and two invalid casts in a test, an
+  unresolvable API import until `api/` was built, two implicit `any`s, and the
+  CommonJS Vite plugin "not callable" under its own types.
+- `tsconfig.app.json` has no `noEmit`, so `tsc -b` wrote a `.js` file beside every
+  source file. Vitest then ran every test twice.
+- One test fails: it expects the text "Lace wallet"; the component says "No
+  Midnight wallet extension found".
+- `vite build` failed: `vite-plugin-top-level-await` 1.6.0 with Vite 7 throws
+  "missing field `type`". The build targets `esnext`, which supports top-level
+  await natively, so the plugin was removed.
+- The build warns that `isomorphic-ws/browser.js` does not export `WebSocket`,
+  which the indexer provider imports for subscriptions. Not yet tested at runtime.
+
+About ten minutes to a green typecheck, 7 passing tests and a working build. The
+resulting bundle carries 10.2MB of ledger WebAssembly (4.6MB gzipped).
+
+### 33. The template is wallet-first; the read path is left to the reader
+
+Everything hangs off a connected wallet: `createProviders(api)` takes the
+DApp Connector session and reads the indexer URL from the wallet's
+configuration. There is no way to show a contract's state to a visitor without
+a wallet, although the leaderboard tutorial documents exactly that pattern.
+
+The wallet half looks careful. The `balanceTx` and `submitTx` bridges carry
+precise comments on the connector's hex encoding and return types, and the
+template includes a wallet widget, a proof server status check and tests.
+Those claims are unverified until the write path is tried.

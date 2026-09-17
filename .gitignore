@@ -13,3 +13,7 @@ target/
 # Local private state (holds contract secrets)
 midnight-level-db/
 .mn-contract-*.mjs
+
+# Front end build output
+web/dist/
+api/dist/
