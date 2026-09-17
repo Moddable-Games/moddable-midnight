@@ -26,13 +26,17 @@ and state no API key is required. Probing on 2026-09-17:
   server `https://mcp.kapa.ai/auth/public`, scope `openid`
 - `/mcp`, `/sse`, `/messages` and `/v1/mcp` all return 404
 
-So the server is healthy and expects an OAuth flow. A first-time reader who
-tries the plain URL, or an agent probing the usual MCP paths, meets a 401 or a
-404 with nothing pointing at the sign-in step.
+So the server is healthy and expects an OAuth flow. Kapa's public MCP option
+authenticates users through a Google or GitHub sign-in, which explains both the
+401 and the docs' claim that no API key is needed: strictly true, since it is
+OAuth rather than a key, but the sign-in step is never mentioned.
 
-Suggested fix: say in the docs that the first connection opens a browser sign-in,
-and note what to do when it does not (headless machines, CI). A short
-troubleshooting line would remove the guesswork.
+Effect: a first-time reader who curls the URL, or an agent probing the usual MCP
+paths, sees a 401 or a 404 and nothing that points at a browser sign-in. On a
+headless machine there is no stated route at all.
+
+Suggested fix: state that the first connection opens a Google or GitHub sign-in,
+and say what to do without a browser (API key auth, or a documented fallback).
 
 ### 2. midnightntwrk.expert is hard for agents to read
 
