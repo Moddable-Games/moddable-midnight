@@ -419,10 +419,11 @@ convention, which you find by reading the bundled source:
 **Suggested fix:** document the witness module contract on the CLI page, and
 fail loudly instead of falling back to `{}` when a factory exists but throws.
 
-### 19. Faucet drips queue with no feedback
+### 19. The faucet hung on the first request and worked on the second
 
 The preview faucet accepted the request at 12:55 and returned a drip id with
 status `PENDING` and task status `scheduled`, and no transaction hash. Ten
-minutes later nothing had reached the wallet. The 5,000 tNIGHT arrived at
-13:21, 27 minutes after the request. There is no queue position or
+minutes later nothing had reached the wallet. After about 30 minutes the web page
+crashed. A second request went through in under a minute, and 5,000 tNIGHT
+arrived at 13:21 ([transaction](https://preview.midnightexplorer.com/transactions/0x98b947897e9b174eee8be1ae55c1915b5424a7045a5b129f27621e9e0f3d7634)). There is no queue position or
 expected wait, so neither a person nor an agent can tell slow from stuck.
