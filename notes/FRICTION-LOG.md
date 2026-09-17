@@ -181,6 +181,37 @@ machine path (or a documented scripted route through the wallet SDK) would let a
 agent take a contract from source to a deployed address unattended, which is a
 sharper demonstration of "buildable by AI agents" than any tutorial.
 
+### An agent-shaped wallet
+
+The pieces for a headless wallet exist: the Wallet SDK covers a facade, HD key
+derivation, address encoding, transfers, DUST management and atomic swaps, and
+testkit-js exposes seed helpers for tests. So a script can hold keys and move
+value today.
+
+What does not obviously exist is a wallet shaped for an autonomous agent, where
+the interesting questions are about restraint rather than capability:
+
+- **Spend policy.** Per-call and per-day caps, an allowlist of contracts or
+  endpoints, and a hard ceiling the agent cannot raise on its own.
+- **Key custody.** Where does an agent's key live so that a compromised process
+  is not a drained wallet? Session keys with short lives, and a separate
+  funding key the agent never sees, would be the obvious shape.
+- **Approval boundaries.** Which actions run unattended and which need a human,
+  with the boundary declared up front rather than discovered after an incident.
+- **Auditability with privacy.** On a shielded chain, an operator still needs to
+  answer "what did my agent spend, and on what?" Selective disclosure could make
+  that answerable to the operator and to a regulator without publishing it to
+  everyone. That is the combination no public-chain agent wallet offers today.
+- **DUST for machines.** DUST is non-transferable and regenerates from held
+  NIGHT, so an agent cannot simply be sent gas. Its funding model has to be
+  designed rather than assumed.
+
+This connects the previous two notes: an agent that can pay per call (x402
+style) and fund itself (a machine-usable faucet) still needs somewhere safe to
+keep the keys, with limits an operator sets. A reference implementation of that,
+even a small one, would say more about "buildable by AI agents" than another
+tutorial contract.
+
 ## During the build
 
 <!-- Add entries as they happen: what was asked for, what the tooling produced,
