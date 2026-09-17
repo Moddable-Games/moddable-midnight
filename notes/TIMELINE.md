@@ -28,6 +28,9 @@ memory. Anything estimated says so.
 | 11a | First deploy fails: the stable SDK cannot run 0.34.0 output; project moved to the supported toolchain (compiler 0.31.1, runtime 0.16.0, Midnight.js 4.1.1), tests re-run green | 17 Sep 17:34 | +76m |
 | 12 | **Agent deploys the contract to `preview`** in 25 seconds, block 907,507 | 17 Sep 17:35 | **+77m** |
 | 13 | Deploy confirmed through the public indexer; explorer links below | 17 Sep 17:37 | +79m |
+| 14 | First calls fail on a duplicated ledger package; fixed with npm overrides; pool funded on-chain | 17 Sep 17:39 | +81m |
+| 15 | Pass issued, but the claim fails: the CLI replaces private state on every call, so the nonce changed; nonce now derived from the secret key | 17 Sep 17:40 | +82m |
+| 16 | Pass reissued and **a private claim succeeds on-chain**: pool 500 to 400, one nullifier spent | 17 Sep 17:41 | **+84m** |
 
 **The only human step is the faucet captcha.** Everything else, from wallet
 creation to deployment, is driven by the agent through the community wallet
@@ -54,16 +57,33 @@ transaction that deployed it. Links recorded below when we have them.
 - Contract on Subscan: https://midnight-preview.subscan.io/contract/2a7fe78cdafc8126041298f307f699b319ed43e908e85287f8b72ad291e1c191
 - Contract on 1am: https://explorer.1am.xyz/contract/2a7fe78cdafc8126041298f307f699b319ed43e908e85287f8b72ad291e1c191?network=preview
 
+### Every transaction
+
+| Action | Transaction | Block | Time (BST) |
+|---|---|---|---|
+| Deploy | [`cae26415ed0a…`](https://preview.midnightexplorer.com/transactions/0xcae26415ed0ab92ee22f8c0feb4ef61ef0d0283161bddd875b70fc2c1aa812ca) | 907,507 | 17:35:24 |
+| fundPool | [`42c0d6732288…`](https://preview.midnightexplorer.com/transactions/0x42c0d67322885a26ef0b3737400cccc2de365a1835f8113124bc2212c408fa1a) | 907,545 | 17:39:12 |
+| issuePass (orphaned) | [`3f8414661bd0…`](https://preview.midnightexplorer.com/transactions/0x3f8414661bd018856dd405c1ac8d25242ad05ea2d467453585bea23e48e1f1b2) | 907,551 | 17:39:48 |
+| issuePass | [`5e31df51cb8c…`](https://preview.midnightexplorer.com/transactions/0x5e31df51cb8c88eeb319b863d0dc85fdd5aecd97a53ae2ccc0b9b6edf3f47d65) | 907,565 | 17:41:12 |
+| claimPrize | [`c2d1cfd9553d…`](https://preview.midnightexplorer.com/transactions/0xc2d1cfd9553df5294c431c563706154a0e2d52a16b1b3e5ec64f54e0c6e7aeed) | 907,570 | 17:41:42 |
+
+The orphaned pass was issued against a nonce the CLI then discarded (finding 26).
+It stays in the tree, unclaimable, which is itself a small demonstration: the
+ledger holds a commitment nobody can link to a player.
+
+**Final public state:** 2 passes, 1 claim, pool 400 of 500, prize 100 per claim,
+1 spent nullifier.
+
 The explorers are single-page apps, so their URLs return 200 whatever the
 address; the deploy itself was verified against the preview indexer's GraphQL
 API, which returned the `ContractDeploy` action and block above.
 
 ## Where it stands
 
-- **Done: +77 minutes of working time** from an empty repository to a contract
-  on a public Midnight network, excluding the break between sessions.
-- **Next:** exercise the contract on-chain (fund, issue, claim) and add a small
-  front end that reads its public state.
+- **+77 minutes** of working time from an empty repository to a contract on a
+  public Midnight network; **+84 minutes** to the full lifecycle (fund, issue,
+  private claim) on-chain. The break between sessions is excluded.
+- **Next:** a small front end that reads the contract's public state.
 
 ## Notes on the measure
 

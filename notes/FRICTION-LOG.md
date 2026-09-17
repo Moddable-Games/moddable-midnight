@@ -498,3 +498,65 @@ and exactly the thing to constrain before mainnet.
 The CLI also writes a `midnight-level-db/` directory into the project holding
 the contract's private state, including the secret key. It is not in any default
 `.gitignore`; a catch-all `git add` would publish it.
+
+## Using the contract on-chain
+
+### 25. Two copies of the ledger package break every call, not the deploy
+
+The deploy worked. Every call after it failed within six seconds with
+`expected instance of LedgerParameters`. `npm ls` showed two copies of
+`@midnight-ntwrk/ledger-v8` (8.1.0 pinned by `midnight-js-protocol@4.1.1`, 8.1.2
+from `compact-js@2.5.1`) and two of `onchain-runtime-v3` (3.0.0 and 3.1.1). An
+`instanceof` check across the copies fails.
+
+Adding npm `overrides` for both packages fixed it at once. The error names a
+class, not a version conflict, so nothing points at the cause.
+
+**Suggested fix:** align the exact pins inside the Midnight.js 4.1.x packages,
+and name duplicate runtime packages in the error.
+
+### 26. The wallet CLI replaces a contract's private state on every call
+
+`midnight contract call` passes `initialPrivateState` to `findDeployedContract`
+each time, built afresh by the project's `createPrivateState`. Midnight.js stores
+whatever is passed, so the stored state from the previous call is overwritten.
+The source comment says the stored state is kept and this is only a fallback;
+the behaviour says otherwise.
+
+For this contract that meant the pass nonce, randomly generated when not
+supplied, changed between `issuePass` and `claimPrize`, and the claim failed
+with "No entry pass found". The witness error message made the diagnosis quick.
+The fix was to derive the nonce from the secret key, which keeps it unguessable
+but limits a key to one pass. A contract storing anything that evolves in private
+state (counters, balances, credentials) would lose it silently.
+
+**Suggested fix:** omit `initialPrivateState` when stored state exists.
+
+### 27. The CLI returns no transaction hashes and no circuit results
+
+`contract call` returns `{"status":"success"}`. There is no transaction hash to
+link to an explorer, and no return value, so a circuit like `makePassCommitment`
+that exists to compute a value is unusable from the CLI. Getting the commitment
+meant a script that reads the CLI's private state store directly, which in turn
+meant reading the CLI source for the store name, account id and password.
+
+That password is a constant in the published package,
+`mn-contract-default-pwd-16ch`, so the private state store is effectively
+unencrypted to anyone with the file. Fine for a testnet agent, worth a warning
+before mainnet. Transaction hashes came from the public indexer's
+`contract(address) { actions }` query, which worked well.
+
+### 28. Front-end tooling exists, and assumes a browser wallet
+
+Midnight Expert ships `midnight-dapp-dev`: an `init` skill scaffolding Vite,
+React 19, shadcn and Tailwind v4, plus skills for the DApp Connector API and the
+SDK, and a front-end agent. The docs add a leaderboard tutorial with a browser
+DApp part, React and Next.js wallet-connect guides, and a community starter
+template (see `KAPA-QUERIES.md`, query 5).
+
+Every write path in that material goes through the Lace (or 1AM) browser
+extension. The leaderboard tutorial also shows the read path that needs no
+wallet: fetch contract state from the indexer and decode it with the compiled
+contract's own `ledger()` function. The community CLI documents a local DApp
+Connector on `ws://localhost:9932`, which could let a page transact through the
+agent wallet instead of an extension. Not yet tried.

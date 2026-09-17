@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { WitnessContext } from "@midnight-ntwrk/compact-runtime";
 import type {
   Ledger,
@@ -24,12 +25,15 @@ export type TournamentPrivateState = {
 /**
  * Build private state from 32-byte values supplied by the caller.
  *
- * The nonce is optional because deploy tooling (the Midnight wallet CLI) calls
- * this factory with a secret key only. A fresh nonce is drawn when none is given.
+ * The nonce is optional because the Midnight wallet CLI calls this factory with
+ * a secret key only, and calls it again on every contract call, replacing the
+ * stored private state each time. A random default would change the nonce
+ * between issuing a pass and claiming it. Deriving it from the secret keeps it
+ * stable and still unguessable, at the cost of one pass per secret key.
  */
 export const createPrivateState = (
   secretKey: Uint8Array,
-  passNonce: Uint8Array = randomBytes32(),
+  passNonce: Uint8Array = deriveNonce(secretKey),
 ): TournamentPrivateState => {
   assertLength(secretKey, "secretKey");
   assertLength(passNonce, "passNonce");
@@ -45,6 +49,15 @@ export const createPrivateState = (
  */
 export const randomBytes32 = (): Uint8Array =>
   globalThis.crypto.getRandomValues(new Uint8Array(32));
+
+/** Deterministic pass nonce: SHA-256 over a domain tag and the secret key. */
+const deriveNonce = (secretKey: Uint8Array): Uint8Array =>
+  new Uint8Array(
+    createHash("sha256")
+      .update("moddable:tournament-pass:nonce")
+      .update(secretKey)
+      .digest(),
+  );
 
 const assertLength = (value: Uint8Array, name: string): void => {
   if (value.length !== 32) {

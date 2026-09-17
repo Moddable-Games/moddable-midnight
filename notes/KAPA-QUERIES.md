@@ -103,6 +103,29 @@ and the tokenomics whitepaper.
 said an agent-shaped wallet did not obviously exist. It does, as community
 tooling, and the open question narrowed to where limits are enforced.
 
+### 5. Building a front end
+
+**Asked (17 Sep, ~17:42):** "Building a Midnight DApp frontend in the browser:
+React, Lace wallet DApp connector, reading contract state from the indexer, UI
+templates"
+
+**Came back from:** the leaderboard tutorial (browser DApp part and overview),
+the Edda Labs starter template page, the community wallet integration guide, the
+wallet SDK developer guide, and the React and Next.js wallet-connect guides.
+
+**What it established:**
+
+- A read-only view needs no wallet: query `contractAction(address) { state }`
+  from the indexer and decode it with the compiled contract's `ledger()`
+- Browser writes go through the DApp Connector API (`window.midnight`), with
+  Lace and 1AM as the documented wallets
+- The community CLI exposes a local connector on `ws://localhost:9932`
+- The starter template and tutorial both target compiler 0.30 to 0.31, runtime
+  0.16 and Midnight.js 4.1.1, matching what deployment forced (finding 20)
+
+**What it changed:** the front end starts read-only, decoding state in the
+browser, rather than asking anyone to install a wallet extension.
+
 ## Assessment so far
 
 **Strong:**
