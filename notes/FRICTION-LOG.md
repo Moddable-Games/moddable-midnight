@@ -664,8 +664,12 @@ Two small notes:
 
 ### 35. Lace on Firefox cannot set up a Midnight wallet, and fails with "file not found"
 
-Choosing Midnight during Lace's wallet setup in Firefox opened a "file not found"
-page; choosing Cardano or Bitcoin moved on to recovery phrase setup as normal.
+Lace's Firefox setup screen, "Select a Blockchain", offers Cardano (Default),
+Midnight (New) and Bitcoin (New). Selecting Midnight and pressing Next navigates
+to `moz-extension://…/tab.html`, which does not exist in the Firefox build, and
+Firefox shows its own "File not found" page. Selecting Cardano and pressing Next
+goes on to "Choose recovery method" as normal. Observed from screenshots taken
+17 Sep, 18:08 to 18:09.
 
 This is a known gap, reported but unexplained in the product:
 
