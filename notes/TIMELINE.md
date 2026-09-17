@@ -14,8 +14,8 @@ memory. Anything estimated says so.
 | 2 | Compact toolchain installed (CLI 0.5.2, compiler 0.34.0) | 17 Sep 12:10 | +7m |
 | 3 | Midnight Expert plugins installed (16 plugins) | 17 Sep 12:15 (approx) | +12m |
 | 4 | Environment verified, two doctors run, blockers fixed | 17 Sep 12:35 | +32m |
-| 5 | First contract compiles | pending | |
-| 6 | Tests pass against the contract and witnesses | pending | |
+| 5 | First contract compiles (2 attempts, full ZK pipeline) | 17 Sep 12:36 | +33m |
+| 6 | Tests pass: 14 assertions, including an adversarial witness case | 17 Sep 12:36 | +33m |
 | 7 | Proof server running locally | pending | |
 | 8 | Wallet funded from the preview faucet, tNIGHT registered for tDUST | pending | |
 | 9 | Deployed to `preview` | pending | |

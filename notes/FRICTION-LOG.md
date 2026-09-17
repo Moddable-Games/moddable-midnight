@@ -218,5 +218,136 @@ tutorial contract.
 
 ## During the build
 
-<!-- Add entries as they happen: what was asked for, what the tooling produced,
-what the compiler said, and how long the loop took. -->
+Contract: an entry pass committed into a Merkle tree, a prize pool, and a claim
+that proves membership and spends a nullifier without revealing which pass.
+**Two compile attempts**: one rejection, then clean. The TypeScript side took
+four rounds. Roughly 20% of the effort was Compact; 80% was the tooling around
+it.
+
+### 7. The pragma version is not the compiler version
+
+Compiler 0.34.0 emits language version **0.26.0**:
+
+```
+$ compact compile --language-version
+0.26.0
+```
+
+`contract-info.json` carries three independent numbers: compiler 0.34.0,
+language 0.26.0, runtime 0.19.0. Every skill says to run
+`compact compile --language-version`, but none says why. Anyone reasoning from
+"I installed 0.34.0" writes `pragma language_version >= 0.34;` and gets a
+rejection with no hint that two different version lines exist.
+
+Suggested fix: one sentence in the pragma docs saying the language version is
+versioned independently of the compiler and currently trails it.
+
+### 8. Exported circuit parameters are witness-tainted, and no skill says so
+
+The only compile failure, four errors at once:
+
+```
+potential witness-value disclosure must be declared but is not:
+  witness value potentially disclosed:
+    the value of parameter tid of the constructor at line 111 char 13
+  nature of the disclosure:
+    ledger operation might disclose the witness value
+```
+
+Every skill frames disclosure around `witness()` return values. Circuit
+*parameters* are never mentioned, yet they are prover-supplied, so a plain
+`commitment: Bytes<32>` argument needs `disclose()` before reaching
+`passes.insert()`. Correct behaviour and arguably the right default, but
+surprising, and it nudges a newcomer toward wrapping everything in `disclose()`
+reflexively, which is the habit the privacy model exists to prevent.
+
+The error message itself is excellent: it names the parameter, the line, the
+nature of the disclosure and the path through the program.
+
+Suggested fix: a row in the disclosure tables reading "an exported circuit's
+parameters are private until disclosed".
+
+### 9. Skill guidance for Merkle membership has a security gap
+
+`compact-privacy-disclosure/references/privacy-patterns.md` gives an "Anonymous
+Authentication with Nullifier" pattern that feeds the witness-supplied path
+straight into `merkleTreePathRoot`. The witness returns the whole path
+*including its leaf*, and nothing binds that leaf to the caller, so a witness
+returning another member's path passes the check. The RWA example in
+`compact-examples` carries a comment acknowledging the same gap in its own code.
+
+The contract here rebinds the leaf in-circuit before hashing:
+
+```compact
+const bound = MerkleTreePath<16, Bytes<32>> { leaf: commitment, path: supplied.path };
+```
+
+and a deliberately lying witness (`claimPrizeWithStolenPath`) is rejected by the
+test suite. The fix is three lines and costs nothing.
+
+Suggested fix: correct the canonical pattern at source, with a sentence on why.
+Anonymous Merkle membership is the flagship Midnight pattern, so this is the
+example people will copy.
+
+### 10. Runtime context API matches no documented shape (four rounds)
+
+Writing witnesses was clean: the generated `Witnesses<PS>` type matched what
+`compact-witness-ts` describes and type-checked first time. *Driving* the
+contract from TypeScript did not. Getting new contract state out of a circuit
+result took three wrong guesses:
+
+- `result.context.transactionContext.state` — no such property
+- `result.context.currentQueryContext.state` — exists on `CallContext`, not `CircuitContext`
+- `result.context.callContext.currentQueryContext.state` — correct
+
+Also `initialState()` returns a `ContractState` while `createCircuitContext` and
+`ledger()` want a `ChargedState`, so `.data` is required. None of this appears in
+any skill; it was found by reading
+`node_modules/@midnight-ntwrk/compact-runtime/dist/circuit-context.d.ts`.
+
+Suggested fix: a ten-line worked simulator example in the testing skill. Single
+highest-value gap encountered.
+
+### 11. Smaller papercuts
+
+- **Generic stdlib struct literals compile** (`MerkleTreePath<16, Bytes<32>> { ... }`)
+  but appear in no skill. This is what makes the security fix above possible, so
+  it is worth documenting; the alternative is asserting leaf equality, which
+  discloses a bit and is strictly weaker.
+- **Field names differ across the boundary**: `goesLeft` in Compact becomes
+  `goes_left` in the generated `index.d.ts`. Harmless until someone constructs a
+  path by hand in TypeScript.
+- **`compact format` has no line-width control** and collapsed multi-line hash
+  argument vectors into a 101-character line. On cryptographic code, one
+  domain-separated input per line is a review aid, not a style preference.
+
+### 12. The compiler is smarter than the docs suggest (positive)
+
+`makePassCommitment` reads a witness, so it is not `pure`, but it performs no
+ledger operation. The compiler worked that out and marked it `"proof": false`,
+emitting no ZKIR and no proving key, so a player derives their pass commitment
+locally at zero proof cost. The skills present `pure` as a binary affecting
+proving-key generation; the reality is a three-way split (pure /
+impure-but-unproven / proven). Good behaviour the documentation undersells.
+
+### 13. Skills were accurate on the language, weak on integration (positive and negative)
+
+Reliable on Compact itself: `persistentCommit`'s `(value, rand)` signature,
+`merkleTreePathRoot` generics, `HistoricMerkleTree` over `MerkleTree` for a
+growing set, `Counter.read()` and `map.lookup()` naming traps, depth bounds, and
+the commitment-versus-nullifier domain separation rule. The "Common
+Hallucination Traps" tables are load-bearing and were used in preference to
+recall. One rejection in two attempts is the result.
+
+Everything *around* the contract — versions, runtime API, local testing, the
+formatter — is where the time went.
+
+### 14. Process note: a catch-all `git add` mixed unrelated work
+
+While the contract was being written, a parallel commit of these notes ran
+`git add -A` and swept the in-progress contract, witnesses, tests and
+`package.json` into commits `2096b3c` and `19f8314`, whose messages describe
+only the notes. Nothing was lost and the tree is clean, but the history is
+misleading. Recorded rather than rewritten, since the commits were already
+pushed. Lesson for an agent-driven repo: stage explicit paths when more than one
+worker is active.
