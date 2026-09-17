@@ -15,10 +15,11 @@ That is the shape Midnight is built for, so this repository tests it directly.
 |---|---|
 | **Contract** | [`tournament_pass.compact`](contracts/tournament_pass.compact): private entry passes plus a prize pool, claimed by proof |
 | **Tests** | 14 assertions, including an adversarial stolen-path case ([`src/`](src/README.md)) |
-| **Toolchain** | Compact compiler 0.34.0, language 0.26, runtime 0.19.0, proof server 8.1.0 |
-| **Clock** | +63 minutes from empty repository to a funded-wallet wait ([timeline](notes/TIMELINE.md)) |
-| **Findings** | 19 logged, with suggested fixes ([friction log](notes/FRICTION-LOG.md)) |
-| **Status** | Compiled and tested locally; deployment to the `preview` testnet in progress |
+| **Deployed** | [`2a7fe78c…e1c191`](https://preview.midnightexplorer.com/contracts/2a7fe78cdafc8126041298f307f699b319ed43e908e85287f8b72ad291e1c191) on the `preview` testnet, with a private claim made on-chain |
+| **Front end** | Read-only React page decoding live state from the public indexer ([`web/`](web/)) |
+| **Toolchain** | Compact compiler 0.31.1, runtime 0.16.0, Midnight.js 4.1.1, proof server 8.1.0 ([versions](docs/INTEGRATION.md#versions-that-work-together)) |
+| **Clock** | +77 minutes to deploy, +84 to a private claim on-chain, by an agent wallet ([timeline](notes/TIMELINE.md)) |
+| **Findings** | 34 logged, with suggested fixes ([friction log](notes/FRICTION-LOG.md)) |
 
 ## The notes
 
@@ -29,6 +30,7 @@ The code is the smaller half of this repository. The notes are the point.
 | [**Friction log**](notes/FRICTION-LOG.md) | Every obstacle, surprise and pleasant surprise met on the way, each with evidence and a suggested fix |
 | [**Timeline**](notes/TIMELINE.md) | Milestones from repository creation to a contract in a public explorer, timed from git history and command output |
 | [**Kapa queries**](notes/KAPA-QUERIES.md) | Every question put to Midnight's knowledge base server, what came back, and what it changed |
+| [**Integration**](docs/INTEGRATION.md) | Addresses, endpoints, public versus private data, real indexer responses, CLI commands and pinned SDK versions |
 
 ### Worth reading first
 
@@ -39,6 +41,9 @@ The code is the smaller half of this repository. The notes are the point.
 - [The knowledge base server needs an undocumented sign-in](notes/FRICTION-LOG.md#1-the-kapa-mcp-server-needs-a-sign-in-the-docs-do-not-mention),
   and [how much better it is once connected](notes/FRICTION-LOG.md#15-kapa-is-much-better-than-grepping-the-docs-index-positive)
 - [Deploying a contract with witnesses relies on an unwritten convention](notes/FRICTION-LOG.md#18-the-wallet-cli-deploys-witness-contracts-only-if-you-match-an-unwritten-convention)
+- [The newest compiler cannot be deployed with the stable SDK](notes/FRICTION-LOG.md#20-the-newest-compiler-cannot-be-deployed-with-the-stable-sdk)
+- [The wallet CLI replaces a contract's private state on every call](notes/FRICTION-LOG.md#26-the-wallet-cli-replaces-a-contracts-private-state-on-every-call)
+- [The front-end scaffold does not typecheck, test or build untouched](notes/FRICTION-LOG.md#32-the-untouched-scaffold-does-not-typecheck-test-or-build)
 
 ### Open questions
 
@@ -86,7 +91,11 @@ npm install
 npm run compile     # Compact to circuits, keys and TypeScript bindings
 npm run typecheck
 npm test            # in-memory simulator, no network needed
+npm run web         # read-only front end on http://localhost:5173
 ```
+
+Deploying and calling the contract from a terminal is covered in
+[the integration guide](docs/INTEGRATION.md#writing-wallet-proof-server-and-sdk).
 
 Requires macOS or Linux (Windows via WSL), Node.js 20 or newer, and the
 [Compact toolchain](https://docs.midnight.network). The Midnight Expert plugin
@@ -99,6 +108,10 @@ throughout the build.
 |---|---|
 | [`contracts/`](contracts/README.md) | Compact source |
 | [`src/`](src/README.md) | Witnesses, simulator harness and tests |
+| [`scripts/`](scripts/) | Helpers for on-chain use, such as computing a pass commitment |
+| [`web/`](web/) | React front end (Vite, shadcn, Tailwind), scaffolded with `midnight-dapp-dev` |
+| [`api/`](api/) | Provider wiring for browser writes, from the same scaffold |
+| [`docs/`](docs/INTEGRATION.md) | Integration guide |
 | [`notes/`](notes/) | Friction log, timeline and knowledge base queries |
 
 ## References

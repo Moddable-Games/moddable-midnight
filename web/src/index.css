@@ -1,6 +1,25 @@
 @import "tailwindcss";
 
+/* Moddable design tokens, from moddable-web css/_mg.css */
+@font-face { font-family: "Rajdhani"; font-weight: 600; font-display: swap; src: url("/fonts/rajdhani-600.woff2") format("woff2"); }
+@font-face { font-family: "Rajdhani"; font-weight: 700; font-display: swap; src: url("/fonts/rajdhani-700.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 400; font-display: swap; src: url("/fonts/barlow-400.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 500; font-display: swap; src: url("/fonts/barlow-500.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 600; font-display: swap; src: url("/fonts/barlow-600.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("/fonts/jetbrains-mono-400.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; font-display: swap; src: url("/fonts/jetbrains-mono-500.woff2") format("woff2"); }
+@font-face { font-family: "Press Start 2P"; font-weight: 400; font-display: swap; src: url("/fonts/press-start-2p.woff2") format("woff2"); }
+
 @theme inline {
+  --font-sans: "Barlow", system-ui, sans-serif;
+  --font-display: "Rajdhani", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-pixel: "Press Start 2P", monospace;
+  --color-cosmic-deep: #0a0d2a;
+  --color-cosmic-mid: #1a3680;
+  --color-cosmic-glow: #6fb5ff;
+  --color-mg-green: #3a9928;
+  --color-mg-red: #d11a1a;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -27,26 +46,26 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
+  --background: #f5f4ef;
+  --foreground: #14161c;
+  --card: #ffffff;
+  --card-foreground: #1f2228;
+  --popover: #ffffff;
+  --popover-foreground: #1f2228;
+  --primary: #0c4f8d;
+  --primary-foreground: #ffffff;
+  --secondary: #ecebe4;
+  --secondary-foreground: #14161c;
+  --muted: #ecebe4;
+  --muted-foreground: #4f5764;
+  --accent: #ecebe4;
+  --accent-foreground: #14161c;
+  --destructive: #d11a1a;
+  --destructive-foreground: #d11a1a;
+  --border: #e6e3d8;
+  --input: #e6e3d8;
+  --ring: #1a6dc4;
+  --radius: 1rem;
 }
 
 .dark {
@@ -79,3 +98,45 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes hex-float {
+  from { background-position: 0 0; }
+  to { background-position: 56px 64px; }
+}
+
+@layer components {
+  .mg-hero-hex {
+    position: absolute;
+    inset: -20% 0;
+    background-image: url("/img/hex-grid-blue.svg");
+    background-size: 56px 64px;
+    opacity: 0.5;
+    animation: hex-float 30s linear infinite;
+    pointer-events: none;
+  }
+
+  .mg-eyebrow::before {
+    content: "";
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 7px solid currentColor;
+  }
+
+  progress.pool-meter {
+    appearance: none;
+    width: 100%;
+    height: 0.375rem;
+    border: 0;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: var(--muted);
+  }
+  progress.pool-meter::-webkit-progress-bar { background: var(--muted); }
+  progress.pool-meter::-webkit-progress-value { background: var(--primary); border-radius: 9999px; }
+  progress.pool-meter::-moz-progress-bar { background: var(--primary); border-radius: 9999px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mg-hero-hex { animation: none; }
+}
+

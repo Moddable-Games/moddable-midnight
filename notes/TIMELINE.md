@@ -31,6 +31,10 @@ memory. Anything estimated says so.
 | 14 | First calls fail on a duplicated ledger package; fixed with npm overrides; pool funded on-chain | 17 Sep 17:39 | +81m |
 | 15 | Pass issued, but the claim fails: the CLI replaces private state on every call, so the nonce changed; nonce now derived from the secret key | 17 Sep 17:40 | +82m |
 | 16 | Pass reissued and **a private claim succeeds on-chain**: pool 500 to 400, one nullifier spent | 17 Sep 17:41 | **+84m** |
+| 17 | Front end scaffolded with the `midnight-dapp-dev:init` skill | 17 Sep 17:48 | +90m |
+| 18 | Scaffold fixed to typecheck, test and build (findings 30 to 33) | 17 Sep 17:52 | +94m |
+| 19 | **Read-only front end decodes live contract state in the browser**, in Moddable styling | 17 Sep 17:56 | **+98m** |
+| 20 | Integration guide written from captured responses | 17 Sep 18:02 | +104m |
 
 **The only human step is the faucet captcha.** Everything else, from wallet
 creation to deployment, is driven by the agent through the community wallet
@@ -83,7 +87,9 @@ API, which returned the `ContractDeploy` action and block above.
 - **+77 minutes** of working time from an empty repository to a contract on a
   public Midnight network; **+84 minutes** to the full lifecycle (fund, issue,
   private claim) on-chain. The break between sessions is excluded.
-- **Next:** a small front end that reads the contract's public state.
+- **+98 minutes** to a read-only front end showing that state live.
+- **Next:** browser writes, through Lace and through the wallet CLI's local
+  connector.
 
 ## Notes on the measure
 

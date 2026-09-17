@@ -21,6 +21,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@contract": [
+        "../src/managed/tournament_pass/contract/index.d.ts"
       ]
     },
     "noEmit": true

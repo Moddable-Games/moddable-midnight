@@ -640,3 +640,22 @@ The wallet half looks careful. The `balanceTx` and `submitTx` bridges carry
 precise comments on the connector's hex encoding and return types, and the
 template includes a wallet widget, a proof server status check and tests.
 Those claims are unverified until the write path is tried.
+
+### 34. Reading the contract from a browser was the smoothest step so far (positive)
+
+The read-only page worked the first time it ran. The preview indexer allows any
+origin, so the browser queries it directly with no proxy or key. Decoding with
+`ContractState.deserialize` and the compiled contract's `ledger()` ran in the
+browser through `vite-plugin-wasm`, exactly as the leaderboard tutorial
+describes. It took about eight minutes from a green scaffold to a styled page
+showing live pool, passes, claims, nullifiers and activity.
+
+Two small notes:
+
+- The scaffold keeps separate alias lists in `vite.config.ts` and
+  `vitest.config.ts`, so a new alias has to be added twice or the tests cannot
+  resolve it.
+- Once the page stopped importing the wallet providers, the build dropped the
+  10.2MB ledger WebAssembly entirely. A read-only page ships 1.3MB of WebAssembly
+  and 1.1MB of JavaScript. The template bundles the wallet stack whether a page
+  needs it or not.

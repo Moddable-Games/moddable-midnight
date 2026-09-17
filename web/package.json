@@ -23,7 +23,8 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "rxjs": "^7.8.1",
-    "tailwind-merge": "^3.0.0"
+    "tailwind-merge": "^3.0.0",
+    "@midnight-ntwrk/compact-runtime": "0.16.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.0",

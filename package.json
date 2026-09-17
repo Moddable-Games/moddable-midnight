@@ -8,7 +8,9 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx src/tournament_pass.test.ts",
     "build": "tsc -p tsconfig.build.json",
-    "deploy:preview": "npm run build && midnight contract deploy --managed src/managed/tournament_pass --network preview --wallet moddable-preview"
+    "deploy:preview": "npm run build && midnight contract deploy --managed src/managed/tournament_pass --network preview --wallet moddable-preview",
+    "web": "npm run build -w api && npm run dev -w web",
+    "web:build": "npm run build -w web"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-js": "^2.5.1",

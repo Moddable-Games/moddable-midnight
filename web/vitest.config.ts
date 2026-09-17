@@ -12,6 +12,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@contract": path.resolve(
+        __dirname,
+        "../src/managed/tournament_pass/contract/index.js",
+      ),
     },
   },
 });
