@@ -707,10 +707,38 @@ Checked on 17 September 2026:
 - SubWallet, listed among wallets announcing Midnight support, is on Firefox as
   version 1.2.32, last updated October 2024, before Midnight's launch.
 
+- The same FAQ says "Safari and mobile coming soon", yet the UK App Store lists
+  "1AM Wallet" for iPhone and iPad: seller Webisoft Technologie inc, seller site
+  1am.xyz, first released 30 April 2026, version 6.3.11 from 31 August, no
+  ratings (iTunes lookup API). The seller matches the developer Midnight's docs
+  name for 1AM's Android app, so the listing looks genuine. The site and store
+  disagree anyway.
+
 So a Firefox user currently has no browser wallet for Midnight that could be
-found, and the documentation says otherwise. The alternatives are a Chromium
+found, and the documentation says otherwise. For a wallet, mismatches like these
+are not cosmetic: a person checking whether an app is genuine sees the official
+site deny a store listing exists, which is the pattern of an impersonation scam,
+and reasonably declines to install it. The alternatives are a Chromium
 browser, or a CLI wallet such as `midnight-wallet-cli`.
 
 **Suggested fix:** correct the 1AM entry, or link the Firefox listing if it
 exists; and state browser support plainly on the "Fund a wallet" and Lace pages,
 which are where a newcomer meets the choice.
+
+## Publishing the front end
+
+### 37. GitHub Pages: one failed run from committed build state
+
+The page is published at https://moddable-games.github.io/moddable-midnight/
+by a GitHub Actions workflow that builds the API package, runs the front-end
+tests and deploys `web/dist`. The first run failed: Vitest could not resolve
+`moddable-midnight-api`, because `tsconfig.tsbuildinfo` files had been committed
+and TypeScript's incremental build considered the API package up to date, so it
+emitted nothing. Untracking `*.tsbuildinfo` fixed the next run (48 seconds). This
+one is ours rather than Midnight's; it is logged because the scaffold's
+`tsc -b` produces those files and nothing in the template ignores them.
+
+Two changes made the page work under a sub-path: a `VITE_BASE` setting, and
+moving fonts and the hex grid from `public/` into `src/assets/` so Vite rewrites
+their URLs. The compiled contract's JavaScript is now committed (keys and
+circuits are not), so the build needs no Compact toolchain.

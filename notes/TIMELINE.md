@@ -36,6 +36,7 @@ memory. Anything estimated says so.
 | 19 | **Read-only front end decodes live contract state in the browser**, in Moddable styling | 17 Sep 17:56 | **+98m** |
 | 20 | Integration guide written from captured responses | 17 Sep 17:59 | +101m |
 | 21 | Caveats researched (Kapa, four queries) and checked against raw chain data; documented with sources | 17 Sep 18:05 | +106m |
+| 22 | Front end published on GitHub Pages with links to the write-up (after the clock stopped; not counted) | 17 Sep 18:24 | — |
 
 **The only human step is the faucet captcha.** Everything else, from wallet
 creation to deployment, is driven by the agent through the community wallet

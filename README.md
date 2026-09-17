@@ -1,5 +1,7 @@
 # moddable-midnight
 
+**[View the live contract page](https://moddable-games.github.io/moddable-midnight/)**
+
 A proof of concept on [Midnight](https://midnight.network), the data-protection
 blockchain, exploring what selective disclosure offers a games platform, and a
 timed, documented record of what it takes a newcomer to ship on it.
@@ -16,10 +18,10 @@ That is the shape Midnight is built for, so this repository tests it directly.
 | **Contract** | [`tournament_pass.compact`](contracts/tournament_pass.compact): private entry passes plus a prize pool, claimed by proof |
 | **Tests** | 14 assertions, including an adversarial stolen-path case ([`src/`](src/README.md)) |
 | **Deployed** | [`2a7fe78c…e1c191`](https://preview.midnightexplorer.com/contracts/2a7fe78cdafc8126041298f307f699b319ed43e908e85287f8b72ad291e1c191) on the `preview` testnet, with a private claim made on-chain |
-| **Front end** | Read-only React page decoding live state from the public indexer ([`web/`](web/)) |
+| **Front end** | [Live read-only page](https://moddable-games.github.io/moddable-midnight/) decoding contract state from the public indexer ([`web/`](web/)) |
 | **Toolchain** | Compact compiler 0.31.1, runtime 0.16.0, Midnight.js 4.1.1, proof server 8.1.0 ([versions](docs/INTEGRATION.md#versions-that-work-together)) |
 | **Clock** | +77 minutes to deploy, +84 to a private claim on-chain, by an agent wallet ([timeline](notes/TIMELINE.md)) |
-| **Findings** | 34 logged, with suggested fixes ([friction log](notes/FRICTION-LOG.md)) |
+| **Findings** | 37 logged, with suggested fixes ([friction log](notes/FRICTION-LOG.md)) |
 
 ![The read-only front end: prize pool, passes and claims, public versus private data, and every contract transaction, decoded live from the preview indexer](docs/img/read-only-front-end.png)
 
