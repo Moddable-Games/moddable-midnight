@@ -1,0 +1,165 @@
+pragma language_version >= 0.26;
+
+import CompactStandardLibrary;
+
+// Tournament entry pass + prize pool.
+//
+// One deployment is one tournament. The organiser issues entry passes as
+// commitments to a player secret, inserted into a Merkle tree. A player later
+// claims a share of the prize pool by proving, in zero knowledge, that they
+// know the opening of some leaf in that tree. The claim reveals a nullifier
+// and nothing else: not the leaf, not the player, not which pass was used.
+//
+// Public on-chain:  organiser identity hash, tournament id, Merkle root,
+//                   pass count, pool balance, prize per claim, spent
+//                   nullifiers, claim count.
+// Private:          player secret, per-pass nonce, Merkle authentication path,
+//                   and therefore which pass a given claim consumed.
+
+// Re-exported so the TypeScript witness layer can name these types.
+export { MerkleTreePath };
+
+export { MerkleTreeDigest };
+
+// ---------------------------------------------------------------------------
+// Ledger
+// ---------------------------------------------------------------------------
+
+// Hash-derived organiser identity. Bound to a secret held off-chain, not to
+// ownPublicKey(), which a prover can claim freely.
+export sealed ledger organiser: Bytes<32>;
+
+// Domain separator for this tournament, so a pass minted here cannot be
+// replayed against another deployment of the same contract.
+export sealed ledger tournamentId: Bytes<32>;
+
+// Issued passes. Historic, because passes are added over time and a path
+// generated before a later insertion must stay valid.
+export ledger passes: HistoricMerkleTree<16, Bytes<32>>;
+
+// Public counters and balances.
+export ledger passCount: Counter;
+
+export ledger claimCount: Counter;
+
+export ledger prizePool: Uint<64>;
+
+export ledger prizePerClaim: Uint<64>;
+
+// One entry per consumed pass. Public by design: a nullifier is a derived
+// value that reveals nothing about the pass or its holder.
+export ledger spentPasses: Set<Bytes<32>>;
+
+// ---------------------------------------------------------------------------
+// Witnesses (implemented in ../src/witnesses.ts)
+// ---------------------------------------------------------------------------
+
+// The caller's long-lived 32-byte secret.
+witness localSecretKey(): Bytes<32>;
+
+// Per-pass blinding nonce. Two passes for the same player differ only by this
+// value, which is what makes their nullifiers distinct.
+witness passNonce(): Bytes<32>;
+
+// Authentication path for the given leaf, read from the local copy of the
+// ledger. Only the sibling entries are trusted; the leaf is re-bound in-circuit.
+witness findPassPath(commitment: Bytes<32>): MerkleTreePath<16, Bytes<32>>;
+
+// ---------------------------------------------------------------------------
+// Helper circuits
+// ---------------------------------------------------------------------------
+
+// Organiser identity: a domain-separated hash of the organiser's secret.
+circuit deriveOrganiser(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:pass:organiser:"), sk]);
+}
+
+// A pass is a commitment to the player's secret under a per-pass nonce.
+// persistentCommit hides the secret, so the commitment can be handed to the
+// organiser and published as a leaf without leaking the holder.
+circuit derivePassCommitment(sk: Bytes<32>, nonce: Bytes<32>): Bytes<32> {
+  return persistentCommit<Vector<2, Bytes<32>>>([pad(32, "moddable:pass:leaf:"), sk], nonce);
+}
+
+// Nullifier for one pass. A different domain separator from the commitment, so
+// an observer cannot correlate a published leaf with a later claim. The
+// tournament id keeps nullifiers unique across deployments.
+circuit derivePassNullifier(sk: Bytes<32>, nonce: Bytes<32>, tid: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>([pad(32, "moddable:pass:nullifier:"), tid, sk, nonce]);
+}
+
+circuit assertOrganiser(): [] {
+  const sk = localSecretKey();
+  assert(disclose(organiser == deriveOrganiser(sk)), "Caller is not the organiser");
+}
+
+// ---------------------------------------------------------------------------
+// Constructor
+// ---------------------------------------------------------------------------
+
+constructor(tid: Bytes<32>, prize: Uint<64>) {
+  organiser = disclose(deriveOrganiser(localSecretKey()));
+  tournamentId = disclose(tid);
+  prizePerClaim = disclose(prize);
+}
+
+// ---------------------------------------------------------------------------
+// Exported circuits
+// ---------------------------------------------------------------------------
+
+// Player-side helper: build the commitment to hand to the organiser. Pure in
+// the sense that it touches no ledger state, but it reads witnesses, so it is
+// an ordinary circuit. The returned value is a commitment, which is what makes
+// disclosing it safe.
+export circuit makePassCommitment(): Bytes<32> {
+  return derivePassCommitment(localSecretKey(), passNonce());
+}
+
+// Organiser issues one entry pass. The commitment is a public argument; it
+// hides the player secret behind the nonce, and MerkleTree insertion hashes
+// the leaf again before it reaches the transcript.
+export circuit issuePass(commitment: Bytes<32>): [] {
+  assertOrganiser();
+  passes.insert(disclose(commitment));
+  passCount.increment(1);
+}
+
+// Organiser funds the prize pool. A plain balance, deliberately: token
+// mechanics are out of scope for this proof of concept.
+export circuit fundPool(amount: Uint<64>): [] {
+  assertOrganiser();
+  assert(amount > 0, "Funding amount must be positive");
+  prizePool = (prizePool + disclose(amount)) as Uint<64>;
+}
+
+// The private claim path.
+//
+// Proves knowledge of the opening of a leaf in `passes` and spends that pass
+// exactly once. Nothing in the transcript identifies the leaf or the claimant.
+export circuit claimPrize(): [] {
+  const sk = localSecretKey();
+  const nonce = passNonce();
+
+  // 1. Rebuild the pass commitment from private inputs.
+  const commitment = derivePassCommitment(sk, nonce);
+
+  // 2. Fetch the authentication path, then discard its leaf and substitute the
+  //    commitment computed above. Without this rebinding a prover could hand
+  //    back any valid path in the tree and claim against someone else's pass.
+  const supplied = findPassPath(commitment);
+  const bound = MerkleTreePath<16, Bytes<32>> { leaf: commitment, path: supplied.path };
+
+  // 3. Membership: the recomputed root must match a current or historic root.
+  const root = merkleTreePathRoot<16, Bytes<32>>(bound);
+  assert(passes.checkRoot(disclose(root)), "No such entry pass");
+
+  // 4. Single use, enforced by nullifier.
+  const nullifier = derivePassNullifier(sk, nonce, tournamentId);
+  assert(!spentPasses.member(disclose(nullifier)), "Pass already claimed");
+  spentPasses.insert(disclose(nullifier));
+
+  // 5. Pay out.
+  assert(prizePool >= prizePerClaim, "Prize pool exhausted");
+  prizePool = (prizePool - prizePerClaim) as Uint<64>;
+  claimCount.increment(1);
+}

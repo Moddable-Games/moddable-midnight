@@ -150,6 +150,37 @@ Relevant experience: I led passkey-based wallet infrastructure at Oviato, taking
 prototypes to production architecture, so this is the gap I would most like to
 dig into.
 
+### Machine-payable endpoints and faucets for agents
+
+Two adjacent threads, both relevant to a chain whose selling point is
+regulator-friendly privacy.
+
+**Agentic payments.** x402 (Coinbase, May 2025) revives HTTP 402: a client calls
+an endpoint, the server answers `402` with payment terms, the client signs a
+transfer authorisation and retries with it in a header. Today it settles USDC or
+EURC on EVM chains and SPL USDC on Solana, and volumes are small (roughly $28k a
+day in early 2026, much of it testing), but the direction is toward more chains
+and tighter integration with agent tooling and MCP.
+
+Questions Midnight is unusually placed to answer:
+
+- What would a machine-payable endpoint look like where the *amount and the
+  payer* are shielded, but a regulator or auditor can be given selective
+  disclosure? That is a genuine differentiator over settling in public USDC.
+- DUST is non-transferable and regenerates from held NIGHT. What does that mean
+  for an agent paying per call: does it pay in a shielded custom token while DUST
+  covers its own fees, and who funds the agent's NIGHT?
+- Could an MCP server price individual tool calls this way? Moddable already runs
+  a public API serving around 250,000 agent requests a week, so the metering
+  problem is real rather than hypothetical.
+
+**Faucets an agent can use.** Funding on `preview` currently means a human in a
+browser: request tNIGHT, then register it so DUST generates. An agent building
+and deploying end to end stops dead at that step. A rate-limited, attested
+machine path (or a documented scripted route through the wallet SDK) would let an
+agent take a contract from source to a deployed address unattended, which is a
+sharper demonstration of "buildable by AI agents" than any tutorial.
+
 ## During the build
 
 <!-- Add entries as they happen: what was asked for, what the tooling produced,
