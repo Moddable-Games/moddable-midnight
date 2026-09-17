@@ -135,20 +135,30 @@ Suggested fix: mark those references optional and downgrade them to `info` when
 
 ### Passwordless onboarding: passkeys and WebAuthn
 
-Neither the docs (`llms.txt`, 1,834 lines) nor OpenZeppelin's Compact library
-mention passkeys or WebAuthn. On Ethereum, passkey-backed smart accounts
-(WebAuthn plus ERC-4337) removed seed phrases from onboarding, which is the
-single biggest drop-off in consumer wallets. Midnight's account model is
-different: shielded notes and a UTXO-style ledger rather than programmable
-accounts, so the same pattern does not port directly.
+*Revised after querying the Kapa knowledge base.*
 
-Questions this raises, and worth time on a later pass:
+What the knowledge base says:
 
-- What does onboarding look like for a player who will never manage a seed
-  phrase, and is passwordless entry on anyone's roadmap?
-- Could a Compact contract verify a P-256 signature, and what would that cost in
-  circuit terms?
-- Where should key recovery live when the wallet holds shielded state?
+- **No native account abstraction.** The docs' wallet matrix leaves the smart
+  contract / account abstraction row empty: "Midnight has no native smart
+  accounts". So the Ethereum route (a passkey-backed ERC-4337 account) has no
+  direct equivalent.
+- **Signature verification in Compact covers secp256k1, not P-256.** The
+  standard library exposes `secp256k1EcdsaVerify` and `jubjubSchnorrVerify`.
+  NIST P-256, the curve WebAuthn passkeys use, exists lower down in the
+  `midnight-zk` Rust curves crate but is not exposed to Compact.
+- **Consumer onboarding is pointed elsewhere.** The docs suggest Dynamic
+  ("confirm Midnight support") or Wallet-as-a-Service for passkey onboarding,
+  and list Midnight Passport, an announced MPC-based consumer wallet.
+
+Questions this leaves, worth time on a later pass:
+
+- Would exposing P-256 verification in the Compact standard library, given the
+  curve already exists in `midnight-zk`, make contract-level passkey
+  authorisation practical, and at what circuit cost?
+- Is MPC (Midnight Passport) the intended passwordless path, rather than
+  on-chain authorisation?
+- Where does key recovery live when the wallet holds shielded state?
 
 Relevant experience: I led passkey-based wallet infrastructure at Oviato, taking
 prototypes to production architecture, so this is the gap I would most like to
@@ -178,43 +188,49 @@ Questions Midnight is unusually placed to answer:
   a public API serving around 250,000 agent requests a week, so the metering
   problem is real rather than hypothetical.
 
-**Faucets an agent can use.** Funding on `preview` currently means a human in a
-browser: request tNIGHT, then register it so DUST generates. An agent building
-and deploying end to end stops dead at that step. A rate-limited, attested
-machine path (or a documented scripted route through the wallet SDK) would let an
-agent take a contract from source to a deployed address unattended, which is a
-sharper demonstration of "buildable by AI agents" than any tutorial.
+**Faucets an agent can use.** Funding on `preview` and `preprod` is
+captcha-gated: the official testkit `FaucetClient` sends an `X-Captcha-Token`
+and a Turnstile token with each request, and the wallet CLI's `airdrop` works
+only on the local `undeployed` network. DUST registration afterwards *is*
+scriptable through the wallet SDK. So an agent can do everything except the
+first step, which needs a human. A rate-limited, attested machine path would let
+an agent take a contract from source to a deployed address unattended, a sharper
+demonstration of "buildable by AI agents" than any tutorial.
 
 ### An agent-shaped wallet
 
-The pieces for a headless wallet exist: the Wallet SDK covers a facade, HD key
-derivation, address encoding, transfers, DUST management and atomic swaps, and
-testkit-js exposes seed helpers for tests. So a script can hold keys and move
-value today.
+*Corrected after querying the Kapa knowledge base: an earlier draft said this
+did not obviously exist. It does, as community tooling.*
 
-What does not obviously exist is a wallet shaped for an autonomous agent, where
-the interesting questions are about restraint rather than capability:
+The community `midnight-wallet-cli` (npm, v0.5.2) ships an MCP server,
+`midnight-wallet-mcp`, exposing wallet generation, balances, transfers, DUST
+registration and local network control as tools. The docs say its newest tools
+let an agent "drive the full contract lifecycle: deploy, call, and read state",
+and that a two-step confirmation tool "shows the human what the agent is about
+to spend before anything executes". The awesome-dapps list also includes
+MidPilot, an AI spending assistant with local policy checks over the MCP wallet.
 
-- **Spend policy.** Per-call and per-day caps, an allowlist of contracts or
-  endpoints, and a hard ceiling the agent cannot raise on its own.
-- **Key custody.** Where does an agent's key live so that a compromised process
-  is not a drained wallet? Session keys with short lives, and a separate
-  funding key the agent never sees, would be the obvious shape.
-- **Approval boundaries.** Which actions run unattended and which need a human,
-  with the boundary declared up front rather than discovered after an incident.
+The docs are candid about the risk: the MCP column is "the highest-risk cell",
+with a security checklist to scope tools, cap spend per action and per day,
+allowlist destinations, and require human confirmation for anything
+irreversible.
+
+What remains open is where those limits live:
+
+- **Guidance, not enforcement.** Caps and allowlists are recommended practice.
+  With no native account abstraction there are no on-chain session keys or
+  spend policies, so limits sit in the client, where a compromised agent process
+  can ignore them.
 - **Auditability with privacy.** On a shielded chain, an operator still needs to
   answer "what did my agent spend, and on what?" Selective disclosure could make
-  that answerable to the operator and to a regulator without publishing it to
-  everyone. That is the combination no public-chain agent wallet offers today.
+  that answerable to the operator and a regulator without publishing it.
 - **DUST for machines.** DUST is non-transferable and regenerates from held
-  NIGHT, so an agent cannot simply be sent gas. Its funding model has to be
-  designed rather than assumed.
+  NIGHT, so an agent cannot simply be sent gas; its funding model has to be
+  designed.
 
-This connects the previous two notes: an agent that can pay per call (x402
-style) and fund itself (a machine-usable faucet) still needs somewhere safe to
-keep the keys, with limits an operator sets. A reference implementation of that,
-even a small one, would say more about "buildable by AI agents" than another
-tutorial contract.
+Taken with the two notes above: payment per call, a faucet an agent can use,
+and a wallet whose limits are enforced rather than advised are the three pieces
+that would let an agent operate end to end with an operator still in control.
 
 ## During the build
 
@@ -351,3 +367,35 @@ only the notes. Nothing was lost and the tree is clean, but the history is
 misleading. Recorded rather than rewritten, since the commits were already
 pushed. Lesson for an agent-driven repo: stage explicit paths when more than one
 worker is active.
+
+### 15. Kapa is much better than grepping the docs index (positive)
+
+Once signed in, the Kapa MCP returned precise, sourced chunks spanning the docs,
+the wallet specification, architecture decision records, the `midnight-zk`
+crates and community tooling. Four queries surfaced things a grep of
+`llms.txt` missed entirely: the community wallet MCP server, the absence of
+native account abstraction, where P-256 lives, and the captcha on the faucet.
+It corrected two claims in this log before they reached anyone.
+
+Worth saying plainly because finding 1 is about Kapa's setup friction: the tool
+itself is the best research surface in the ecosystem. The gap is getting to it.
+
+### 16. Proof server instructions disagree across pages
+
+- `guides/local-proving` pins `midnightntwrk/proof-server:8.1.0` and warns that
+  `latest` "lags behind", last republished May 2026.
+- `guides/run-proof-server` tells users to pull `midnightntwrk/proof-server:latest`.
+- Tutorials pin `8.0.3` in some places and `8.1.0` in others, and some write
+  `docker run ... 8.1.0 -- midnight-proof-server -v` while others omit the `--`.
+
+Effect: a newcomer following the most obvious guide gets the lagging image, and
+an agent reading several pages has no way to tell which is current.
+
+Suggested fix: point every page at the support matrix for the tag, and retire
+the `latest` instruction.
+
+### 17. The docs' Midnight Expert description is already stale
+
+The community wallets page describes Midnight Expert as "13 plugins (87 skills,
+17 agents)". The marketplace installed 16 plugins on 17 September 2026. Minor,
+but it is the kind of number an agent will repeat with confidence.
