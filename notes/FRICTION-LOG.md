@@ -94,6 +94,62 @@ process (report shape, fix-then-verify loops, what not to show)? The second kind
 seems to travel further than expected, and it is cheaper to maintain than
 reference content that ages with every release.
 
+### 5. A fresh install reports failing cross-plugin references
+
+`/midnight-expert:doctor` on a clean machine flags four critical cross-plugin
+references to a `devs` plugin that is not installed and is not in any configured
+marketplace (checked `claude plugin marketplace list`: only the official
+Anthropic marketplaces and `midnight-expert` are present):
+
+```
+compact-core  → devs:code-review        | critical | devs not installed
+compact-core  → devs:typescript-core    | critical | devs not installed
+compact-core  → devs:security-core      | critical | devs not installed
+midnight-verify → devs:deps-maintenance | critical | devs not installed
+```
+
+Effect: a first-time user's health report opens with four criticals they cannot
+act on, which makes the rest of the report easier to ignore.
+
+Suggested fix: mark those references optional and downgrade them to `info` when
+`devs` is absent, or say in the docs where `devs` comes from.
+
+### 6. Setup notes from a clean install
+
+- `octocode-mcp` added via `npx` timed out on first connect (30s). Installing it
+  globally and pointing the server at the binary connected immediately. Worth a
+  line in the fix table.
+- Two MCP servers the plugins expect (`octocode`, `midnight-devnet`) are reported
+  as "not configured in Claude Code — check that the plugin is installed and its
+  MCP server is enabled", but the plugins ship no MCP server definitions, so the
+  advice cannot resolve the warning. `octocode` has a documented add command in
+  the doctor output; `midnight-devnet` does not.
+- TypeScript was missing and is needed for witness type checking
+  (`npm install -g typescript`).
+
+## Open questions worth exploring
+
+### Passwordless onboarding: passkeys and WebAuthn
+
+Neither the docs (`llms.txt`, 1,834 lines) nor OpenZeppelin's Compact library
+mention passkeys or WebAuthn. On Ethereum, passkey-backed smart accounts
+(WebAuthn plus ERC-4337) removed seed phrases from onboarding, which is the
+single biggest drop-off in consumer wallets. Midnight's account model is
+different: shielded notes and a UTXO-style ledger rather than programmable
+accounts, so the same pattern does not port directly.
+
+Questions this raises, and worth time on a later pass:
+
+- What does onboarding look like for a player who will never manage a seed
+  phrase, and is passwordless entry on anyone's roadmap?
+- Could a Compact contract verify a P-256 signature, and what would that cost in
+  circuit terms?
+- Where should key recovery live when the wallet holds shielded state?
+
+Relevant experience: I led passkey-based wallet infrastructure at Oviato, taking
+prototypes to production architecture, so this is the gap I would most like to
+dig into.
+
 ## During the build
 
 <!-- Add entries as they happen: what was asked for, what the tooling produced,
