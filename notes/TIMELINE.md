@@ -51,6 +51,10 @@ Pending deployment:
 
 ## Notes on the measure
 
+- **Paused 17 Sep ~13:06** at the end of a working session (usage limit reached),
+  with the faucet drip still queued. Time between sessions is excluded from the
+  elapsed total; the restart time is recorded when work resumes.
+
 - The clock starts at the repository, not at the idea, because everything before
   that is thinking rather than building.
 - Time spent on findings for the friction log is included. It is part of the
