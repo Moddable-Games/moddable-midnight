@@ -21,6 +21,8 @@ That is the shape Midnight is built for, so this repository tests it directly.
 | **Clock** | +77 minutes to deploy, +84 to a private claim on-chain, by an agent wallet ([timeline](notes/TIMELINE.md)) |
 | **Findings** | 34 logged, with suggested fixes ([friction log](notes/FRICTION-LOG.md)) |
 
+![The read-only front end: prize pool, passes and claims, public versus private data, and every contract transaction, decoded live from the preview indexer](docs/img/read-only-front-end.png)
+
 ## The notes
 
 The code is the smaller half of this repository. The notes are the point.

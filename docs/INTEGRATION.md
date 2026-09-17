@@ -80,7 +80,10 @@ sealed `organiser` value.
 
 ## Reading: no wallet needed
 
-Two GraphQL queries give everything the [front end](../web/) shows. Send them as
+Two GraphQL queries give everything the [front end](../web/) shows.
+
+![The read-only front end decoding the live contract](img/read-only-front-end.png)
+ Send them as
 a JSON `POST` with `{"query": "...", "variables": {...}}`.
 
 ### Contract history

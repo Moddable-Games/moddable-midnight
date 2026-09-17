@@ -88,6 +88,8 @@ API, which returned the `ContractDeploy` action and block above.
   public Midnight network; **+84 minutes** to the full lifecycle (fund, issue,
   private claim) on-chain. The break between sessions is excluded.
 - **+98 minutes** to a read-only front end showing that state live.
+- **Clock paused at +101m** (17 Sep ~18:00) while the front end is reviewed and
+  next steps are chosen.
 - **Next:** browser writes, through Lace and through the wallet CLI's local
   connector.
 
@@ -96,6 +98,7 @@ API, which returned the `ContractDeploy` action and block above.
 - **Paused 17 Sep ~13:06** at the end of a working session (usage limit reached),
   with the faucet drip still queued, and resumed at 17:21. Time between
   sessions is excluded from the elapsed total.
+- **Paused 17 Sep ~18:00** at +101m for review of the read-only front end.
 
 - The clock starts at the repository, not at the idea, because everything before
   that is thinking rather than building.
