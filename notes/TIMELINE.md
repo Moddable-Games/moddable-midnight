@@ -34,7 +34,7 @@ memory. Anything estimated says so.
 | 17 | Front end scaffolded with the `midnight-dapp-dev:init` skill | 17 Sep 17:48 | +90m |
 | 18 | Scaffold fixed to typecheck, test and build (findings 30 to 33) | 17 Sep 17:52 | +94m |
 | 19 | **Read-only front end decodes live contract state in the browser**, in Moddable styling | 17 Sep 17:56 | **+98m** |
-| 20 | Integration guide written from captured responses | 17 Sep 18:02 | +104m |
+| 20 | Integration guide written from captured responses | 17 Sep 17:59 | +101m |
 
 **The only human step is the faucet captcha.** Everything else, from wallet
 creation to deployment, is driven by the agent through the community wallet
