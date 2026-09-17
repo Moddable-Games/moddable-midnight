@@ -560,3 +560,21 @@ wallet: fetch contract state from the indexer and decode it with the compiled
 contract's own `ledger()` function. The community CLI documents a local DApp
 Connector on `ws://localhost:9932`, which could let a page transact through the
 agent wallet instead of an extension. Not yet tried.
+
+### 29. The explorer confirms the contract, labels the wrong deployment, and shows state as raw bytes
+
+Midnight Explorer (preview) resolved the contract and the claim transaction,
+checked against screenshots taken at 17:45.
+
+- The contract page lists the **latest action**, the `claimPrize` call in block
+  907,570, under "Deployment Tx". The actual deploy is `cae26415…` in block
+  907,507, per the indexer's `ContractDeploy` action.
+- Ledger state is a hex dump. The explorer has no way to decode it, because the
+  layout lives in the compiled contract, not on-chain. Pool size, pass count and
+  claim count are all in there, unreadable.
+- The claim transaction page is a good privacy exhibit: status success, a fee of
+  1 SPECK, 8,583 bytes, entry point `claimPrize`, no created or spent outputs, and
+  nothing that identifies the claimant or the pass.
+
+A contract-specific front end is the only way to show a reader what the state
+means, which is the case for building one.
