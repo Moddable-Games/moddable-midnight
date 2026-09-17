@@ -50,6 +50,20 @@ Pending deployment:
 - Subscan (preview): https://midnight-preview.subscan.io/
 - 1am: https://explorer.1am.xyz/?network=preview
 
+## Where it stands
+
+- **Clock stopped at +63m** (17 Sep ~13:06). Waiting time between sessions is
+  not counted.
+- **Wallet funded:** 5,000 tNIGHT on `preview`, agent wallet `moddable-preview`.
+- **Next, in order:**
+  1. Build `src/witnesses.js` so the wallet CLI can load the witnesses.
+  2. Let the private state factory accept a single secret key and generate the
+     pass nonce itself (see friction log, finding 18).
+  3. Register tNIGHT for DUST generation.
+  4. Deploy to `preview` and record the contract address and explorer link.
+- **On restart:** note the resume time here and continue the elapsed count
+  from +63m.
+
 ## Notes on the measure
 
 - **Paused 17 Sep ~13:06** at the end of a working session (usage limit reached),
