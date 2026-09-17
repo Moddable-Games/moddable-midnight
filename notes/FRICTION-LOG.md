@@ -685,8 +685,31 @@ The setup screen still offers Midnight on Firefox and then breaks, so the user
 finds out by hitting an error page rather than a message. Neither the add-on
 listing nor the Lace setup flow says Midnight needs Chrome or Edge.
 
-**Workarounds:** Lace in Chrome or Edge, or 1AM in Firefox (which also proves in
-the browser, so needs no local proof server).
+**Workaround:** Lace in Chrome or Edge. 1AM is not a Firefox option either, despite
+the docs (finding 36).
 
 **Suggested fix:** hide Midnight in the Firefox build's setup, or show "Midnight
 requires Chrome or Edge" in its place, until the Firefox add-on is updated.
+
+### 36. No Midnight wallet could be found for Firefox, although the docs list one
+
+Midnight's wallet reference lists 1AM with "Browser extension: Yes (Chrome,
+Firefox)", and its 1AM profile says "Chrome and Firefox extensions are live".
+Checked on 17 September 2026:
+
+- A person looking for 1AM in Firefox could not find it.
+- Searching the Mozilla add-ons API for "1am", "1AM wallet", "1am.xyz" and the
+  developer name "webisoft" returned no 1AM extension.
+- 1am.xyz mentions Firefox in its copy, but the only extension download link on
+  the page is to the Chrome Web Store.
+- The Lace add-on on Firefox is 1.33.3, without Midnight (finding 35).
+- SubWallet, listed among wallets announcing Midnight support, is on Firefox as
+  version 1.2.32, last updated October 2024, before Midnight's launch.
+
+So a Firefox user currently has no browser wallet for Midnight that could be
+found, and the documentation says otherwise. The alternatives are a Chromium
+browser, or a CLI wallet such as `midnight-wallet-cli`.
+
+**Suggested fix:** correct the 1AM entry, or link the Firefox listing if it
+exists; and state browser support plainly on the "Fund a wallet" and Lace pages,
+which are where a newcomer meets the choice.
