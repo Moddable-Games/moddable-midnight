@@ -399,3 +399,29 @@ the `latest` instruction.
 The community wallets page describes Midnight Expert as "13 plugins (87 skills,
 17 agents)". The marketplace installed 16 plugins on 17 September 2026. Minor,
 but it is the kind of number an agent will repeat with confidence.
+
+### 18. The wallet CLI deploys witness contracts only if you match an unwritten convention
+
+`midnight contract deploy` does support contracts with witnesses, but only by
+convention, which you find by reading the bundled source:
+
+- It imports a **compiled** module from `dist/witnesses.js`, `src/witnesses.js`,
+  `contract/dist/witnesses.js` or `contract/src/witnesses.js`. A TypeScript
+  `src/witnesses.ts` is found but rejected, so a project tested with `tsx` needs
+  a separate build step before it can deploy.
+- It takes the named export `witnesses`, plus any export whose name starts with
+  `create` and contains `privatestate`.
+- It calls that factory as `createPrivateState(secretKey)` with **one** argument.
+  If that throws, it tries no arguments, then silently falls back to `{}`. A
+  factory needing two values (ours takes a secret key and a pass nonce) deploys
+  with empty private state and fails later inside a witness, far from the cause.
+
+**Suggested fix:** document the witness module contract on the CLI page, and
+fail loudly instead of falling back to `{}` when a factory exists but throws.
+
+### 19. Faucet drips queue with no feedback
+
+The preview faucet accepted the request at 12:55 and returned a drip id with
+status `PENDING` and task status `scheduled`, and no transaction hash. Ten
+minutes later nothing had reached the wallet. There is no queue position or
+expected wait, so neither a person nor an agent can tell slow from stuck.
