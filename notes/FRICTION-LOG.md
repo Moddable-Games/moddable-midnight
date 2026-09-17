@@ -659,3 +659,30 @@ Two small notes:
   10.2MB ledger WebAssembly entirely. A read-only page ships 1.3MB of WebAssembly
   and 1.1MB of JavaScript. The template bundles the wallet stack whether a page
   needs it or not.
+
+## Setting up a browser wallet
+
+### 35. Lace on Firefox cannot set up a Midnight wallet, and fails with "file not found"
+
+Choosing Midnight during Lace's wallet setup in Firefox opened a "file not found"
+page; choosing Cardano or Bitcoin moved on to recovery phrase setup as normal.
+
+This is a known gap, reported but unexplained in the product:
+
+- The Firefox add-on is Lace 1.33.3, last updated 28 January 2026 (checked
+  against the Mozilla add-ons API on 17 September 2026).
+- [Lace issue #2206](https://github.com/input-output-hk/lace/issues/2206), opened
+  1 April 2026, says 1.33.3 "does not support Midnight". It is open, with no
+  comments.
+- Midnight's wallet reference lists Lace's browser extension as Chrome and Edge
+  only, and 1AM as available on Chrome and Firefox.
+
+The setup screen still offers Midnight on Firefox and then breaks, so the user
+finds out by hitting an error page rather than a message. Neither the add-on
+listing nor the Lace setup flow says Midnight needs Chrome or Edge.
+
+**Workarounds:** Lace in Chrome or Edge, or 1AM in Firefox (which also proves in
+the browser, so needs no local proof server).
+
+**Suggested fix:** hide Midnight in the Firefox build's setup, or show "Midnight
+requires Chrome or Edge" in its place, until the Firefox add-on is updated.
