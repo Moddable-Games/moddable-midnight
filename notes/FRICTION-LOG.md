@@ -70,6 +70,30 @@ behind, and an agent reading the same page will suggest it.
 Suggested fix: drop the pinned version from the guide, or mark it as an example
 and point to `compact update` for the current release.
 
+### 4. The skills shape output, not just knowledge (positive)
+
+Running `/midnight-expert:doctor` and `/midnight-tooling:doctor` returned a
+health report that was genuinely good: status vocabulary from the check scripts
+(`pass`, `warn`, `critical`, `info`), a defined badge mapping, table layouts and
+section headings, all specified in the skill files rather than left to the
+agent. The result read like a product feature, not a chat response.
+
+Two things stood out:
+
+- Once that style was established, it carried across the rest of the session.
+  The agent kept the same reporting shape for later output, so the plugins set a
+  house style rather than formatting one command.
+- The formatting rules did some of the thinking: "omit sections where everything
+  passes", "re-run only the checks that failed", "show the report, never the raw
+  bash output". That is process encoded as instructions, and it made the answer
+  shorter and more useful.
+
+**Question worth asking the team:** how much of Midnight Expert's value is
+knowledge (Compact syntax, SDK detail, verification) and how much is enforced
+process (report shape, fix-then-verify loops, what not to show)? The second kind
+seems to travel further than expected, and it is cheaper to maintain than
+reference content that ages with every release.
+
 ## During the build
 
 <!-- Add entries as they happen: what was asked for, what the tooling produced,
