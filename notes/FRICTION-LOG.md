@@ -71,8 +71,16 @@ set it as default. Toolchain `compact 0.5.2`.
 Effect: a reader following the guide literally pins a version three releases
 behind, and an agent reading the same page will suggest it.
 
-Suggested fix: drop the pinned version from the guide, or mark it as an example
-and point to `compact update` for the current release.
+~~Suggested fix: drop the pinned version from the guide, or mark it as an example
+and point to `compact update` for the current release.~~
+
+**Corrected at deploy time (finding 20):** the pin was right. 0.31.1 is the
+version the networks and the stable SDK support; 0.34.0 compiles and tests
+locally but cannot be deployed with stable tooling. The real problem is that
+`compact update` installs a release the networks do not support, and nothing
+says so. The better fix is the reverse of the one first suggested: keep the pin,
+explain why, and have `compact update` warn when it moves past the supported
+version.
 
 ### 4. The skills shape output, not just knowledge (positive)
 
@@ -427,3 +435,66 @@ minutes later nothing had reached the wallet. After about 30 minutes the web pag
 crashed. A second request went through in under a minute, and 5,000 tNIGHT
 arrived at 13:21 ([transaction](https://preview.midnightexplorer.com/transactions/0x98b947897e9b174eee8be1ae55c1915b5424a7045a5b129f27621e9e0f3d7634)). There is no queue position or
 expected wait, so neither a person nor an agent can tell slow from stuck.
+
+## Deploying to the public testnet
+
+### 20. The newest compiler cannot be deployed with the stable SDK
+
+The default install path (`compact update`) gave compiler 0.34.0 and runtime
+0.19.0. The contract compiled and passed every test. Deploying it failed.
+
+The [compatibility matrix](https://docs.midnight.network/relnotes/support-matrix)
+lists compiler 0.31.1, runtime 0.16.0 and Midnight.js 4.1.1 for preview, preprod
+and mainnet alike. Midnight.js only accepts 0.19-era contracts from its 5.0 beta
+line. The community wallet CLI bundles the stable 4.1.1 line.
+
+The switch back took about ten minutes: install 0.31.1 alongside 0.34.0, relax
+the pragma from `>= 0.26` to `>= 0.23` (the contract needed nothing newer), pin
+the runtime, and adapt the test harness to the older runtime API
+(`createCircuitContext` loses its circuit id argument, and state moves from
+`context.callContext.currentQueryContext` to `context.currentQueryContext`).
+
+**Suggested fix:** have `compact update` default to, or at least warn about, the
+newest release the networks support. The matrix exists; the tools do not read it.
+
+### 21. The latest `compact-js` on npm cannot be installed
+
+`@midnight-ntwrk/compact-js@2.5.3`, tagged `latest`, depends on
+`@midnight-ntwrk/ledger-v9@^0.1.0-alpha.1`, which is not published. `npm install`
+fails with `ETARGET`. Pinning 2.5.1, the version in the compatibility matrix and
+the one the wallet CLI bundles, works.
+
+### 22. The wallet CLI deploy needs SDK packages in the project, and says it is a network error
+
+The deploy writes a temporary script into the project and runs it there, so it
+resolves `@midnight-ntwrk/midnight-js-*` from the project's own `node_modules`,
+not from the CLI's. With none installed, it fails with `ERR_MODULE_NOT_FOUND`,
+wrapped in an error coded `NETWORK_ERROR`. It took four minutes to fail. Seven
+packages are needed: `compact-js`, `midnight-js-contracts`, `-network-id`,
+`-http-client-proof-provider`, `-indexer-public-data-provider`,
+`-level-private-state-provider` and `-node-zk-config-provider`.
+
+**Suggested fix:** check for these before syncing the wallet, and print the
+install command.
+
+### 23. DUST registration succeeds, then reports failure
+
+`midnight dust register` registered both UTXOs, then waited for DUST to appear,
+timed out after five minutes and exited with `SYNC_TIMEOUT` (exit code 4). An
+immediate `midnight dust status` showed the registration in place and 619 DUST
+available. An agent trusting the exit code would retry or stop.
+
+`--json` also does not suppress the progress spinner: the register run wrote
+170KB of spinner frames to stdout ahead of the JSON result.
+
+### 24. Deploying was fast once it worked (positive)
+
+With the versions aligned, `midnight contract deploy` synced the wallet, proved
+the constructor locally, balanced fees in DUST and submitted, in **25 seconds**.
+The contract was queryable through the public indexer straight away. No human
+signed anything: the agent wallet auto-approves, which is the point for testnet
+and exactly the thing to constrain before mainnet.
+
+The CLI also writes a `midnight-level-db/` directory into the project holding
+the contract's private state, including the secret key. It is not in any default
+`.gitignore`; a catch-all `git add` would publish it.

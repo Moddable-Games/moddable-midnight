@@ -9,3 +9,7 @@ target/
 .DS_Store
 .idea/
 .vscode/
+
+# Local private state (holds contract secrets)
+midnight-level-db/
+.mn-contract-*.mjs

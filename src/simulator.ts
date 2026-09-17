@@ -1,5 +1,5 @@
-import type { ChargedState } from "@midnightntwrk/onchain-runtime-v4";
 import {
+  type ChargedState,
   type CircuitContext,
   createCircuitContext,
   createConstructorContext,
@@ -64,11 +64,10 @@ export class TournamentSimulator {
   }
 
   private context(
-    circuitId: string,
+    _circuitId: string,
     privateState: TournamentPrivateState,
   ): CircuitContext<TournamentPrivateState> {
     return createCircuitContext(
-      circuitId,
       this.contractAddress,
       "0".repeat(64),
       this.contractState,
@@ -79,7 +78,7 @@ export class TournamentSimulator {
   private commit(result: {
     context: CircuitContext<TournamentPrivateState>;
   }): void {
-    this.contractState = result.context.callContext.currentQueryContext.state;
+    this.contractState = result.context.currentQueryContext.state;
   }
 
   /** Player-side: derive the commitment to hand to the organiser. */

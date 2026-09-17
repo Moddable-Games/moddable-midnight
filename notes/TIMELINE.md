@@ -22,9 +22,12 @@ memory. Anything estimated says so.
 | 10 | **Human step:** tNIGHT requested at the preview faucet (captcha); drip queued as `PENDING` / `scheduled` | 17 Sep 12:55 | +52m |
 | 10a | First faucet request hangs; the web page crashes after about 30 minutes | 17 Sep ~13:20 | during the pause |
 | 10b | Second faucet request succeeds in under a minute: 5,000 tNIGHT ([tx](https://preview.midnightexplorer.com/transactions/0x98b947897e9b174eee8be1ae55c1915b5424a7045a5b129f27621e9e0f3d7634)) | 17 Sep 13:21 | during the pause |
-| 11 | Agent registers tNIGHT for DUST generation | pending | |
-| 12 | Agent deploys the contract to `preview` | pending | |
-| 13 | Contract visible in a public explorer | pending | |
+| — | **Clock resumed** after the pause; wallet now holds 10,000 tNIGHT (the first faucet request also landed) | 17 Sep 17:21 | +63m |
+| 10c | Deploy fixes: compiled witnesses module, single-argument private state factory | 17 Sep 17:22 | +64m |
+| 11 | Agent registers 2 UTXOs for DUST generation; CLI reports a timeout, but status shows 619 DUST available | 17 Sep 17:27 | +69m |
+| 11a | First deploy fails: the stable SDK cannot run 0.34.0 output; project moved to the supported toolchain (compiler 0.31.1, runtime 0.16.0, Midnight.js 4.1.1), tests re-run green | 17 Sep 17:34 | +76m |
+| 12 | **Agent deploys the contract to `preview`** in 25 seconds, block 907,507 | 17 Sep 17:35 | **+77m** |
+| 13 | Deploy confirmed through the public indexer; explorer links below | 17 Sep 17:37 | +79m |
 
 **The only human step is the faucet captcha.** Everything else, from wallet
 creation to deployment, is driven by the agent through the community wallet
@@ -44,31 +47,29 @@ transaction that deployed it. Links recorded below when we have them.
 
 ## Explorer links
 
-Pending deployment:
+- **Contract address:** `2a7fe78cdafc8126041298f307f699b319ed43e908e85287f8b72ad291e1c191`
+- **Deploy transaction:** `cae26415ed0ab92ee22f8c0feb4ef61ef0d0283161bddd875b70fc2c1aa812ca` (block 907,507, 17:35:24 BST)
+- Contract on Midnight Explorer: https://preview.midnightexplorer.com/contracts/2a7fe78cdafc8126041298f307f699b319ed43e908e85287f8b72ad291e1c191
+- Deploy transaction on Midnight Explorer: https://preview.midnightexplorer.com/transactions/0xcae26415ed0ab92ee22f8c0feb4ef61ef0d0283161bddd875b70fc2c1aa812ca
+- Contract on Subscan: https://midnight-preview.subscan.io/contract/2a7fe78cdafc8126041298f307f699b319ed43e908e85287f8b72ad291e1c191
+- Contract on 1am: https://explorer.1am.xyz/contract/2a7fe78cdafc8126041298f307f699b319ed43e908e85287f8b72ad291e1c191?network=preview
 
-- Midnight Explorer (preview): https://preview.midnightexplorer.com/
-- Subscan (preview): https://midnight-preview.subscan.io/
-- 1am: https://explorer.1am.xyz/?network=preview
+The explorers are single-page apps, so their URLs return 200 whatever the
+address; the deploy itself was verified against the preview indexer's GraphQL
+API, which returned the `ContractDeploy` action and block above.
 
 ## Where it stands
 
-- **Clock stopped at +63m** (17 Sep ~13:06). Waiting time between sessions is
-  not counted.
-- **Wallet funded:** 5,000 tNIGHT on `preview`, agent wallet `moddable-preview`.
-- **Next, in order:**
-  1. Build `src/witnesses.js` so the wallet CLI can load the witnesses.
-  2. Let the private state factory accept a single secret key and generate the
-     pass nonce itself (see friction log, finding 18).
-  3. Register tNIGHT for DUST generation.
-  4. Deploy to `preview` and record the contract address and explorer link.
-- **On restart:** note the resume time here and continue the elapsed count
-  from +63m.
+- **Done: +77 minutes of working time** from an empty repository to a contract
+  on a public Midnight network, excluding the break between sessions.
+- **Next:** exercise the contract on-chain (fund, issue, claim) and add a small
+  front end that reads its public state.
 
 ## Notes on the measure
 
 - **Paused 17 Sep ~13:06** at the end of a working session (usage limit reached),
-  with the faucet drip still queued. Time between sessions is excluded from the
-  elapsed total; the restart time is recorded when work resumes.
+  with the faucet drip still queued, and resumed at 17:21. Time between
+  sessions is excluded from the elapsed total.
 
 - The clock starts at the repository, not at the idea, because everything before
   that is thinking rather than building.

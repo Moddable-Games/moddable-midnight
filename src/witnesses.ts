@@ -21,10 +21,15 @@ export type TournamentPrivateState = {
   readonly passNonce: Uint8Array;
 };
 
-/** Build private state from 32-byte values supplied by the caller. */
+/**
+ * Build private state from 32-byte values supplied by the caller.
+ *
+ * The nonce is optional because deploy tooling (the Midnight wallet CLI) calls
+ * this factory with a secret key only. A fresh nonce is drawn when none is given.
+ */
 export const createPrivateState = (
   secretKey: Uint8Array,
-  passNonce: Uint8Array,
+  passNonce: Uint8Array = randomBytes32(),
 ): TournamentPrivateState => {
   assertLength(secretKey, "secretKey");
   assertLength(passNonce, "passNonce");
