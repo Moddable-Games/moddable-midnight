@@ -7,7 +7,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTournament } from "@/hooks/use-tournament";
 import { formatTime, shortHex } from "@/lib/format";
-import { CONTRACT_ADDRESS, EXPLORER, NETWORK } from "@/lib/tournament";
+import {
+  CONTRACT_ADDRESS,
+  EXPLORER,
+  NETWORK,
+  ONE_AM_EXPLORER,
+  SUBSCAN,
+} from "@/lib/tournament";
 
 export function App() {
   const { snapshot, error, loading, refresh } = useTournament();
@@ -72,6 +78,17 @@ export function App() {
                 Refresh
               </Button>
             </div>
+            <p className="text-sm text-white/70">
+              Also on{" "}
+              <a href={SUBSCAN.contract(CONTRACT_ADDRESS)} target="_blank" rel="noopener" className="text-white underline underline-offset-4 hover:text-cosmic-glow">
+                Subscan
+              </a>{" "}
+              and the{" "}
+              <a href={ONE_AM_EXPLORER.contract(CONTRACT_ADDRESS)} target="_blank" rel="noopener" className="text-white underline underline-offset-4 hover:text-cosmic-glow">
+                1AM explorer
+              </a>
+              . Every figure below is read live from Midnight's public indexer.
+            </p>
           </section>
         </div>
       </header>

@@ -20,6 +20,11 @@ export const INDEXER_URL: string =
   import.meta.env.VITE_INDEXER_URL ??
   "https://indexer.preview.midnight.network/api/v4/graphql";
 
+/**
+ * Three independent explorers, so a reader can check this page against sources
+ * it does not control. URL formats confirmed by rendering each one on
+ * 17 September 2026.
+ */
 export const EXPLORER = {
   contract: (address: string) =>
     `https://preview.midnightexplorer.com/contracts/${address}`,
@@ -27,6 +32,20 @@ export const EXPLORER = {
     `https://preview.midnightexplorer.com/transactions/0x${hash}`,
   block: (height: number) =>
     `https://preview.midnightexplorer.com/blocks/${height}`,
+};
+
+export const SUBSCAN = {
+  contract: (address: string) =>
+    `https://midnight-preview.subscan.io/contract/${address}`,
+  transaction: (hash: string) =>
+    `https://midnight-preview.subscan.io/tx/0x${hash}`,
+};
+
+export const ONE_AM_EXPLORER = {
+  contract: (address: string) =>
+    `https://explorer.1am.xyz/contract/${address}?network=preview`,
+  transaction: (hash: string) =>
+    `https://explorer.1am.xyz/tx/${hash}?network=preview`,
 };
 
 const SNAPSHOT_QUERY = `

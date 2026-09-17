@@ -7,7 +7,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { EXPLORER, type ContractActivity } from "@/lib/tournament";
+import {
+  EXPLORER,
+  ONE_AM_EXPLORER,
+  SUBSCAN,
+  type ContractActivity,
+} from "@/lib/tournament";
 import { ACTION_LABELS, formatTime, shortHex } from "@/lib/format";
 
 export function ActivityFeed({ activity }: { activity: ContractActivity[] }) {
@@ -16,7 +21,8 @@ export function ActivityFeed({ activity }: { activity: ContractActivity[] }) {
       <CardHeader>
         <CardTitle className="font-display text-xl">Contract activity</CardTitle>
         <CardDescription>
-          Every transaction that touched this contract, newest first.
+          Every transaction that touched this contract, newest first. Check any
+          of them on three independent explorers.
         </CardDescription>
       </CardHeader>
       <CardContent className="overflow-x-auto">
@@ -27,7 +33,8 @@ export function ActivityFeed({ activity }: { activity: ContractActivity[] }) {
               <th className="py-2 pr-4 font-medium">Circuit</th>
               <th className="py-2 pr-4 font-medium">Block</th>
               <th className="py-2 pr-4 font-medium">Time</th>
-              <th className="py-2 font-medium">Transaction</th>
+              <th className="py-2 pr-4 font-medium">Transaction</th>
+              <th className="py-2 font-medium">Also on</th>
             </tr>
           </thead>
           <tbody>
@@ -42,12 +49,19 @@ export function ActivityFeed({ activity }: { activity: ContractActivity[] }) {
                   </Badge>
                 </td>
                 <td className="py-3 pr-4 font-mono tabular-nums">
-                  {item.blockHeight.toLocaleString()}
+                  <a
+                    href={EXPLORER.block(item.blockHeight)}
+                    target="_blank"
+                    rel="noopener"
+                    className="underline-offset-4 hover:underline"
+                  >
+                    {item.blockHeight.toLocaleString()}
+                  </a>
                 </td>
                 <td className="py-3 pr-4 whitespace-nowrap text-muted-foreground">
                   {formatTime(item.timestamp)}
                 </td>
-                <td className="py-3">
+                <td className="py-3 pr-4">
                   <a
                     href={EXPLORER.transaction(item.hash)}
                     target="_blank"
@@ -56,6 +70,25 @@ export function ActivityFeed({ activity }: { activity: ContractActivity[] }) {
                   >
                     {shortHex(item.hash)}
                     <ExternalLink className="size-3" />
+                  </a>
+                </td>
+                <td className="py-3 whitespace-nowrap">
+                  <a
+                    href={SUBSCAN.transaction(item.hash)}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    Subscan
+                  </a>
+                  <span className="px-1.5 text-muted-foreground">·</span>
+                  <a
+                    href={ONE_AM_EXPLORER.transaction(item.hash)}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-primary underline-offset-4 hover:underline"
+                  >
+                    1AM
                   </a>
                 </td>
               </tr>
