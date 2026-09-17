@@ -33,6 +33,10 @@ assistants have to be given the context to get it right. Where that works,
 where it guesses, and what the compiler catches is tracked in
 [`notes/FRICTION-LOG.md`](notes/FRICTION-LOG.md), alongside suggested fixes.
 
+Alongside it, [`notes/TIMELINE.md`](notes/TIMELINE.md) times the run: how long
+one engineer new to Compact takes to get from an idea to a contract deployed on
+a public Midnight network, with an explorer link as the finish line.
+
 ## Prerequisites
 
 - macOS or Linux (the tooling assumes POSIX; Windows needs WSL)
