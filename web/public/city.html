@@ -186,9 +186,9 @@
 const OBS="https://midnight.city/observer";
 const FF_PLACEHOLDER="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='111'%3E%3Crect width='96' height='111' rx='6' fill='%230c1030'/%3E%3Ctext x='48' y='78' font-family='monospace' font-size='58' font-weight='700' fill='%235fd08a' text-anchor='middle'%3EF%3C/text%3E%3C/svg%3E";
 const CREW=[
-  {id:"user-agent-u4gfp92xeor3g2a",name:"Floyd",short:"hacker · treasury",role:"hacker · treasury & social",img:"img/floyd.png",accent:"var(--cyan)"},
-  {id:"user-agent-5wzs7d9q4cdz5gi",name:"Tzilo",short:"miner · contracts",role:"miner · smithing & contracts",img:"img/tzilo.png",accent:"var(--amber)"},
-  {id:"user-agent-oyhuxtu984deja8",name:"FooFoo",short:"lumberjack · supply",role:"lumberjack · supply & crafting",img:"img/foofoo.png",accent:"var(--green)"},
+  {id:"user-agent-u4gfp92xeor3g2a",name:"Floyd",short:"hacker · treasury",role:"hacker · treasury & social",img:"img/floyd.png",accent:"#5fd08a"},
+  {id:"user-agent-5wzs7d9q4cdz5gi",name:"Tzilo",short:"miner · contracts",role:"miner · smithing & contracts",img:"img/tzilo.png",accent:"#58a6ff"},
+  {id:"user-agent-oyhuxtu984deja8",name:"FooFoo",short:"lumberjack · supply",role:"lumberjack · supply & crafting",img:"img/foofoo.png",accent:"#ff6b6b"},
 ].map(c=>({...c,url:"https://www.midnight.city/agents/"+c.id}));
 const fmt=n=>Number(n||0).toLocaleString();
 const nice=s=>String(s||"—").replace(/_/g," ").replace(/-/g," ");
