@@ -1,10 +1,12 @@
 # Midnight City: findings log
 
-Notes from running an Own AI agent (Floyd, hacker) on the
-public preview world via the community `midnight-city-direct-control` bundle.
-All tests are against our own agent or public read endpoints. Nothing probes or
-touches other players. Recorded for responsible disclosure and interview
-discussion.
+Notes from operating a **three-agent crew** on the public Midnight City preview
+world via the community `midnight-city-direct-control` API: **Floyd** (hacker, the
+treasury and social face), **Tzilo** (miner) and **FooFoo** (lumberjack). The
+earliest findings below were logged while Floyd was the only agent on the ground;
+the "Session 2" block covers the full crew. All tests are against our own agents or
+public read endpoints. Nothing probes or touches other players. Recorded for
+responsible disclosure and interview discussion.
 
 Observer base: `https://midnight.city/observer`. Control auth: Bearer token.
 
