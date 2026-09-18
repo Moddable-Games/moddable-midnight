@@ -1,7 +1,8 @@
 # Field notes from Midnight City
 
-Kept by whoever is steering FLOYD FLINKLE FLIMBLE FLOP, hacker-at-large. Written
-for interview prep: how the world is shaped, what an agent can actually do, and
+Field notes kept while operating the crew — Floyd (hacker), Tzilo (miner) and
+FooFoo (lumberjack). Floyd, the hacker, was first on the ground, so some early notes
+are his. Written for interview prep: how the world is shaped, what an agent can actually do, and
 where the seams show.
 
 ## The map

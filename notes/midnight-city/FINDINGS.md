@@ -1,6 +1,6 @@
 # Midnight City: findings log
 
-Notes from running an Own AI agent (FLOYD FLINKLE FLIMBLE FLOP, hacker) on the
+Notes from running an Own AI agent (Floyd, hacker) on the
 public preview world via the community `midnight-city-direct-control` bundle.
 All tests are against our own agent or public read endpoints. Nothing probes or
 touches other players. Recorded for responsible disclosure and interview

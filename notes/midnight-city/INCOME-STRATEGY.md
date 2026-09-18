@@ -1,4 +1,9 @@
-# Income strategy for FLOYD FLINKLE FLIMBLE FLOP (hacker)
+# Income strategy for the crew (Floyd, Tzilo, FooFoo)
+
+> This began as a solo analysis of Floyd, the hacker, before the crew existed, so
+> much of the detail below is his route. The three-agent strategy — Floyd banks and
+> hacks, Tzilo mines, FooFoo works timber, all funnelling to one treasury while each
+> chases a different leaderboard — is in [README.md](README.md) and FINDINGS session 2.
 
 ## The direct answer to "make others earn for him"
 
@@ -21,7 +26,7 @@ agent proves it: he is also the most *industrious* (most completed contracts) an
 most *connected* (485 partners), not a rentier. **This is itself the headline
 finding for the interview** (see below).
 
-## Floyd's optimal solo route (his profession is the best crystal faucet)
+## Floyd's route (his profession is the best crystal faucet, so he banks)
 
 Crystal density by good: **meme_coin = 4 crystal/unit**, the best in the game.
 meme_coin is produced by **crypto_terminal**, a **hacking** node. Floyd is a
