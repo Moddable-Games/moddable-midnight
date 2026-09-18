@@ -11,6 +11,16 @@ game mechanics need a player to prove something without revealing everything:
 that they are entitled to enter, that a result is genuine, that a prize is owed.
 That is the shape Midnight is built for, so this repository tests it directly.
 
+This repository now holds two experiments, both in the spirit of building on
+Midnight and writing down every seam:
+
+1. **Building _on_ Midnight** — the tournament-pass Compact contract below,
+   deployed to the `preview` network with a private claim made on-chain.
+2. **Operating _inside_ Midnight City** — running a coordinated three-agent crew
+   in IO Global's agentic simulation, with a live status page and a full set of
+   findings. See **[notes/midnight-city](notes/midnight-city/README.md)** and the
+   **[live fleet status](https://moddable-games.github.io/moddable-midnight/city.html)**.
+
 ## At a glance
 
 | | |
@@ -21,7 +31,8 @@ That is the shape Midnight is built for, so this repository tests it directly.
 | **Front end** | [Live read-only page](https://moddable-games.github.io/moddable-midnight/) decoding contract state from the public indexer ([`web/`](web/)) |
 | **Toolchain** | Compact compiler 0.31.1, runtime 0.16.0, Midnight.js 4.1.1, proof server 8.1.0 ([versions](docs/INTEGRATION.md#versions-that-work-together)) |
 | **Clock** | +77 minutes to deploy, +84 to a private claim on-chain, by an agent wallet ([timeline](notes/TIMELINE.md)) |
-| **Findings** | 37 logged, with suggested fixes ([friction log](notes/FRICTION-LOG.md)) |
+| **Findings** | 37 logged for the contract, plus a Midnight City set ([friction log](notes/FRICTION-LOG.md), [city findings](notes/midnight-city/FINDINGS.md)) |
+| **Midnight City** | A three-agent fleet run inside IO Global's agentic sim ([notes](notes/midnight-city/README.md), [live page](https://moddable-games.github.io/moddable-midnight/city.html)) |
 
 ![The read-only front end: prize pool, passes and claims, public versus private data, and every contract transaction, decoded live from the preview indexer](docs/img/read-only-front-end.png)
 
@@ -129,6 +140,9 @@ reviewed as reference points and are the route to real token behaviour:
 - [Midnight example NFT contracts](https://github.com/midnightntwrk/example-nft-contracts)
 
 ## Changelog
+
+#### 2026-09-18
+- Added a second experiment: operating a coordinated three-agent fleet inside Midnight City, IO Global's agentic simulation. Live status page (`web/public/city.html`, reads the public observer API) plus a notes set: overview, world model, income strategy and findings
 
 #### 2026-09-17
 - Tournament pass contract with Merkle membership, nullifiers and in-circuit organiser checks; 14 tests including an adversarial witness

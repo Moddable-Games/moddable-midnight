@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Fleet Status · Moddable on Midnight City</title>
+<meta name="description" content="A live view of a three-agent fleet operating on Midnight City, IO Global's agentic simulation, read straight from the public observer API." />
+<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+<meta property="og:title" content="Fleet Status · Moddable on Midnight City" />
+<meta property="og:description" content="Three AI agents working as a crew on Midnight City. Live public data, plus the findings from running them." />
+<meta property="og:type" content="website" />
+<style>
+  :root{
+    --deep:#0a0d2a; --mid:#1a3680; --glow:#6fb5ff; --ink:#14161c;
+    --canvas:#f5f4ef; --card:#ffffff; --line:#e6e3d8; --mute:#4f5764;
+    --blue:#0c4f8d; --green:#3a9928; --claret:#6E1B33; --gold:#9A6B12;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--canvas);color:var(--ink);
+    font-family:"Barlow","DM Sans",system-ui,-apple-system,sans-serif;line-height:1.5}
+  a{color:var(--blue)}
+  .hero{position:relative;overflow:hidden;background:#000;color:#fff;
+    background-image:linear-gradient(180deg,var(--deep) 0%,var(--mid) 45%,#000 100%)}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+  .nav{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:18px 0;flex-wrap:wrap}
+  .brand{font-weight:700;letter-spacing:.02em}
+  .pill{display:inline-block;border:1px solid rgba(255,255,255,.3);border-radius:999px;
+    padding:3px 12px;font-size:12px;color:#fff}
+  h1{font-family:"Rajdhani","Space Grotesk",system-ui,sans-serif;font-weight:700;
+    font-size:clamp(30px,5vw,46px);line-height:1.05;letter-spacing:-.02em;margin:14px 0 10px;text-wrap:balance}
+  .sub{color:rgba(255,255,255,.8);max-width:660px;text-wrap:pretty}
+  .eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--glow)}
+  .hero-body{padding:14px 0 40px}
+  main{max-width:1040px;margin:0 auto;padding:28px 20px 64px}
+  h2{font-family:"Rajdhani","Space Grotesk",system-ui,sans-serif;font-weight:700;
+    font-size:24px;letter-spacing:-.01em;margin:34px 0 14px}
+  .grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px}
+  .agent h3{margin:0 0 2px;font-family:"Rajdhani","Space Grotesk",system-ui,sans-serif;font-size:20px}
+  .role{color:var(--mute);font-size:13px;text-transform:capitalize}
+  .stat-row{display:flex;justify-content:space-between;align-items:baseline;margin-top:10px;
+    padding-top:10px;border-top:1px solid var(--line)}
+  .stat-row .n{font-family:"JetBrains Mono",ui-monospace,monospace;font-weight:600;font-variant-numeric:tabular-nums}
+  .skills{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+  .chip{font-size:12px;border:1px solid var(--line);border-radius:999px;padding:2px 9px;
+    font-family:"JetBrains Mono",ui-monospace,monospace}
+  .chip b{color:var(--blue)}
+  .treasury{display:flex;gap:24px;flex-wrap:wrap;align-items:baseline}
+  .treasury .big{font-family:"Rajdhani","Space Grotesk",system-ui,sans-serif;font-size:40px;font-weight:700}
+  .muted{color:var(--mute)}
+  .online{color:var(--green)} .offline{color:var(--claret)}
+  ul.tight{margin:8px 0 0;padding-left:18px} ul.tight li{margin:4px 0}
+  .links{display:flex;flex-wrap:wrap;gap:14px;margin-top:8px}
+  footer{border-top:1px solid var(--line);color:var(--mute);font-size:13px}
+  footer .wrap2{max-width:1040px;margin:0 auto;padding:20px;display:flex;gap:18px;flex-wrap:wrap}
+  .updated{font-size:12px;color:var(--mute);margin-top:6px}
+  .err{color:var(--claret)}
+</style>
+</head>
+<body>
+  <header class="hero">
+    <div class="wrap">
+      <div class="nav">
+        <div class="brand">MODDABLE <span style="opacity:.6">×</span> MIDNIGHT CITY</div>
+        <div><span class="pill">preview fleet</span> <span class="pill">live · public data</span></div>
+      </div>
+    </div>
+    <div class="wrap hero-body">
+      <div class="eyebrow">Fleet status</div>
+      <h1>A three-agent crew working Midnight City, read live from the public API</h1>
+      <p class="sub">Midnight City is IO Global's agentic simulation, where AI agents live, work and trade on their own. We run a crew of three and coordinate them: one hacks and banks, two gather and fund the treasury, all climbing the leaderboards together. Everything below is fetched straight from the game's public observer API, with no wallet and no sign-in.</p>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="card">
+        <div class="treasury">
+          <div><div class="muted">Crew treasury (crystal)</div><div class="big" id="treasury">…</div></div>
+          <div><div class="muted">Agents online</div><div class="big" id="online">…</div></div>
+          <div><div class="muted">Skills levelled</div><div class="big" id="skills">…</div></div>
+        </div>
+        <div class="updated" id="updated"></div>
+      </div>
+    </section>
+
+    <h2>The crew</h2>
+    <div class="grid" id="crew"><div class="card muted">Reading the city…</div></div>
+
+    <h2>What this is</h2>
+    <div class="card">
+      <p style="margin-top:0">A study of how well an operator can run a small fleet of AI agents inside Midnight City, and what that reveals about the platform's agent economy. The agents are driven through the community control API; the coordination logic decides, per agent and per tick, whether to gather, complete a contract, craft, sell, fund a teammate, or grind for the next level.</p>
+      <p><strong>The roles:</strong> <b>Floyd</b> (hacker) is the treasury and social face; <b>Tzilo</b> (miner) and <b>FooFoo</b> (lumberjack) gather, complete their own contracts, and funnel crystal up. Because the game lets agents send each other crystal but never items, cooperation is financial: the treasury buys each teammate's tools, and each specialises in a different leaderboard.</p>
+      <p>The full write-up, the world model, the income analysis and the findings live alongside this page:</p>
+      <div class="links">
+        <a href="https://github.com/Moddable-Games/moddable-midnight/blob/main/notes/midnight-city/README.md" target="_blank" rel="noopener">Overview &amp; findings ↗</a>
+        <a href="https://github.com/Moddable-Games/moddable-midnight/blob/main/notes/midnight-city/FINDINGS.md" target="_blank" rel="noopener">Findings log ↗</a>
+        <a href="https://github.com/Moddable-Games/moddable-midnight/blob/main/notes/midnight-city/WORLD-MODEL.md" target="_blank" rel="noopener">World model ↗</a>
+        <a href="https://github.com/Moddable-Games/moddable-midnight/blob/main/notes/midnight-city/INCOME-STRATEGY.md" target="_blank" rel="noopener">Income strategy ↗</a>
+        <a href="./" target="_blank" rel="noopener">← The tournament-pass contract</a>
+      </div>
+    </div>
+  </main>
+
+  <footer><div class="wrap2">
+    <a href="https://github.com/Moddable-Games/moddable-midnight" target="_blank" rel="noopener">Repository</a>
+    <a href="https://www.midnight.city/" target="_blank" rel="noopener">Midnight City</a>
+    <span class="muted">Public data via midnight.city/observer · refreshes every 20s</span>
+  </div></footer>
+
+<script>
+const OBS = "https://midnight.city/observer";
+const CREW = [
+  { id:"user-agent-u4gfp92xeor3g2a", name:"Floyd", tag:"Treasury · hacking · social" },
+  { id:"user-agent-5wzs7d9q4cdz5gi", name:"Tzilo", tag:"Mining · smithing · contracts" },
+  { id:"user-agent-oyhuxtu984deja8", name:"FooFoo", tag:"Woodcutting · crafting · provisions" },
+];
+const fmt = n => Number(n||0).toLocaleString();
+
+async function refresh(){
+  try{
+    const r = await fetch(OBS + "/api/spectator/bootstrap", {cache:"no-store"});
+    if(!r.ok) throw new Error("observer " + r.status);
+    const data = await r.json();
+    const byId = {};
+    for(const a of data.dynamicWorld.agents) byId[a.id] = a;
+    let treasury=0, online=0, skillCount=0;
+    const cards = CREW.map(c=>{
+      const a = byId[c.id];
+      if(!a) return `<div class="card agent"><h3>${c.name}</h3><div class="role">${c.tag}</div><p class="muted">Not in the live snapshot right now.</p></div>`;
+      const crystal = a.inventory?.crystal||0; treasury += crystal;
+      const isOn = a.presence==="online" || a.status!=="offline"; if(isOn) online++;
+      const skills = Object.entries(a.skills||{}).filter(([k,v])=>(v.xp||0)>0).sort((x,y)=>y[1].level-x[1].level);
+      skillCount += skills.length;
+      const chips = skills.map(([k,v])=>`<span class="chip">${k} <b>L${v.level}</b></span>`).join("") || '<span class="muted">no XP yet</span>';
+      return `<div class="card agent">
+        <h3>${a.name||c.name} <span class="${isOn?'online':'offline'}" style="font-size:12px">●</span></h3>
+        <div class="role">${c.tag}</div>
+        <div class="stat-row"><span class="muted">Profession</span><span class="n">${a.profession} · rank ${a.professionRank??1}</span></div>
+        <div class="stat-row"><span class="muted">Crystal</span><span class="n">${fmt(crystal)}</span></div>
+        <div class="stat-row"><span class="muted">Where</span><span class="n">${(a.position?.spaceId||"—").replace(/-/g," ")}</span></div>
+        <div class="skills">${chips}</div>
+      </div>`;
+    }).join("");
+    document.getElementById("crew").innerHTML = cards;
+    document.getElementById("treasury").textContent = fmt(treasury);
+    document.getElementById("online").textContent = online + " / " + CREW.length;
+    document.getElementById("skills").textContent = skillCount;
+    document.getElementById("updated").textContent = "Updated " + new Date().toLocaleTimeString();
+  }catch(e){
+    document.getElementById("crew").innerHTML = '<div class="card err">Could not reach the city API: '+e.message+'</div>';
+  }
+}
+refresh();
+setInterval(refresh, 20000);
+</script>
+</body>
+</html>
