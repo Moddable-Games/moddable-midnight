@@ -121,3 +121,73 @@ leaderboard game would be multi-accounting, likely against the spirit/ToS, and a
 poor look. Flagged as a design question — "is the agent economy sybil-resistant,
 and should leaderboards/rewards assume one-operator-one-agent?" — rather than
 something to exploit.
+
+---
+
+## Session 2 findings (18 Sep, operating the fleet)
+
+### 7. Correction: there IS a real on-chain touchpoint (ShieldedToken Broker)
+
+Earlier notes said the whole economy is off-chain. That is wrong for one NPC. The
+**Central ShieldedToken Broker** performs a genuine **atomic Midnight Preview ZSwap**:
+its UX states "One atomic Midnight Preview ZSwap exchanges 0.01 NIGHT for 1
+ShieldedToken", and it shows a real Preview shielded address
+(`mn_shield-addr_preview1…`, the same format as this repo's `moddable-preview`
+wallet). So the game is wired to the **real Preview network** for shielding NIGHT
+into a private ShieldedToken. `NIGHT` and `ShieldedToken` are not in the 941-item
+content dump (handled as a special token layer). No merchant sells NIGHT for
+crystal, so grinding crystal never yields NIGHT; the swap is UX-driven and needs the
+agent's own Preview wallet funded. This is the bridge between the two experiments in
+this repo.
+
+### 8. Agents can transfer crystal but never items (sanctioned fleet, shallow co-op)
+
+The app allows **three agents per account** (a sanctioned fleet, not sybil), and
+`send-crystal` moves crystal between them. There is **no item transfer** — searched
+the content for owner/rent/tax/employ/hire/wage/royalty/dividend/stake/tribute: all
+zero. So a crew can pool money but not goods: no passing a forged tool or cooked meal
+down a line. Cooperation is financial (workers fund the treasury; the treasury buys
+each agent's own gear) plus dividing which leaderboard each chases. True cooperative
+production is not expressible.
+
+### 9. Contracts are bound to skills, not professions (the breadth engine)
+
+A hacker can deliver a fishing contract and earn fishing XP; the `experience`
+leaderboard is the sum of all skill XP. Delivery is the `deliver_contract` action
+(agent must be idle, holding the required items). 200 contracts, mostly XP with tiny
+crystal. This is how an agent trains many skills and how the crew clears far more
+contracts collectively than any one alone.
+
+### 10. Tools are level-gated, auto-apply when held, and wear out
+
+Gathering tools (Volcano shops, Hacker House decoder) give a work-speed/output bonus
+but require a skill level to use: cinder_axe L2, cinder_decoder L21, obsidian_pickaxe
+L31. They are **not equipped** (equip is refused) — holding the item applies it, once
+the level is met. They have a `wearChanceBasisPoints`, confirming the roadmap's "tools
+wear out and use crystals". So the "capital equips labour" play (Floyd funds a worker's
+tool) only unlocks at those levels; it worked end-to-end for FooFoo's cinder_axe at L2.
+
+### 11. The public feed is rich; a per-agent public page exists
+
+`spectator/bootstrap` exposes per agent, with no auth: `vitals` (health), `hunger`,
+`status` + `statusEmoji`, `activeAction` (what they are doing now), `professionRank`,
+`skills`, `inventory`, `completedContractIds`, `load`, `equipment`. Each agent also
+has a public profile at `https://www.midnight.city/agents/<id>` (stats, chat, 2D/3D).
+The live city page (`web/public/city.html`) now surfaces all of this.
+
+### 12. Survival is automated; conversation is not
+
+The control loop self-manages hunger (eat, or buy food; workers keep a 60-crystal
+buffer so they never starve) and health is passive. But it cannot reply to
+conversations — good replies need an LLM per message, which the bash daemon lacks.
+Agents DO receive messages (Gen❌, the richest/most-partnered agent, opened threads
+with all three of ours). Replies are therefore a "controller-with-a-brain" task,
+which is exactly why the crew wants to move to a Cloudflare Worker with Workers AI
+(see CLOUDFLARE-WORKER-PLAN.md).
+
+### 13. Operational: single controller per agent, and it dies on sleep
+
+The control API allows one lease per agent at a time, so two controllers fight.
+The current stop-gap is a detached laptop daemon (`~/.midnight-city/run-crew.sh`),
+which suspends when the Mac sleeps (leases expire, agents idle). `caffeinate` keeps
+it alive; the real fix is the always-on Worker.

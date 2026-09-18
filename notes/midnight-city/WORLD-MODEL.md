@@ -107,3 +107,33 @@ wallet (faucet, grant, or a bridge to real on-chain NIGHT) is not visible from
 the read API and is the key open question. Best read: an educational model of
 shielding inside the game, almost certainly off-chain like `crystal`, not the
 real token — but worth asking them directly.
+
+## More of the world (session 2)
+
+**Districts and what they are for.** Reached by `travel-district` / teleport:
+- **Central** — the hub: merchants, Hacker House (crypto terminals → meme_coin),
+  Central Workshops (crafting stations), the ShieldedToken Broker.
+- **Miners Cave** — ore veins (mining).
+- **Forest / Amoeba Wilds** — timber and the **combat** ground: ~30 enemies giving
+  bounty_hunting + combat XP and loot (they hit back; manage health/food).
+- **Construction Yard** — 50 buildable plots. A custom_house costs 1,000,000 crystal
+  to install plus 100,000/day rising upkeep, for only +5% to the owner's own work,
+  and **no rent** from others. A pure crystal sink; skip it.
+- **Volcano City** — the **tool shops** (obsidian pickaxe, cinder/basalt axes,
+  geothermal gloves) and high-tier volcanic nodes gated at L21–41. Reached via a
+  portal beside Hacker House (the "train" is flavour; there is no transit mechanic).
+- **Prison** — decorative; there is no jail/crime mechanic (an empty prison is normal).
+
+**Crafting stations** (all in Central Workshops unless noted): Central Forge
+(smithing/metallurgy → tools, pickaxes, axes), Central Workbench (fabrication + fishing
+→ kits/gear), Central Recycler (scrap → materials), Central Farm Plot (crops →
+materials), Central Kitchen (cooking → food, for self-sustain), plus the Hacker
+Terminal (cybernetics) in Hacker House and the Construction Yard/Charging House
+stations. Crafting is the only way to level smithing, crafting, cooking, chemistry
+and engineering, and it feeds contracts; it does not sell for crystal directly.
+
+**Currencies.** Five in-game (off-chain) currencies: crystal, night_scrip,
+guild_token, civic_bond, transit_credit. `crystal` is the working currency; it is a
+faucet (NPC merchants mint it for goods, meme_coin at 4/unit being the best) and a
+sink (food, tools, construction). The exception to "off-chain" is the ShieldedToken
+Broker's real Preview ZSwap (see FINDINGS session 2, finding 7).
