@@ -22,7 +22,7 @@ const ROUND_COST = 2;           // inventory + action, per agent
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 const CHECKED_KINDS = new Set(["trade", "crystal_transfer"]); // failures we learn from
 
-export async function runTick(client, state, log) {
+export async function runTick(env, client, state, log) {
   const started = Date.now();
   const toolOffers = await readToolOffers(client, state).catch(() => []);
 
@@ -54,7 +54,7 @@ export async function runTick(client, state, log) {
     }
     if (round === 0) {
       for (const turn of turns) {
-        await safely(log, turn.agent, () => conversationTurn(client, turn.lease, turn.agent, state, log));
+        await safely(log, turn.agent, () => conversationTurn(env, client, turn.lease, turn.agent, state, log));
       }
     }
   }
@@ -66,12 +66,13 @@ async function actRound(client, { agent, lease, progression, needs }, state, too
     mealCost: state.mealCost,
     sendBlocked: (state.noSendUntil[agent.name] ?? 0) > Date.now(),
     treasuryId: TREASURY_ID,
+    round,
     toolOffers,
   });
 
   // Re-sending work while the agent walks to or works a node restarts the job; let it run.
   const active = inventory?.agent?.activeAction;
-  if (decision.action?.kind === "perform_job" && active?.kind === "engage" &&
+  if (["perform_job", "gather"].includes(decision.action?.kind) && active?.kind === "engage" &&
       ["traveling", "active"].includes(active.phase)) {
     log(`r${round} ${agent.name}: BUSY ${active.activity} ${active.phase} | ${decision.status}`);
     return;

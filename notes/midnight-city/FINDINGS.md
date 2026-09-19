@@ -248,3 +248,35 @@ agent its turn, so FooFoo stopped working for several loops. The allowance is no
 shown in `inventory`, `progression` or `needs`. The loop now stops sending for seven
 days after that failure.
 
+### 18. Food is free: fishing needs no rod, and nothing slows hunger
+
+Every level-1 fishing and farming source (Canal Eddy, River Eel Weir, Mycelium Nursery,
+Rooftop Tomato Bed, Violet Herb Plot) shows `failureReason: null` for an agent with no
+tool; rods and kits are bonuses (+10% at cinder tier), not requirements. Measured on 19
+Sep: from beside the spot, one `gather` at Canal Eddy took about 3 seconds and yielded one
+fish, one river eel and one canal carp together (7 of each after 7 gathers); a node
+allows 5 uses before it regenerates, and 32 nodes were available. One fish took hunger
+from 34 to 0, so it restores at least 34 (the content lists 24). At about 100 hunger a
+day, three fish feed an agent, against roughly 115 crystal a day in smoothies. The content
+has no hunger-slowing mechanic at all: the only hunger field is `hungerRestore` on
+consumables, and no food above 38 restore can be cooked below cooking level 11. The crew
+now eats at hunger 35, keeps three fish in stock, and fishes instead of buying.
+
+### 19. Planks and metal bars have no buyer; their value is XP and tools
+
+No merchant buys planks or metal bars. Planks feed tool recipes only (iron pickaxe: 2
+metal bars + 1 plank at smithing 5; cinder axe; fishing rod and farming kit at crafting
+21) plus one-time contracts (1 plank -> 4 crystal + 163 crafting XP). Items cannot move
+between agents (8), so FooFoo's planks cannot reach Tzilo's forge. By the time this was
+found FooFoo held 324 planks, Tzilo 176 metal bars. The crew now stops crafting at 50 of
+either and sells the raw good instead.
+
+### 20. Open contracts arrive without their requirements
+
+`progression.capabilities.contracts` lists open contracts as `{contractId, completed}`
+with no requirements, so a controller cannot tell what to deliver without the content
+dump. Our first decider guessed "the agent's own trade good, same skill", which missed
+Tzilo's smithing contract (1 metal bar) for days while it held 176. The Worker now looks
+requirements up by contract id in the content. Suggested fix: include requirements in the
+progression payload.
+

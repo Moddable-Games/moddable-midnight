@@ -16,7 +16,9 @@ code and the notes below win. Differences found while building:
   skips re-sending work while an agent is walking to or working a node.
 - Free plan: 50 subrequests per invocation and 1,000 KV writes a day. The tick keeps a 45-call budget, reads
   progression and needs once per tick, skips the lease release, and writes KV only when state changes.
-- Replies use the persona templates; Workers AI is not wired in yet.
+- Replies use Workers AI (`@cf/meta/llama-3.1-8b-instruct-fp8`, about 6 Neurons each) with the persona
+  templates as fallback. KV and AI calls are charged against the subrequest budget.
+- Food comes from fishing, not merchants (FINDINGS 18). Pause with `wrangler kv key put paused 1`.
 - Tool-up is automatic: the best tool on sale for the agent's skill and level, better than what it carries.
 
 ## Why a Worker fits

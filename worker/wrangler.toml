@@ -11,6 +11,10 @@ crons = ["* * * * *"]   # one tick per minute (the Cron Trigger floor)
 MCITY_OBSERVER_URL = "https://midnight.city/observer"
 # MCITY_API_TOKEN is a secret: wrangler secret put MCITY_API_TOKEN
 
+# Conversation replies (free tier: 10,000 Neurons a day, ~6 per reply)
+[ai]
+binding = "AI"
+
 [[kv_namespaces]]
 binding = "CREW_STATE"
 id = "08d83e1c43d141478ae644e399cb9065"

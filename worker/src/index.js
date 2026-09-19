@@ -8,7 +8,7 @@ const STATE_KEY = "state";
 
 function emptyState() {
   return {
-    paused: false,         // set true in KV to stop the crew without undeploying
+    paused: false,         // legacy switch; prefer the separate "paused" key
     mealCost: DEFAULT_MEAL_COST,
     noSendUntil: {},       // agent name -> ms; crystal transfers hit a weekly allowance
     backoffUntil: {},      // agent name -> ms; new conversations are rate limited
@@ -29,13 +29,15 @@ async function tick(env) {
   const lines = [];
   const log = (line) => { lines.push(line); console.log(line); };
 
-  if (state.paused) {
+  // Pause without touching state: wrangler kv key put paused 1 (delete the key to resume).
+  if (state.paused || (await env.CREW_STATE.get("paused"))) {
     log("paused");
     return lines;
   }
 
   const client = createClient(env);
-  await runTick(client, state, log);
+  client.charge(3); // the KV reads above and the write below
+  await runTick(env, client, state, log);
 
   // Free KV allows 1,000 writes a day and a tick runs 1,440 times, so write only on change.
   if (JSON.stringify(state) !== before) await env.CREW_STATE.put(STATE_KEY, JSON.stringify(state));

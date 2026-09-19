@@ -1,13 +1,15 @@
 // Conversations: answer every open thread waiting on us, else send one queued late reply.
 // Threads close an hour after the last message (FINDINGS 16), so this runs every tick.
 import { replyFor } from "./templates.js";
+import { aiReply } from "./ai.js";
 
 const MAX_THREAD_REPLIES = 2;   // per agent per tick; the rest wait a minute
 const MAX_OUR_TURNS = 2;        // after this many replies in one thread, sign off
 const BACKOFF_MS = 5 * 60 * 1000;
-const SPEAK_COST = 2;           // one action plus one event check
+const THREAD_REPLY_COST = 2;    // AI call + speak (a failed in-thread reply just retries next tick)
+const QUEUED_REPLY_COST = 2;    // speak + event check (to catch the rate limit)
 
-export async function conversationTurn(client, lease, agent, state, log) {
+export async function conversationTurn(env, client, lease, agent, state, log) {
   const threads = await client.threads(agent.id);
   const signedOff = (state.signedOff[agent.name] ??= []);
 
@@ -18,16 +20,18 @@ export async function conversationTurn(client, lease, agent, state, log) {
 
   // 1) open threads waiting on us
   for (const t of pending.slice(0, MAX_THREAD_REPLIES)) {
-    if (client.remaining() < SPEAK_COST + 6) break; // leave room for the later action rounds
+    if (client.remaining() < THREAD_REPLY_COST + 6) break; // leave room for the later action rounds
     const weStarted = t.initiatorAgentId === agent.id;
     const other = weStarted ? t.recipientAgentId : t.initiatorAgentId;
     const ourTurns = (weStarted ? t.initiatorMessageCount : t.recipientMessageCount) ?? 0;
     const signoff = ourTurns >= MAX_OUR_TURNS;
-    const text = replyFor(agent.name, t.latestMessagePreview, { signoff });
+    client.charge();
+    const ai = await aiReply(env, agent.name, t.latestMessagePreview, { signoff });
+    const text = ai ?? replyFor(agent.name, t.latestMessagePreview, { signoff });
 
-    const failure = await client.actAndCheck(lease, { kind: "speak", targetAgentId: other, text }, 1);
+    const failure = await client.actAndCheck(lease, { kind: "speak", targetAgentId: other, text }, 0);
     if (!failure && signoff) signedOff.push(t.threadId);
-    log(`${agent.name}: REPLY ${signoff ? "signoff" : "thread"} ${other.slice(-10)} ${failure ?? "sent"}`);
+    log(`${agent.name}: REPLY ${signoff ? "signoff" : "thread"} ${other.slice(-10)} ${ai ? "ai" : "template"}: ${text.slice(0, 90)}`);
   }
   if (signedOff.length > 300) signedOff.splice(0, signedOff.length - 300);
 
@@ -35,7 +39,7 @@ export async function conversationTurn(client, lease, agent, state, log) {
   const queue = state.queue[agent.name] ?? [];
   const backoff = state.backoffUntil[agent.name] ?? 0;
   if (pending.length || !queue.length || Date.now() < backoff) return;
-  if (client.remaining() < SPEAK_COST + 6) return;
+  if (client.remaining() < QUEUED_REPLY_COST + 6) return;
 
   const item = queue[0];
   const failure = await client.actAndCheck(lease, { kind: "speak", targetAgentId: item.target, text: item.text }, 1);

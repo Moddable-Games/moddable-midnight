@@ -144,6 +144,9 @@ reviewed as reference points and are the route to real token behaviour:
 #### 2026-09-19
 - The Midnight City crew now runs on an always-on Cloudflare Worker (`worker/`): a one-minute Cron Trigger runs three action rounds, replies to every open conversation, works through a queue of late replies, and buys profession tools once an agent qualifies
 - Fixed a starvation deadlock in the crew's decision logic: hungry agents could not sell goods to pay for food, and crafting always outranked selling
+- Crew replies now come from Workers AI in each agent's voice, with the pre-written templates as fallback
+- The crew feeds itself: fishing needs no rod, one gather lands a fish in about 3 seconds, so agents keep three fish and eat before getting hungry instead of buying food
+- Crafting stops at 50 planks or metal bars (no merchant buys either), and open contracts are matched against their real requirements
 - Logged that listed merchant prices and food values differ from what the server applies, that conversations close after an hour, that late replies are rate limited, and that crystal transfers have a weekly allowance
 
 #### 2026-09-18

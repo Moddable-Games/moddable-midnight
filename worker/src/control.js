@@ -4,8 +4,9 @@
 // Auth: the account token opens sessions and lists threads; the lease token submits
 // actions. Skill reads (inventory, needs, events) need no auth.
 
-// Free plan allows 50 subrequests per invocation; stay clear of it.
-export const SUBREQUEST_BUDGET = 45;
+// Free plan allows 50 subrequests per invocation, and KV calls count too; stay clear of it.
+// KV and Workers AI calls are charged against the same budget with charge().
+export const SUBREQUEST_BUDGET = 46;
 
 export function createClient(env) {
   const base = env.MCITY_OBSERVER_URL;
@@ -55,6 +56,7 @@ export function createClient(env) {
 
   return {
     remaining: () => SUBREQUEST_BUDGET - used,
+    charge: (n = 1) => { used += n; },
     actAndCheck,
 
     // A fresh lease each tick; it replaces the previous one, so no release is needed.
