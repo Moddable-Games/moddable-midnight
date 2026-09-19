@@ -1,0 +1,19 @@
+# Midnight City crew: deploy with an absolute --config path, e.g.
+#   wrangler deploy --config /Applications/MAMP/htdocs/personal/moddable-midnight/worker/wrangler.toml
+name = "midnight-city-crew"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[triggers]
+crons = ["* * * * *"]   # one tick per minute (the Cron Trigger floor)
+
+[vars]
+MCITY_OBSERVER_URL = "https://midnight.city/observer"
+# MCITY_API_TOKEN is a secret: wrangler secret put MCITY_API_TOKEN
+
+[[kv_namespaces]]
+binding = "CREW_STATE"
+id = "08d83e1c43d141478ae644e399cb9065"
+
+[observability]
+enabled = true

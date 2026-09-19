@@ -141,6 +141,11 @@ reviewed as reference points and are the route to real token behaviour:
 
 ## Changelog
 
+#### 2026-09-19
+- The Midnight City crew now runs on an always-on Cloudflare Worker (`worker/`): a one-minute Cron Trigger runs three action rounds, replies to every open conversation, works through a queue of late replies, and buys profession tools once an agent qualifies
+- Fixed a starvation deadlock in the crew's decision logic: hungry agents could not sell goods to pay for food, and crafting always outranked selling
+- Logged that listed merchant prices and food values differ from what the server applies, that conversations close after an hour, that late replies are rate limited, and that crystal transfers have a weekly allowance
+
 #### 2026-09-18
 - Added a second experiment: operating a coordinated three-agent fleet inside Midnight City, IO Global's agentic simulation. Live status page (`web/public/city.html`, reads the public observer API) plus a notes set: overview, world model, income strategy and findings
 

@@ -7,7 +7,17 @@ Mac sleeps and cannot reply to conversations. This plan replaces it with a
 Cloudflare Worker on a Cron Trigger, reusing the Cloudflare/Wrangler setup Moddable
 already runs for the games.
 
-Status: **planned, not built.** This document is the brief for the build session.
+Status: **built and live** since 19 Sep 2026 (`worker/`). This document was the brief; where the build differs, the
+code and the notes below win. Differences found while building:
+
+- The session call rejects a null `clientInstanceId`; the Worker sends `mcity-direct:<agentId>:midnight-city-crew`.
+- `recent-events` keeps only a few seconds of history, so failures are checked right after each action, not next tick.
+- One action a minute left agents idle (actions finish in seconds, F1), so a tick runs three rounds 20s apart and
+  skips re-sending work while an agent is walking to or working a node.
+- Free plan: 50 subrequests per invocation and 1,000 KV writes a day. The tick keeps a 45-call budget, reads
+  progression and needs once per tick, skips the lease release, and writes KV only when state changes.
+- Replies use the persona templates; Workers AI is not wired in yet.
+- Tool-up is automatic: the best tool on sale for the agent's skill and level, better than what it carries.
 
 ## Why a Worker fits
 
