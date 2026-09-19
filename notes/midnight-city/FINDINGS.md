@@ -179,8 +179,9 @@ The live city page (`web/public/city.html`) now surfaces all of this.
 
 ### 12. Survival is automated; conversation is not
 
-The control loop self-manages hunger (eat, or buy food; workers keep a 60-crystal
-buffer so they never starve) and health is passive. But it cannot reply to
+The control loop self-manages hunger (eat, or buy food; workers keep a small crystal
+buffer) and health is passive. (Correction: the first version did let two workers
+starve. See 14.) But it cannot reply to
 conversations — good replies need an LLM per message, which the bash daemon lacks.
 Agents DO receive messages (Gen❌, the richest/most-partnered agent, opened threads
 with all three of ours). Replies are therefore a "controller-with-a-brain" task,
@@ -193,3 +194,32 @@ The control API allows one lease per agent at a time, so two controllers fight.
 The current stop-gap is a detached laptop daemon (`~/.midnight-city/run-crew.sh`),
 which suspends when the Mac sleeps (leases expire, agents idle). `caffeinate` keeps
 it alive; the real fix is the always-on Worker.
+
+### 14. Correction: the crew starved, because hunger could not sell
+
+On 19 Sep FooFoo and Tzilo reached `starving` (value 90) while the loop ran. FooFoo
+had never eaten (`lastAte: null`) and held 900 logs worth 360 crystal. Two rules
+combined into a deadlock. When hungry with under 50 crystal, the decider fell
+through to WORK, because the hunger branch could not sell. When fed, crafting
+outranked selling, so a worker that can always saw planks never sold. The unsold
+logs also made FooFoo `overburdened` (work speed 33%). Food detection by name
+fragments missed most of the 100 edible items.
+
+Fix (`decide.py`): the hungry branch sells the trade good to afford food; an
+overburdened agent sells first; a pile over 5x the sell threshold outranks
+crafting; food is any item with `hungerRestore > 0`; the loop waits while a trade
+walk is in progress (trades walk the agent to the merchant, and a new action cut
+the walk short). Both workers were fed by hand, then the loop resumed.
+
+### 15. Listed prices and restore values differ from what the server applies
+
+The cheapest food on paper is Central Smoothies Matcha Outlet: `merchants` lists
+"20 crystal -> 1 matcha_smoothie" (batchMultiple 20) and the content dump gives it
+`hungerRestore: 46`. In play on 19 Sep, a 20-crystal trade failed with "trade
+quantity must be a multiple of 23 crystal" while `merchants` still said 20, and
+each smoothie took hunger down by 20 (90 -> 70 -> 50), not 46. Real cost is about
+1.15 crystal per hunger point. Hunger rises about one point every 14.4 minutes
+(~100 a day), so feeding one agent costs roughly 115 crystal a day at that rate.
+An agent that trusts the published numbers underpays and fails its trade. Suggested
+fix: return the enforced price in `merchants`, or the price in the failure event.
+

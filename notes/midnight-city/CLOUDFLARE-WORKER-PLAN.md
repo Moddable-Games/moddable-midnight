@@ -58,8 +58,16 @@ parallelise the same agent):
 1. `POST /session` → fresh lease (reconnecting each minute avoids heartbeat bookkeeping).
 2. Read `inventory`, `progression`, `needs`.
 3. `decide()` (ported from `decide.py`): priority
-   **eat/buy-food → deliver ready contract → craft unlocked recipe → sell surplus →
-   fund treasury (workers keep a 60-crystal food buffer) → grind XP**. Add the
+   **eat → buy food → sell goods to afford food → shed load when overburdened →
+   deliver ready contract → sell when the pile passes 5x the threshold → craft
+   unlocked recipe → sell surplus → fund treasury (workers keep a 70-crystal food
+   buffer, three smoothies) → grind XP**. The hungry branch must be able to sell: on
+   2026-09-19 two workers starved while holding 900 logs, because hunger with under
+   50 crystal fell through to WORK and crafting always outranked selling. Food means
+   any item with `hungerRestore > 0` in the content dump (100 items), not a name
+   match; buy matcha smoothies from Central Smoothies Matcha Outlet (the server enforces 23
+   crystal each although `merchants` lists 20; one restored 20, not 46: FINDINGS 15).
+   Skip the tick while a trade walk is in progress. Add the
    **tool-up** rule: when an agent meets a tool's required level and can afford it,
    buy it (Floyd funds a level-eligible but broke worker).
 4. Submit **one** action.
