@@ -15,6 +15,7 @@ function emptyState() {
     queue: {},             // agent name -> [{ target, text }] late replies still to send
     signedOff: {},         // agent name -> thread ids we have closed politely
     priceOverride: {},     // merchant name -> price the server enforced over the listing
+    fundRequests: {},      // worker id -> crystal short for a tool on sale; the treasury pays
   };
 }
 

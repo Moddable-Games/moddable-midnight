@@ -280,3 +280,21 @@ Tzilo's smithing contract (1 metal bar) for days while it held 176. The Worker n
 requirements up by contract id in the content. Suggested fix: include requirements in the
 progression payload.
 
+### 21. Specialists cannot trade: no item route and no market for inputs
+
+We wanted one agent on wood and one on ore, trading planks for metal bars. Checked on 19
+Sep: the action set (gather, craft, trade with a merchant, eat, equip, use_item, attack,
+speak, crystal_transfer, events) has no give, drop, pickup or player-to-player trade; the
+content has no market, escrow or shared storage; and no merchant sells ore, logs, bars or
+planks for crystal (they only buy ore and logs). Crystal is the only thing that moves
+between agents, it is capped weekly (17), and it cannot buy the inputs. So specialisation
+buys nothing for tools. It also does not need to: every tool recipe takes a single plank,
+so a miner getting its own plank is one log and one saw.
+
+What the crew does instead: tools a merchant sells are bought (a worker short of crystal
+asks the treasury, which pays exactly the shortfall); tools nobody sells are self-supplied
+by a planner that walks the recipe chain and makes only what is missing, training the
+crafting skill on the way (Tzilo smelts to reach smithing 5 for the iron pickaxe). Nothing
+else is crafted, so no surplus accumulates. Suggested fix for the game: a give action
+between agents of one account, or merchants that sell processed materials.
+

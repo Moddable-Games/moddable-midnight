@@ -1,11 +1,14 @@
 // One agent's next action, ported from notes/midnight-city/decide.py.
 // Priority: 0) do not interrupt a trade walk  1) stay fed: eat early, fish when out of food,
-// buy food only as a fallback  1a) keep a small fish stock  1b) buy the best profession tool the agent qualifies for  2) shed load when overburdened
-// 3) deliver a ready contract  4) sell a big pile  5) craft  6) sell surplus
-// 7) workers fund Floyd, keeping a food buffer  8) work.
+// buy food only as a fallback  1a) keep a small fish stock  1b) buy the best tool on sale
+// 1c) Floyd funds a worker's tool  2) shed load when overburdened  3) deliver a ready contract
+// 4) sell a big pile  5) self-supply a tool nobody sells (gather, craft, train)  5b) cook
+// 6) sell surplus  7) workers fund Floyd, keeping a food buffer  8) work.
+// Nothing is crafted except for a tool plan, a contract or food, so no surplus builds up.
 import { FOOD_IDS } from "./food-ids.js";
 import { TOOLS } from "./tools.js";
 import { CONTRACT_REQUIREMENTS } from "./contracts.js";
+import { toolToCraft, nextStep, trainStep, toolSkills, heldBonus } from "./planner.js";
 
 // Cheapest food per hunger point. The server enforced 23 crystal per smoothie while
 // `merchants` listed 20 (FINDINGS 15); the tick updates this from failure events.
@@ -19,15 +22,12 @@ const FISHING_SOURCE = "canal_eddy";
 const EAT_AT = 35;      // eat before "hungry"; a fish covers at least this much
 const FOOD_STOCK = 3;   // about a day of fish at ~100 hunger a day
 
-// Crafted goods with no merchant buyer: stop crafting once this much is stockpiled.
-// Planks feed tool recipes (one each) and a one-time contract; metal bars likewise.
-const CRAFT_STOCK_CAP = { saw_planks: ["plank", 50], smelt_metal_bar: ["metal_bar", 50] };
-
 const count = (inv, id) => Number(inv?.[id] ?? 0) || 0;
 const hasAll = (inv, reqs) => (reqs ?? []).every((r) => count(inv, r.itemId) >= Number(r.quantity ?? 1));
 
 // agent: roster entry. docs: { inventory, progression, needs } responses.
-// opts: { mealCost, sendBlocked, treasuryId, round, toolOffers: [{ itemId, merchantName, price }] }
+// opts: { mealCost, sendBlocked, treasuryId, round, toolOffers: [{ itemId, merchantName, price }],
+//         fundRequests: { workerId: crystal } (treasury only) }
 export function decide(agent, docs, opts) {
   const invDoc = docs.inventory ?? {};
   const inv = invDoc.inventory ?? {};
@@ -84,59 +84,83 @@ export function decide(agent, docs, opts) {
   // 1a) keep a small fish stock so nobody ever needs to buy food
   if (foodStock < FOOD_STOCK && fishingNodes.length) return fish();
 
-  // 1b) tool up: best tool on sale for our skill, at or below our level, better than what
-  // we carry, affordable while keeping one meal. Never buys a second of the same tool.
-  const tool = bestToolToBuy(agent, inv, Number(skill.level ?? 0), crystal - mealCost, opts.toolOffers ?? []);
-  if (tool) {
-    return result(`BUYTOOL ${tool.itemId} ${tool.price}`, {
-      kind: "trade", merchantName: tool.merchantName, itemId: "crystal", quantity: tool.price,
+  // 1b) buy the best tool on sale for a useful skill; if we cannot afford it, ask the treasury
+  const skills = docs.progression?.skills ?? {};
+  const wanted = bestToolOnSale(agent, inv, skills, opts.toolOffers ?? []);
+  const spendable = crystal - mealCost;
+  const fundRequest = wanted && wanted.price > spendable ? wanted.price - spendable : 0;
+  const withFund = (r) => ({ ...r, fundRequest });
+  if (wanted && !fundRequest) {
+    return result(`BUYTOOL ${wanted.itemId} ${wanted.price}`, {
+      kind: "trade", merchantName: wanted.merchantName, itemId: "crystal", quantity: wanted.price,
     });
   }
 
+  // 1c) the treasury covers a worker's shortfall for a tool on sale, keeping its own buffer
+  if (agent.isTreasury && !opts.sendBlocked) {
+    for (const [workerId, amount] of Object.entries(opts.fundRequests ?? {})) {
+      if (crystal - mealCost * FOOD_BUFFER_MEALS >= amount) {
+        return result(`FUND ${workerId.slice(-6)} ${amount}`, { kind: "crystal_transfer", recipientAgentId: workerId, quantity: amount });
+      }
+    }
+  }
+
   // 2) overburdened agents work at a fraction of speed
-  if (loadState === "overburdened" && sellable > 0) return sell();
+  if (loadState === "overburdened" && sellable > 0) return withFund(sell());
 
   // 3) deliver a ready, uncompleted contract
   for (const c of contracts) {
     if (c.completed) continue;
     const reqs = c.requirements ?? CONTRACT_REQUIREMENTS[c.contractId];
-    if (reqs && hasAll(inv, reqs)) return result(`DELIVER ${c.contractId}`, { kind: "deliver_contract", contractId: c.contractId });
+    if (reqs && hasAll(inv, reqs)) return withFund(result(`DELIVER ${c.contractId}`, { kind: "deliver_contract", contractId: c.contractId }));
   }
 
   // 4) crafting must not starve selling: sell first once the pile passes 5x the threshold
-  if (goods >= agent.sellAt * 5 && sellable > 0) return sell();
+  if (goods >= agent.sellAt * 5 && sellable > 0) return withFund(sell());
 
-  // 5) craft an unlocked recipe whose inputs we hold
+  // 5) self-supply a tool nobody sells: next gather or craft step, or train its crafting skill
+  const soldIds = new Set((opts.toolOffers ?? []).map((o) => o.itemId));
+  const toolId = toolToCraft(agent, inv, skills, soldIds);
+  if (toolId) {
+    const ctx = { inv, skills, nodes: nodesBySource(caps), round: opts.round };
+    const step = nextStep(toolId, 1, ctx, 0, [toolId]);
+    const plan = step.act ?? (step.blocked ? trainStep(toolId, step.blocked, ctx) : null);
+    if (plan) return withFund(result(plan.label, plan.action));
+  }
+
+  // 5b) cook when a cooking recipe is ready: same hunger, and cooking XP leads to better food
   for (const r of recipes) {
-    const id = r.inputs?.length
-      ? (hasAll(inv, r.inputs) ? r.id : null)
-      : (Number(r.craftableBatches ?? 0) > 0 ? (r.recipeId ?? r.id) : null);
-    const [capItem, capQty] = CRAFT_STOCK_CAP[id] ?? [];
-    if (id && !(capItem && count(inv, capItem) >= capQty)) {
-      return result(`CRAFT ${id}`, { kind: "craft", recipeId: id, batches: 1 });
+    const id = r.recipeId ?? r.id;
+    if (r.skill === "cooking" && Number(r.craftableBatches ?? 0) > 0) {
+      return withFund(result(`COOK ${id}`, { kind: "craft", recipeId: id, batches: 1 }));
     }
   }
 
   // 6) sell surplus
-  if (goods >= agent.sellAt && sellable > 0) return sell();
+  if (goods >= agent.sellAt && sellable > 0) return withFund(sell());
 
   // 7) workers fund the treasury, keeping a food buffer (sends have a weekly allowance)
   const buffer = mealCost * FOOD_BUFFER_MEALS;
-  if (!agent.isTreasury && crystal > buffer && !opts.sendBlocked) {
+  if (!agent.isTreasury && crystal > buffer && !opts.sendBlocked && !fundRequest) {
     const quantity = crystal - buffer;
     return result(`SEND ${quantity}`, { kind: "crystal_transfer", recipientAgentId: opts.treasuryId, quantity });
   }
 
-  return work();
+  return withFund(work());
 }
 
-function bestToolToBuy(agent, inv, level, spendable, offers) {
-  const held = Object.keys(inv).filter((id) => TOOLS[id]?.skill === agent.skill && count(inv, id) > 0);
-  const heldBonus = Math.max(0, ...held.map((id) => TOOLS[id].bonus));
+const nodesBySource = (caps) => Object.fromEntries((caps.sources ?? [])
+  .filter((src) => !src.failureReason)
+  .map((src) => [src.sourceId, src.availableNodeIds ?? []]));
+
+// The best tool on sale in a useful skill that the agent can use now and does not already
+// beat, regardless of price (the caller decides between buying and asking for funds).
+function bestToolOnSale(agent, inv, skills, offers) {
+  const level = (skill) => Number(skills?.[skill]?.level ?? 0);
   return offers
     .filter((o) => {
       const t = TOOLS[o.itemId];
-      return t && t.skill === agent.skill && t.level <= level && t.bonus > heldBonus && o.price <= spendable;
+      return t && toolSkills(agent).includes(t.skill) && t.level <= level(t.skill) && t.bonus > heldBonus(inv, t.skill);
     })
     .sort((a, b) => TOOLS[b.itemId].bonus - TOOLS[a.itemId].bonus)[0] ?? null;
 }

@@ -68,7 +68,15 @@ async function actRound(client, { agent, lease, progression, needs }, state, too
     treasuryId: TREASURY_ID,
     round,
     toolOffers,
+    fundRequests: agent.isTreasury ? (state.fundRequests ?? {}) : undefined,
   });
+
+  // Workers post their shortfall for a tool on sale; the treasury pays it on its turn.
+  state.fundRequests ??= {};
+  if (!agent.isTreasury) {
+    if (decision.fundRequest > 0) state.fundRequests[agent.id] = decision.fundRequest;
+    else delete state.fundRequests[agent.id];
+  }
 
   // Re-sending work while the agent walks to or works a node restarts the job; let it run.
   const active = inventory?.agent?.activeAction;
@@ -85,6 +93,8 @@ async function actRound(client, { agent, lease, progression, needs }, state, too
     if (failure) {
       outcome = ` -> failed: ${failure}`;
       learnFromFailure(agent, decision.action, failure, state);
+    } else if (agent.isTreasury && decision.action.kind === "crystal_transfer") {
+      delete state.fundRequests[decision.action.recipientAgentId];
     }
   }
   log(`r${round} ${agent.name}: ${decision.label}${outcome} | ${decision.status}`);
