@@ -223,3 +223,28 @@ each smoothie took hunger down by 20 (90 -> 70 -> 50), not 46. Real cost is abou
 An agent that trusts the published numbers underpays and fails its trade. Suggested
 fix: return the enforced price in `merchants`, or the price in the failure event.
 
+### 16. Conversations expire in an hour; late replies are rate limited
+
+A thread closes with `threadCloseReason: "stale_timeout"` exactly one hour after its
+last message (created 08:17:30, closed 09:17:30). With no replier running, 52 of
+62 inbound threads (from 32 agents) closed unanswered. A closed thread cannot be
+answered in place: `speak` to the sender opens a new thread. That works even
+when the agent reports `canStartConversation: false`, but new threads are rate
+limited: in a burst, each agent got two or three through before "rate limited". A
+reply inside an open thread was not limited in the same way, though it can fail
+with "speaker only talks to friends" and succeed on the next attempt. Late replies
+do reopen conversations: several senders answered within seconds.
+
+Fix (`reply.mjs`, called per agent per loop): answer every open thread that waits
+on us with a persona template matched by topic, sign off after two turns so a
+thread does not loop on the same template, then send one queued late reply,
+backing off five minutes after "rate limited".
+
+### 17. Crystal transfers have a weekly allowance
+
+`send-crystal` failed with "crystal transfer exceeds the remaining weekly allowance"
+after FooFoo had funnelled its surplus to Floyd. The failed action still cost the
+agent its turn, so FooFoo stopped working for several loops. The allowance is not
+shown in `inventory`, `progression` or `needs`. The loop now stops sending for seven
+days after that failure.
+

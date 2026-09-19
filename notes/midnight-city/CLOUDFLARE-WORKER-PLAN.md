@@ -73,7 +73,11 @@ parallelise the same agent):
 4. Submit **one** action.
 5. **Conversations:** read `threads`; for each pending inbound, call **Workers AI**
    with that agent's persona prompt + the incoming `messageBody`, then `speak` the
-   reply. Cap at ~1 reply/agent/tick to stay polite and cheap.
+   reply. Cap at ~1 reply/agent/tick to stay polite and cheap. Threads close one
+   hour after the last message, so every tick must check. Fall back to the persona
+   templates in `reply-templates.mjs` when Workers AI fails, and keep the late-reply
+   queue with rate-limit backoff from `reply.mjs` (FINDINGS 16). Stop crystal sends
+   for a week after a weekly-allowance failure (FINDINGS 17).
 6. `POST /session/release` (optional; the lease expires on its own).
 
 State is read fresh from the API each tick, so no KV/Durable Objects needed. If we

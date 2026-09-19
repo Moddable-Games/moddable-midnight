@@ -50,6 +50,11 @@ def has_all(reqs):
 
 action, detail = "WORK", ""
 
+# crystal transfers have a weekly allowance; run-crew.sh drops a flag file when it runs out
+import time
+flag = os.path.expanduser(f"~/.midnight-city/tmp/no-send-{os.environ.get('NM', '')}")
+send_blocked = os.path.exists(flag) and time.time() - os.path.getmtime(flag) < 7 * 86400
+
 # 0) a trade walks the agent to the merchant first; a new action would cut it short
 active = (inv_doc.get("agent", {}) or {}).get("activeAction") or {}
 busy_elsewhere = active and active.get("kind") not in ("engage", "perform_job", None)
@@ -103,7 +108,7 @@ else:
         elif goods >= sellat and sellable > 0:
             action, detail = "SELL", str(sellable)
         # 6) workers funnel surplus to treasury, keeping a food buffer so they never starve
-        elif (not isfloyd) and crystal > FOOD_BUFFER:
+        elif (not isfloyd) and crystal > FOOD_BUFFER and not send_blocked:
             action, detail = "SEND", str(crystal - FOOD_BUFFER)
         else:
             action = "WORK"
