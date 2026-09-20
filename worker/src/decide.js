@@ -32,7 +32,8 @@ const hasAll = (inv, reqs) => (reqs ?? []).every((r) => count(inv, r.itemId) >= 
 // agent: roster entry. docs: { inventory, progression, needs } responses.
 // opts: { mealCost, sendBlocked, treasuryId, round, toolOffers: [{ itemId, merchantName, price }],
 //         fundRequests: { workerId: crystal } (treasury only), inedible: [itemId],
-//         movedFor: contractId we have already travelled to, delivered: [contractId] }
+//         movedFor: contractId we have already travelled to, delivered: [contractId],
+//         skipContracts: { contractId: until } goals that stopped making progress }
 export function decide(agent, docs, opts) {
   const invDoc = docs.inventory ?? {};
   const inv = invDoc.inventory ?? {};
@@ -136,7 +137,7 @@ export function decide(agent, docs, opts) {
   if (goods >= agent.sellAt * 5 && sellable > 0) return withFund(sell());
 
   // 5) a contract step and a tool step, alternating by round so neither starves the other
-  const ctx = { inv, skills, nodes: nodesBySource(caps), round: opts.round, foodFloor: FOOD_STOCK };
+  const ctx = { inv, skills, nodes: nodesBySource(caps), round: opts.round, foodFloor: FOOD_STOCK, skip: opts.skipContracts ?? {} };
   const toolPlan = () => {
     const soldIds = new Set((opts.toolOffers ?? []).map((o) => o.itemId));
     const toolId = toolToCraft(agent, inv, skills, soldIds);
@@ -148,7 +149,7 @@ export function decide(agent, docs, opts) {
   const order = (opts.round ?? 1) % 3 === 0 ? [toolPlan, contractPlan] : [contractPlan, toolPlan];
   for (const plan of order) {
     const chosen = plan();
-    if (chosen) return withFund(result(chosen.label, chosen.action));
+    if (chosen) return withFund({ ...result(chosen.label, chosen.action), goal: chosen.goal });
   }
 
   // 6) sell surplus

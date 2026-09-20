@@ -21,6 +21,9 @@ const ROUNDS = 3;
 const ROUND_GAP_MS = 20_000;
 const ROUND_COST = 2;           // inventory + action, per agent
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const GOAL_TRIES = 12;          // give up on a contract goal that stops making progress
+const SKIP_MS = 6 * 60 * 60 * 1000;
+
 const CHECKED_KINDS = new Set(["trade", "crystal_transfer", "eat", "deliver_contract"]); // failures we learn from
 
 export async function runTick(env, client, state, log) {
@@ -73,6 +76,7 @@ async function actRound(client, { agent, lease, progression, needs }, state, too
     inedible: state.inedible ?? [],
     movedFor: (state.movedFor ?? {})[agent.name],
     delivered: (state.delivered ?? {})[agent.name] ?? [],
+    skipContracts: (state.skipContracts ?? {})[agent.name] ?? {},
   });
 
   // Workers post their shortfall for a tool on sale; the treasury pays it on its turn.
@@ -88,6 +92,21 @@ async function actRound(client, { agent, lease, progression, needs }, state, too
       ["traveling", "active"].includes(active.phase)) {
     log(`r${round} ${agent.name}: BUSY ${active.activity} ${active.phase} | ${decision.status}`);
     return;
+  }
+
+  // A goal that repeats without the item ever arriving is unreachable in practice (content
+  // and server disagree on some node yields), so drop it for a while and move on.
+  state.goalTries ??= {};
+  if (decision.goal) {
+    const tries = state.goalTries[agent.name]?.goal === decision.goal
+      ? state.goalTries[agent.name].tries + 1 : 1;
+    state.goalTries[agent.name] = { goal: decision.goal, tries };
+    if (tries > GOAL_TRIES) {
+      state.skipContracts ??= {};
+      (state.skipContracts[agent.name] ??= {})[decision.goal] = Date.now() + SKIP_MS;
+      delete state.goalTries[agent.name];
+      log(`${agent.name}: giving up on ${decision.goal} for now`);
+    }
   }
 
   // Remember which contract we travelled for, so the next round delivers instead of moving.

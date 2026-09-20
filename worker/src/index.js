@@ -19,6 +19,8 @@ function emptyState() {
     inedible: ["cooked_fish"], // items the game refuses to eat despite listing them as food
     movedFor: {},          // agent name -> contract whose area it has travelled to
     delivered: {},         // agent name -> contracts we delivered (progression lags a tick)
+    skipContracts: {},     // agent name -> { contractId: until } goals that made no progress
+    goalTries: {},         // agent name -> { goal, tries } progress counter for the current goal
   };
 }
 

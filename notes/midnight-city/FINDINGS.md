@@ -338,3 +338,18 @@ is read once per tick, so a contract completed in round 1 still looked outstandi
 rounds 2 and 3 and was delivered again. Suggested fix for the game: include the contract
 area in the progression payload, or have the delivery route the agent like a trade does.
 
+### 24. A node's live yield can differ from the content, and a goal loop has to notice
+
+The content says `transit_scrap_heap` (scavenging 1) outputs `scrap_steel` and nothing
+else, and `progression.capabilities.sources` offers eleven `salvage-pile-*` nodes for it
+with `failureReason: null`. Gathering those nodes produced `ceramic_fragment` instead: on
+20 Sep the three agents held 468, 809 and 821 ceramic fragments and zero scrap steel. The
+gathers succeed, so nothing fails and nothing warns; the planner simply asked for the same
+item forever and all three agents did nothing else for hours.
+
+Fix here: a goal must make progress. The loop counts attempts per contract goal and, after
+twelve rounds without the item arriving, parks that contract for six hours and moves to
+the next one. The same guard would catch any other content/server drift in yields.
+Suggested fix for the game: make `sources[].outputs` match what the node actually drops,
+or return the node's real output table in the progression payload.
+

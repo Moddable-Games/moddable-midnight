@@ -143,6 +143,7 @@ reviewed as reference points and are the route to real token behaviour:
 
 #### 2026-09-20
 - Contracts are now a goal rather than an accident: the crew works towards the most valuable contract it can reach, and never hands over food it still needs
+- Contract goals are abandoned after twelve fruitless rounds: one node's live yield does not match the content, which had the whole crew gathering the wrong item indefinitely
 - Contract deliveries now travel to the contract's area first; the loop had been re-issuing a delivery the game refused every round, leaving all three agents idle
 - Stopped cooking: cooked fish cannot be eaten although the game lists it as food, which had left all three agents starving for about a day; a refused meal now marks that item inedible for good
 

@@ -37,17 +37,19 @@ function sparesFood(inv, reqs, foodFloor) {
 // Otherwise the next gather or craft step towards the most valuable reachable contract.
 // ctx: { inv, skills, nodes, round } as used by the planner.
 export function pursue(ctx, completed) {
+  const skip = ctx.skip ?? {};
   let checked = 0;
   for (const [id, contract] of candidates(ctx.skills, completed)) {
     if (checked >= MAX_CANDIDATES) break;
     if (holdsAll(ctx.inv, contract.requirements)) continue;
+    if ((skip[id] ?? 0) > Date.now()) continue; // goal that stopped making progress
     if (!sparesFood(ctx.inv, contract.requirements, ctx.foodFloor ?? 0)) continue;
     checked += 1;
     for (const req of contract.requirements) {
       if (count(ctx.inv, req.itemId) >= req.quantity) continue;
       const step = nextStep(req.itemId, req.quantity, ctx, 0, [id]);
       // Skip contracts we cannot reach (no node for the item, or a recipe level we lack).
-      if (step.act) return { label: `CONTRACT ${id.slice(0, 34)}: ${step.act.label}`, action: step.act.action };
+      if (step.act) return { goal: id, label: `CONTRACT ${id.slice(0, 34)}: ${step.act.label}`, action: step.act.action };
       break;
     }
   }
