@@ -17,6 +17,8 @@ function emptyState() {
     priceOverride: {},     // merchant name -> price the server enforced over the listing
     fundRequests: {},      // worker id -> crystal short for a tool on sale; the treasury pays
     inedible: ["cooked_fish"], // items the game refuses to eat despite listing them as food
+    movedFor: {},          // agent name -> contract whose area it has travelled to
+    delivered: {},         // agent name -> contracts we delivered (progression lags a tick)
   };
 }
 

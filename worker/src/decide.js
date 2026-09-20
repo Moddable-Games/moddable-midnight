@@ -10,6 +10,7 @@ import { FOOD_IDS } from "./food-ids.js";
 import { TOOLS } from "./tools.js";
 import { toolToCraft, nextStep, trainStep, toolSkills, heldBonus } from "./planner.js";
 import { deliverable, pursue } from "./contract-plan.js";
+import { CONTRACTS } from "./contracts.js";
 
 // Cheapest food per hunger point. The server enforced 23 crystal per smoothie while
 // `merchants` listed 20 (FINDINGS 15); the tick updates this from failure events.
@@ -30,7 +31,8 @@ const hasAll = (inv, reqs) => (reqs ?? []).every((r) => count(inv, r.itemId) >= 
 
 // agent: roster entry. docs: { inventory, progression, needs } responses.
 // opts: { mealCost, sendBlocked, treasuryId, round, toolOffers: [{ itemId, merchantName, price }],
-//         fundRequests: { workerId: crystal } (treasury only), inedible: [itemId] }
+//         fundRequests: { workerId: crystal } (treasury only), inedible: [itemId],
+//         movedFor: contractId we have already travelled to, delivered: [contractId] }
 export function decide(agent, docs, opts) {
   const invDoc = docs.inventory ?? {};
   const inv = invDoc.inventory ?? {};
@@ -113,9 +115,22 @@ export function decide(agent, docs, opts) {
   if (loadState === "overburdened" && sellable > 0) return withFund(sell());
 
   // 3) deliver a contract whose goods we hold (the API only lists it once we do)
-  const completed = docs.progression?.completedContractIds ?? [];
+  // Progression is read once per tick, so a contract delivered this tick would still look
+  // outstanding to the later rounds; our own record of deliveries covers the gap.
+  const completed = [...(docs.progression?.completedContractIds ?? []), ...(opts.delivered ?? [])];
+  // deliver_contract does not walk the agent to the contract area (FINDINGS 23), so move
+  // first, then deliver on a later round once we are standing there.
   const ready = deliverable(inv, skills, completed, FOOD_STOCK);
-  if (ready) return withFund(result(`DELIVER ${ready}`, { kind: "deliver_contract", contractId: ready }));
+  if (ready) {
+    if (opts.movedFor === ready) {
+      return withFund(result(`DELIVER ${ready}`, { kind: "deliver_contract", contractId: ready }));
+    }
+    const area = CONTRACTS[ready].area;
+    return withFund({
+      ...result(`GOTO ${area} for ${ready.slice(0, 30)}`, { kind: "move_to", destination: { areaId: area } }),
+      movingFor: ready,
+    });
+  }
 
   // 4) crafting must not starve selling: sell first once the pile passes 5x the threshold
   if (goods >= agent.sellAt * 5 && sellable > 0) return withFund(sell());

@@ -322,3 +322,19 @@ counted, record those item ids as inedible and fish instead. Suggested fix for t
 game: make cooked food edible, or drop it from `consumableItemIds` and give `eat` a
 reason that names the item.
 
+### 23. deliver_contract does not travel, and a silent failure stalls the whole loop
+
+Trades and gathers route the agent to the merchant or node on their own. Deliveries do
+not: `{"kind":"deliver_contract","contractId":"clinic_network_canal_provision_river_eel"}`
+fails with `agent is not in contract area central-plaza`, and the area is not in the
+contract payload the API returns (it is in the content dump). Our loop, which only polled
+outcomes for trades, transfers and meals, re-issued the same delivery every round: all
+three agents stood idle in Central holding the goods.
+
+Fixes here: move to the contract's area first (`{"kind":"move_to","destination":
+{"areaId":...}}`), deliver on a later round, and poll delivery outcomes so a refusal
+clears the travel flag and is retried properly. Also record our own deliveries: progression
+is read once per tick, so a contract completed in round 1 still looked outstanding in
+rounds 2 and 3 and was delivered again. Suggested fix for the game: include the contract
+area in the progression payload, or have the delivery route the agent like a trade does.
+

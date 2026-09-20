@@ -21,7 +21,7 @@ const ROUNDS = 3;
 const ROUND_GAP_MS = 20_000;
 const ROUND_COST = 2;           // inventory + action, per agent
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-const CHECKED_KINDS = new Set(["trade", "crystal_transfer", "eat"]); // failures we learn from
+const CHECKED_KINDS = new Set(["trade", "crystal_transfer", "eat", "deliver_contract"]); // failures we learn from
 
 export async function runTick(env, client, state, log) {
   const started = Date.now();
@@ -71,6 +71,8 @@ async function actRound(client, { agent, lease, progression, needs }, state, too
     toolOffers,
     fundRequests: agent.isTreasury ? (state.fundRequests ?? {}) : undefined,
     inedible: state.inedible ?? [],
+    movedFor: (state.movedFor ?? {})[agent.name],
+    delivered: (state.delivered ?? {})[agent.name] ?? [],
   });
 
   // Workers post their shortfall for a tool on sale; the treasury pays it on its turn.
@@ -88,6 +90,10 @@ async function actRound(client, { agent, lease, progression, needs }, state, too
     return;
   }
 
+  // Remember which contract we travelled for, so the next round delivers instead of moving.
+  state.movedFor ??= {};
+  if (decision.movingFor) state.movedFor[agent.name] = decision.movingFor;
+
   let outcome = "";
   if (decision.action) {
     const polls = CHECKED_KINDS.has(decision.action.kind) ? 1 : 0;
@@ -95,6 +101,11 @@ async function actRound(client, { agent, lease, progression, needs }, state, too
     if (failure) {
       outcome = ` -> failed: ${failure}`;
       learnFromFailure(agent, decision.action, failure, state, inventory);
+    } else if (decision.action.kind === "deliver_contract") {
+      delete state.movedFor[agent.name];
+      state.delivered ??= {};
+      const done = [...new Set([...(state.delivered[agent.name] ?? []), decision.action.contractId])];
+      state.delivered[agent.name] = done.slice(-60);
     } else if (agent.isTreasury && decision.action.kind === "crystal_transfer") {
       delete state.fundRequests[decision.action.recipientAgentId];
     }
@@ -116,6 +127,8 @@ async function readToolOffers(client, state) {
 
 // Failures that should change future decisions (FINDINGS 15 and 17).
 function learnFromFailure(agent, action, reason, state, inventory) {
+  // Delivered from the wrong place: travel again before the next attempt (FINDINGS 23).
+  if (action.kind === "deliver_contract") delete state.movedFor[agent.name];
   // The game refused food we counted as edible: never count those items again (FINDINGS 22).
   if (action.kind === "eat" && /edible/i.test(reason)) {
     state.inedible = [...new Set([...(state.inedible ?? []), ...edibleLooking(inventory, state)])];
