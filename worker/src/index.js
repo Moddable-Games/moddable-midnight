@@ -16,6 +16,7 @@ function emptyState() {
     signedOff: {},         // agent name -> thread ids we have closed politely
     priceOverride: {},     // merchant name -> price the server enforced over the listing
     fundRequests: {},      // worker id -> crystal short for a tool on sale; the treasury pays
+    inedible: ["cooked_fish"], // items the game refuses to eat despite listing them as food
   };
 }
 

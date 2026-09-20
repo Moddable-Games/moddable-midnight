@@ -2,13 +2,14 @@
 // Priority: 0) do not interrupt a trade walk  1) stay fed: eat early, fish when out of food,
 // buy food only as a fallback  1a) keep a small fish stock  1b) buy the best tool on sale
 // 1c) Floyd funds a worker's tool  2) shed load when overburdened  3) deliver a ready contract
-// 4) sell a big pile  5) self-supply a tool nobody sells (gather, craft, train)  5b) cook
+// 4) sell a big pile  5) work a contract, and self-supply a tool nobody sells (gather, craft,
+// train); the two alternate by round so neither starves the other
 // 6) sell surplus  7) workers fund Floyd, keeping a food buffer  8) work.
 // Nothing is crafted except for a tool plan, a contract or food, so no surplus builds up.
 import { FOOD_IDS } from "./food-ids.js";
 import { TOOLS } from "./tools.js";
-import { CONTRACT_REQUIREMENTS } from "./contracts.js";
 import { toolToCraft, nextStep, trainStep, toolSkills, heldBonus } from "./planner.js";
+import { deliverable, pursue } from "./contract-plan.js";
 
 // Cheapest food per hunger point. The server enforced 23 crystal per smoothie while
 // `merchants` listed 20 (FINDINGS 15); the tick updates this from failure events.
@@ -17,9 +18,11 @@ export const DEFAULT_MEAL_COST = 23;
 const FOOD_BUFFER_MEALS = 3;
 
 // Fishing is free: Canal Eddy needs no rod at fishing level 1, and each gather yields one
-// fish, one river eel and one canal carp. One fish took hunger from 34 to 0 (listed at 24).
+// fish, one river eel and one canal carp. One fish restored about 50 hunger in play.
+// Never cook: cooked_fish cannot be eaten even though the game lists it as consumable
+// (FINDINGS 22), so cooking destroys the crew's food.
 const FISHING_SOURCE = "canal_eddy";
-const EAT_AT = 35;      // eat before "hungry"; a fish covers at least this much
+const EAT_AT = 45;      // eat before "hungry"; a fish restored about 50 in play
 const FOOD_STOCK = 3;   // about a day of fish at ~100 hunger a day
 
 const count = (inv, id) => Number(inv?.[id] ?? 0) || 0;
@@ -27,7 +30,7 @@ const hasAll = (inv, reqs) => (reqs ?? []).every((r) => count(inv, r.itemId) >= 
 
 // agent: roster entry. docs: { inventory, progression, needs } responses.
 // opts: { mealCost, sendBlocked, treasuryId, round, toolOffers: [{ itemId, merchantName, price }],
-//         fundRequests: { workerId: crystal } (treasury only) }
+//         fundRequests: { workerId: crystal } (treasury only), inedible: [itemId] }
 export function decide(agent, docs, opts) {
   const invDoc = docs.inventory ?? {};
   const inv = invDoc.inventory ?? {};
@@ -45,7 +48,8 @@ export function decide(agent, docs, opts) {
   const crystal = count(inv, "crystal");
   const goods = count(inv, agent.good);
   const sellable = Math.floor(goods / agent.batch) * agent.batch;
-  const foods = Object.keys(inv).filter((id) => FOOD_IDS.has(id) && count(inv, id) > 0);
+  const inedible = new Set(opts.inedible ?? []);
+  const foods = Object.keys(inv).filter((id) => FOOD_IDS.has(id) && !inedible.has(id) && count(inv, id) > 0);
   const foodStock = foods.reduce((sum, id) => sum + count(inv, id), 0);
 
   const status = `L${skill.level ?? "?"} ${agent.skill} xp${skill.xp ?? 0} | hunger=${hunger}(${hungerValue}) | ` +
@@ -108,32 +112,28 @@ export function decide(agent, docs, opts) {
   // 2) overburdened agents work at a fraction of speed
   if (loadState === "overburdened" && sellable > 0) return withFund(sell());
 
-  // 3) deliver a ready, uncompleted contract
-  for (const c of contracts) {
-    if (c.completed) continue;
-    const reqs = c.requirements ?? CONTRACT_REQUIREMENTS[c.contractId];
-    if (reqs && hasAll(inv, reqs)) return withFund(result(`DELIVER ${c.contractId}`, { kind: "deliver_contract", contractId: c.contractId }));
-  }
+  // 3) deliver a contract whose goods we hold (the API only lists it once we do)
+  const completed = docs.progression?.completedContractIds ?? [];
+  const ready = deliverable(inv, skills, completed, FOOD_STOCK);
+  if (ready) return withFund(result(`DELIVER ${ready}`, { kind: "deliver_contract", contractId: ready }));
 
   // 4) crafting must not starve selling: sell first once the pile passes 5x the threshold
   if (goods >= agent.sellAt * 5 && sellable > 0) return withFund(sell());
 
-  // 5) self-supply a tool nobody sells: next gather or craft step, or train its crafting skill
-  const soldIds = new Set((opts.toolOffers ?? []).map((o) => o.itemId));
-  const toolId = toolToCraft(agent, inv, skills, soldIds);
-  if (toolId) {
-    const ctx = { inv, skills, nodes: nodesBySource(caps), round: opts.round };
+  // 5) a contract step and a tool step, alternating by round so neither starves the other
+  const ctx = { inv, skills, nodes: nodesBySource(caps), round: opts.round, foodFloor: FOOD_STOCK };
+  const toolPlan = () => {
+    const soldIds = new Set((opts.toolOffers ?? []).map((o) => o.itemId));
+    const toolId = toolToCraft(agent, inv, skills, soldIds);
+    if (!toolId) return null;
     const step = nextStep(toolId, 1, ctx, 0, [toolId]);
-    const plan = step.act ?? (step.blocked ? trainStep(toolId, step.blocked, ctx) : null);
-    if (plan) return withFund(result(plan.label, plan.action));
-  }
-
-  // 5b) cook when a cooking recipe is ready: same hunger, and cooking XP leads to better food
-  for (const r of recipes) {
-    const id = r.recipeId ?? r.id;
-    if (r.skill === "cooking" && Number(r.craftableBatches ?? 0) > 0) {
-      return withFund(result(`COOK ${id}`, { kind: "craft", recipeId: id, batches: 1 }));
-    }
+    return step.act ?? (step.blocked ? trainStep(toolId, step.blocked, ctx) : null);
+  };
+  const contractPlan = () => pursue(ctx, completed);
+  const order = (opts.round ?? 1) % 3 === 0 ? [toolPlan, contractPlan] : [contractPlan, toolPlan];
+  for (const plan of order) {
+    const chosen = plan();
+    if (chosen) return withFund(result(chosen.label, chosen.action));
   }
 
   // 6) sell surplus

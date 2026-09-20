@@ -4,6 +4,7 @@
 import { decide } from "./decide.js";
 import { conversationTurn } from "./replies.js";
 import { TOOLS } from "./tools.js";
+import { FOOD_IDS } from "./food-ids.js";
 
 // Same roster as the laptop daemon (~/.midnight-city/run-crew.sh).
 export const CREW = [
@@ -20,7 +21,7 @@ const ROUNDS = 3;
 const ROUND_GAP_MS = 20_000;
 const ROUND_COST = 2;           // inventory + action, per agent
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-const CHECKED_KINDS = new Set(["trade", "crystal_transfer"]); // failures we learn from
+const CHECKED_KINDS = new Set(["trade", "crystal_transfer", "eat"]); // failures we learn from
 
 export async function runTick(env, client, state, log) {
   const started = Date.now();
@@ -69,6 +70,7 @@ async function actRound(client, { agent, lease, progression, needs }, state, too
     round,
     toolOffers,
     fundRequests: agent.isTreasury ? (state.fundRequests ?? {}) : undefined,
+    inedible: state.inedible ?? [],
   });
 
   // Workers post their shortfall for a tool on sale; the treasury pays it on its turn.
@@ -92,7 +94,7 @@ async function actRound(client, { agent, lease, progression, needs }, state, too
     const failure = await client.actAndCheck(lease, decision.action, polls);
     if (failure) {
       outcome = ` -> failed: ${failure}`;
-      learnFromFailure(agent, decision.action, failure, state);
+      learnFromFailure(agent, decision.action, failure, state, inventory);
     } else if (agent.isTreasury && decision.action.kind === "crystal_transfer") {
       delete state.fundRequests[decision.action.recipientAgentId];
     }
@@ -113,7 +115,11 @@ async function readToolOffers(client, state) {
 }
 
 // Failures that should change future decisions (FINDINGS 15 and 17).
-function learnFromFailure(agent, action, reason, state) {
+function learnFromFailure(agent, action, reason, state, inventory) {
+  // The game refused food we counted as edible: never count those items again (FINDINGS 22).
+  if (action.kind === "eat" && /edible/i.test(reason)) {
+    state.inedible = [...new Set([...(state.inedible ?? []), ...edibleLooking(inventory, state)])];
+  }
   const price = /multiple of (\d+) crystal/i.exec(reason);
   if (price && action.itemId === "crystal") {
     if (/Smoothies/.test(action.merchantName)) state.mealCost = Number(price[1]);
@@ -134,4 +140,11 @@ async function safely(log, agent, fn) {
   } catch (error) {
     log(`${agent.name}: error ${String(error.message ?? error).slice(0, 200)}`);
   }
+}
+
+// Items we currently count as food, used to mark the culprits when an eat is refused.
+function edibleLooking(inventory, state) {
+  const inv = inventory?.inventory ?? {};
+  const known = new Set(state.inedible ?? []);
+  return Object.keys(inv).filter((id) => FOOD_IDS.has(id) && !known.has(id) && Number(inv[id]) > 0);
 }

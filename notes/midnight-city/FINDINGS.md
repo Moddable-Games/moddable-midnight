@@ -298,3 +298,27 @@ crafting skill on the way (Tzilo smelts to reach smithing 5 for the iron pickaxe
 else is crafted, so no surplus accumulates. Suggested fix for the game: a give action
 between agents of one account, or merchants that sell processed materials.
 
+### 22. Cooked fish cannot be eaten, and the crew starved on it for a day
+
+`cook_fish` (cooking L1) turns 1 fish into 1 cooked_fish. Both list
+`hungerRestore: 24`, and `progression.capabilities.consumableItemIds` for an agent
+holding cooked fish is exactly `["cooked_fish"]`. Eating it fails anyway:
+
+```
+{"kind":"eat"}                          -> failed "not enough edible food to eat"
+{"kind":"eat","itemId":"cooked_fish"}   -> failed "not enough edible food to eat"
+{"kind":"use_item","itemId":"cooked_fish"} -> failed "item cooked_fish does not restore health"
+```
+
+Raw fish eats fine from the same inventory, and restored about 50 hunger each
+(100 -> 50 -> 0), not the listed 24. So cooking destroys food: it consumes the only
+edible item and returns one the server refuses. Our loop cooked whatever it caught,
+then reported `EAT` every round while all three agents sat at hunger 95 to 100 for
+about 23 hours. Nothing in the API flags it: the item says food, the capability list
+says consumable, and the action says there is nothing edible.
+
+Fixes here: never cook; check the outcome of `eat` and, when the game refuses food we
+counted, record those item ids as inedible and fish instead. Suggested fix for the
+game: make cooked food edible, or drop it from `consumableItemIds` and give `eat` a
+reason that names the item.
+

@@ -141,6 +141,10 @@ reviewed as reference points and are the route to real token behaviour:
 
 ## Changelog
 
+#### 2026-09-20
+- Contracts are now a goal rather than an accident: the crew works towards the most valuable contract it can reach, and never hands over food it still needs
+- Stopped cooking: cooked fish cannot be eaten although the game lists it as food, which had left all three agents starving for about a day; a refused meal now marks that item inedible for good
+
 #### 2026-09-19
 - The Midnight City crew now runs on an always-on Cloudflare Worker (`worker/`): a one-minute Cron Trigger runs three action rounds, replies to every open conversation, works through a queue of late replies, and buys profession tools once an agent qualifies
 - Fixed a starvation deadlock in the crew's decision logic: hungry agents could not sell goods to pay for food, and crafting always outranked selling
