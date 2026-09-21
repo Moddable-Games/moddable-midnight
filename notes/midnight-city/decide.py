@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SUPERSEDED on 2026-09-20 by worker/src/decide.js (the laptop daemon is retired).
+# Kept as the record of the bash-daemon era; the Worker port has the later rules.
 # Decide one agent's next action from inventory/progression/needs JSON.
 # Priority: 1) stay fed (sell goods to afford food if broke)  2) shed load when
 # overburdened  3) complete a ready contract  4) craft once unlocked  5) sell surplus

@@ -21,6 +21,7 @@ function emptyState() {
     delivered: {},         // agent name -> contracts we delivered (progression lags a tick)
     skipContracts: {},     // agent name -> { contractId: until } goals that made no progress
     goalTries: {},         // agent name -> { goal, tries } progress counter for the current goal
+    contentVersion: null,  // game content hash; a change means the game shipped an update
   };
 }
 
@@ -64,6 +65,7 @@ export default {
       paused: state.paused,
       mealCost: state.mealCost,
       queued,
+      contentVersion: state.contentVersion,
       noSendUntil: state.noSendUntil,
       backoffUntil: state.backoffUntil,
     });

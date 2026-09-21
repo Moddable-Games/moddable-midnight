@@ -33,7 +33,8 @@ const hasAll = (inv, reqs) => (reqs ?? []).every((r) => count(inv, r.itemId) >= 
 // opts: { mealCost, sendBlocked, treasuryId, round, toolOffers: [{ itemId, merchantName, price }],
 //         fundRequests: { workerId: crystal } (treasury only), inedible: [itemId],
 //         movedFor: contractId we have already travelled to, delivered: [contractId],
-//         skipContracts: { contractId: until } goals that stopped making progress }
+//         skipContracts: { contractId: until } goals that stopped making progress,
+//         buyers: [{ itemId, merchantName, batch }] merchants that buy items for crystal }
 export function decide(agent, docs, opts) {
   const invDoc = docs.inventory ?? {};
   const inv = invDoc.inventory ?? {};
@@ -113,7 +114,19 @@ export function decide(agent, docs, opts) {
   }
 
   // 2) overburdened agents work at a fraction of speed
-  if (loadState === "overburdened" && sellable > 0) return withFund(sell());
+  if (loadState === "overburdened") {
+    if (sellable > 0) return withFund(sell());
+    // Nothing of our own trade good: shift whatever else a merchant will take.
+    const spare = (opts.buyers ?? [])
+      .map((b) => ({ ...b, qty: Math.floor(count(inv, b.itemId) / b.batch) * b.batch }))
+      .filter((b) => b.qty > 0)
+      .sort((a, b) => b.qty - a.qty)[0];
+    if (spare) {
+      return withFund(result(`DUMP ${spare.itemId} ${spare.qty}`, {
+        kind: "trade", merchantName: spare.merchantName, itemId: spare.itemId, quantity: spare.qty,
+      }));
+    }
+  }
 
   // 3) deliver a contract whose goods we hold (the API only lists it once we do)
   // Progression is read once per tick, so a contract delivered this tick would still look
@@ -176,7 +189,7 @@ function bestToolOnSale(agent, inv, skills, offers) {
   return offers
     .filter((o) => {
       const t = TOOLS[o.itemId];
-      return t && toolSkills(agent).includes(t.skill) && t.level <= level(t.skill) && t.bonus > heldBonus(inv, t.skill);
+      return t && toolSkills(agent, skills).includes(t.skill) && t.level <= level(t.skill) && t.bonus > heldBonus(inv, t.skill);
     })
     .sort((a, b) => TOOLS[b.itemId].bonus - TOOLS[a.itemId].bonus)[0] ?? null;
 }

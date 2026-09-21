@@ -16,8 +16,13 @@ for (const [id, recipe] of Object.entries(RECIPES)) {
 
 const count = (inv, id) => Number(inv?.[id] ?? 0) || 0;
 
-// Skills whose tools are worth having: the agent's profession, and fishing for food.
-export const toolSkills = (agent) => [agent.skill, "fishing"];
+// Skills whose tools are worth having: the agent's profession, fishing for food, and any
+// other skill it actually practises (contracts spread the crew across skills).
+export const toolSkills = (agent, skills) => [...new Set([
+  agent.skill,
+  "fishing",
+  ...Object.entries(skills ?? {}).filter(([, s]) => (s?.xp ?? 0) > 0).map(([name]) => name),
+])];
 
 export function heldBonus(inv, skill) {
   return Math.max(0, ...Object.keys(inv)
@@ -30,7 +35,7 @@ export function heldBonus(inv, skill) {
 export function toolToCraft(agent, inv, skills, soldIds) {
   const level = (skill) => Number(skills?.[skill]?.level ?? 0);
   return Object.entries(TOOLS)
-    .filter(([id, t]) => toolSkills(agent).includes(t.skill) &&
+    .filter(([id, t]) => toolSkills(agent, skills).includes(t.skill) &&
       t.level <= level(t.skill) + LOOKAHEAD_LEVELS &&
       t.bonus > heldBonus(inv, t.skill) &&
       !soldIds.has(id) &&

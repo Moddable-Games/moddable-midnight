@@ -141,6 +141,11 @@ reviewed as reference points and are the route to real token behaviour:
 
 ## Changelog
 
+#### 2026-09-21
+- Overburdened agents now sell anything a merchant will buy, not just their own trade good
+- Tool buying covers every skill an agent actually practises, not only its profession
+- The crew notices game updates: a change in the content version is logged and shown on the status page
+
 #### 2026-09-20
 - Contracts are now a goal rather than an accident: the crew works towards the most valuable contract it can reach, and never hands over food it still needs
 - Contract goals are abandoned after twelve fruitless rounds: one node's live yield does not match the content, which had the whole crew gathering the wrong item indefinitely

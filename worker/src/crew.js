@@ -28,7 +28,7 @@ const CHECKED_KINDS = new Set(["trade", "crystal_transfer", "eat", "deliver_cont
 
 export async function runTick(env, client, state, log) {
   const started = Date.now();
-  const toolOffers = await readToolOffers(client, state).catch(() => []);
+  const { toolOffers, buyers } = await readMerchants(client, state).catch(() => ({ toolOffers: [], buyers: [] }));
 
   // Open each agent's lease and read its progression once per tick. The lease lasts five
   // minutes and the next tick's session replaces it, so there is no release call.
@@ -39,6 +39,7 @@ export async function runTick(env, client, state, log) {
       // Hunger moves about one point every 14 minutes, so needs is read once per tick too.
       const [progression, needs] = await Promise.all([client.read(agent.id, "progression"), client.read(agent.id, "needs")]);
       turns.push({ agent, lease, progression, needs });
+      noteContentVersion(progression, state, log);
     } catch (error) {
       log(`${agent.name}: session error ${String(error.message ?? error).slice(0, 160)}`);
     }
@@ -54,7 +55,7 @@ export async function runTick(env, client, state, log) {
       break;
     }
     for (const turn of turns) {
-      await safely(log, turn.agent, () => actRound(client, turn, state, toolOffers, log, round + 1));
+      await safely(log, turn.agent, () => actRound(client, turn, state, { toolOffers, buyers }, log, round + 1));
     }
     if (round === 0) {
       for (const turn of turns) {
@@ -64,7 +65,7 @@ export async function runTick(env, client, state, log) {
   }
 }
 
-async function actRound(client, { agent, lease, progression, needs }, state, toolOffers, log, round) {
+async function actRound(client, { agent, lease, progression, needs }, state, { toolOffers, buyers }, log, round) {
   const inventory = await client.read(agent.id, "inventory");
   const decision = decide(agent, { inventory, progression, needs }, {
     mealCost: state.mealCost,
@@ -72,6 +73,7 @@ async function actRound(client, { agent, lease, progression, needs }, state, too
     treasuryId: TREASURY_ID,
     round,
     toolOffers,
+    buyers,
     fundRequests: agent.isTreasury ? (state.fundRequests ?? {}) : undefined,
     inedible: state.inedible ?? [],
     movedFor: (state.movedFor ?? {})[agent.name],
@@ -132,16 +134,29 @@ async function actRound(client, { agent, lease, progression, needs }, state, too
   log(`r${round} ${agent.name}: ${decision.label}${outcome} | ${decision.status}`);
 }
 
-// Tools on sale for crystal, at the enforced price where a failure has taught us one.
-async function readToolOffers(client, state) {
+// What the merchants will sell us (tools) and what they will buy (to shed load).
+async function readMerchants(client, state) {
   const merchants = (await client.merchants()) ?? [];
-  return merchants
+  const toolOffers = merchants
     .filter((m) => TOOLS[m.offer?.paysItemId] && m.offer?.acceptsItemId === "crystal")
     .map((m) => ({
       itemId: m.offer.paysItemId,
       merchantName: m.name,
       price: state.priceOverride?.[m.name] ?? m.offer.acceptsQuantity,
     }));
+  const buyers = merchants
+    .filter((m) => m.offer?.paysItemId === "crystal" && m.offer?.acceptsItemId !== "crystal")
+    .map((m) => ({ itemId: m.offer.acceptsItemId, merchantName: m.name, batch: m.trade?.batchMultiple ?? 1 }));
+  return { toolOffers, buyers };
+}
+
+// The game ships content changes; log when its version moves so patches are visible.
+function noteContentVersion(progression, state, log) {
+  const version = progression?.capabilities?.contentVersion;
+  if (version && version !== state.contentVersion) {
+    log(`game content version changed: ${String(state.contentVersion).slice(0, 8)} -> ${version.slice(0, 8)}`);
+    state.contentVersion = version;
+  }
 }
 
 // Failures that should change future decisions (FINDINGS 15 and 17).
