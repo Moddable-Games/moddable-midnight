@@ -179,3 +179,12 @@ never deployed.
 | 61 | Token metadata built, subjects re-derived from chain, digests anchored with `setMetadata` (992,402) | 14:10 |
 | 62 | Agents' route with limits: small crew transfers auto-approved, larger and external ones held; per-wallet queue after a concurrent send failed | 14:19 |
 | 63 | Overdraw tested on preview: refused as a partial success, treasury and nullifier intact (992,518, 992,552) | 14:24 |
+| 64 | Shielded addresses fail to parse; traced to a minor release of `@scure/base` capping Bech32 length; scoped override (finding 44) | 14:45 |
+| 65 | The seven metadata CIDs confirmed with the reference `multiformats` library | 14:49 |
+
+Paused at 14:5x for the usage limit; resumed 16:11 UTC. The break is excluded.
+
+| # | Step | When (UTC) |
+|---|---|---|
+| 66 | Public verification page (`treasury.html`): all six checks pass against the live chain in a clean browser | 16:14 |
+| 67 | MCC sent between agents (block 993,649); an Agent Smart Contract sent to a shielded address and back (993,656, 993,666) | 16:17 |

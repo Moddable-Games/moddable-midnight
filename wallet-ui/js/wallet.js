@@ -1,7 +1,7 @@
 // Browser wallet for Midnight, driving the local wallet daemon (wallet-daemon/server.mjs).
 // Balances come live from the public indexer even when the daemon is down; the daemon adds
 // DUST, sending, and the approval queue.
-import { watchAddress } from "./indexer.js";
+import { watchAddress, NIGHT_TOKEN } from "./indexer.js";
 
 const DAEMON = "http://127.0.0.1:9900";
 const EXPLORER_TX = "https://preview.midnightexplorer.com/transactions/";
@@ -118,6 +118,33 @@ function tokenList(tokens) {
   return `<ul class="tokens">${rows}</ul>`;
 }
 
+const tokenName = (type) => metadata[type]?.name ?? KNOWN_TOKENS[type]?.name ?? `token ${type.slice(0, 8)}…`;
+
+/** What a wallet can send: NIGHT, its public tokens (from the indexer), its shielded ones (from the daemon). */
+function sendableTokens(c, d) {
+  const out = [{ type: NIGHT_TOKEN, name: "NIGHT", label: "NIGHT" }];
+  for (const t of c?.tokens ?? []) out.push({ type: t.type, name: tokenName(t.type), label: `${tokenName(t.type)} (${t.amount})` });
+  for (const [type, amount] of Object.entries(d?.shielded ?? {})) {
+    out.push({ type, name: tokenName(type), label: `${tokenName(type)} (${amount}, shielded)` });
+  }
+  return out;
+}
+
+const isShieldedToken = (type, d) => type !== NIGHT_TOKEN && Object.hasOwn(d?.shielded ?? {}, type);
+
+function recipientOptions(entry, draft) {
+  const d = daemon?.find((w) => w.wallet === entry.wallet);
+  const shielded = isShieldedToken(draft.token, d);
+  const crew = ROSTER.filter((r) => r.wallet !== entry.wallet).map((r) => {
+    const address = shielded ? r.shieldedAddress : r.address;
+    return `<option value="${address}" ${draft.to === address ? "selected" : ""}>${r.name}${shielded ? " (shielded)" : ""}</option>`;
+  });
+  return `<option value="">Send to…</option>${crew.join("")}
+    <option value="external" ${draft.to === "external" ? "selected" : ""}>Another address…</option>`;
+}
+
+const recipientName = (to) => ROSTER.find((r) => r.address === to || r.shieldedAddress === to)?.name ?? `${to.slice(0, 24)}…`;
+
 /** Shielded holdings are private to the wallet, so only the daemon can list them. */
 function shieldedTokens(d) {
   return Object.entries(d?.shielded ?? {}).map(([type, amount]) => ({ type, amount, shielded: true }));
@@ -150,43 +177,61 @@ function card(entry) {
     </dl>
   `;
 
-  const draft = drafts.get(entry.wallet) ?? { to: "", amount: "" };
+  const draft = drafts.get(entry.wallet) ?? { token: NIGHT_TOKEN, to: "", amount: "" };
+  const holdings = sendableTokens(c, d);
+  if (!holdings.some((h) => h.type === draft.token)) draft.token = NIGHT_TOKEN;
   const form = document.createElement("form");
   form.className = "send";
   const external = draft.to === "external";
   form.innerHTML = `
-    <select name="to" aria-label="Send to">
-      <option value="">Send NIGHT to…</option>
-      ${ROSTER.filter((r) => r.wallet !== entry.wallet)
-        .map((r) => `<option value="${r.address}" ${draft.to === r.address ? "selected" : ""}>${r.name}</option>`).join("")}
-      <option value="external" ${external ? "selected" : ""}>Another address…</option>
+    <select name="token" aria-label="Token to send">
+      ${holdings.map((h) => `<option value="${h.type}" ${draft.token === h.type ? "selected" : ""}>${h.label}</option>`).join("")}
     </select>
-    <input name="amount" type="text" inputmode="decimal" placeholder="amount" value="${draft.amount}" aria-label="Amount in NIGHT">
+    <select name="to" aria-label="Send to">${recipientOptions(entry, draft)}</select>
+    <input name="amount" type="text" inputmode="decimal" placeholder="amount" value="${draft.amount}" aria-label="Amount">
     <button type="submit" ${d?.status === "ready" ? "" : "disabled"}>Request</button>
     <input name="address" class="external ${external ? "" : "hidden"}" type="text" spellcheck="false"
-      placeholder="mn_addr_preview1…" value="${draft.address ?? ""}" aria-label="Recipient address">
+      placeholder="${isShieldedToken(draft.token, d) ? "mn_shield-addr_preview1…" : "mn_addr_preview1…"}" value="${draft.address ?? ""}" aria-label="Recipient address">
   `;
+  const saveDraft = () => drafts.set(entry.wallet, {
+    token: form.elements.token.value, to: form.elements.to.value,
+    amount: form.elements.amount.value, address: form.elements.address.value,
+  });
+  form.elements.token.addEventListener("change", () => {
+    // Shielded tokens go to shielded addresses, everything else to unshielded ones.
+    saveDraft();
+    const current = drafts.get(entry.wallet);
+    current.to = current.to === "external" ? "external" : "";
+    form.elements.to.innerHTML = recipientOptions(entry, current);
+    form.elements.address.placeholder = isShieldedToken(current.token, d) ? "mn_shield-addr_preview1…" : "mn_addr_preview1…";
+  });
   form.addEventListener("input", () => {
-    drafts.set(entry.wallet, { to: form.elements.to.value, amount: form.elements.amount.value, address: form.elements.address.value });
+    saveDraft();
     form.elements.address.classList.toggle("hidden", form.elements.to.value !== "external");
   });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
+    const token = form.elements.token.value;
+    const shielded = isShieldedToken(token, d);
     const choice = form.elements.to.value;
     const to = choice === "external" ? form.elements.address.value.trim() : choice;
-    if (choice === "external" && !/^mn_addr_preview1[0-9a-z]+$/.test(to)) {
-      return log("That is not a preview unshielded address (it should start mn_addr_preview1)", "bad");
+    const pattern = shielded ? /^mn_shield-addr_preview1[0-9a-z]+$/ : /^mn_addr_preview1[0-9a-z]+$/;
+    if (choice === "external" && !pattern.test(to)) {
+      return log(shielded
+        ? "That is not a preview shielded address (it should start mn_shield-addr_preview1)"
+        : "That is not a preview unshielded address (it should start mn_addr_preview1)", "bad");
     }
     const amount = form.elements.amount.value.trim();
     if (!to || !amount) return log("Pick a recipient and an amount first", "bad");
+    const label = holdings.find((h) => h.type === token)?.name ?? "tokens";
     try {
       await api("/api/requests", {
         method: "POST",
-        body: JSON.stringify({ wallet: entry.wallet, kind: "transfer", to, amount, requestedBy: "you, in the browser" }),
+        body: JSON.stringify({ wallet: entry.wallet, kind: "transfer", to, amount, token, requestedBy: "you, in the browser" }),
       });
       drafts.delete(entry.wallet);
       document.activeElement?.blur?.();
-      log(`${entry.name}: sending ${amount} NIGHT to ${byAddress(to)?.name ?? to.slice(0, 24) + "…"} is waiting for your approval above`, "ok");
+      log(`${entry.name}: sending ${amount} ${label} to ${recipientName(to)} is waiting for your approval above`, "ok");
       await refresh();
     } catch (error) {
       log(`${entry.name}: ${error.message}`, "bad");
@@ -200,9 +245,17 @@ function card(entry) {
   copy.textContent = "Copy address";
   copy.addEventListener("click", async () => {
     await navigator.clipboard.writeText(entry.address);
-    log(`${entry.name}: address copied`);
+    log(`${entry.name}: unshielded address copied`);
   });
-  article.append(copy);
+  const copyShielded = document.createElement("button");
+  copyShielded.className = "ghost small";
+  copyShielded.type = "button";
+  copyShielded.textContent = "Copy shielded address";
+  copyShielded.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(entry.shieldedAddress);
+    log(`${entry.name}: shielded address copied`);
+  });
+  article.append(copy, copyShielded);
   return article;
 }
 
@@ -219,13 +272,14 @@ function describe(r, toName) {
       ?? (a?.bytes ? `0x${a.bytes.slice(0, 8)}…` : JSON.stringify(a))).join(", ");
     return `${who} calls <b>${r.contract}.${r.circuit}(${args})</b>`;
   }
-  return `${who} sends <b>${night(r.amount)} NIGHT</b> to <b>${toName}</b>`;
+  const what = !r.token || r.token === NIGHT_TOKEN ? `${night(r.amount)} NIGHT` : `${r.amount} ${tokenName(r.token)}`;
+  return `${who} sends <b>${what}</b> to <b>${toName}</b>${r.shielded ? " (shielded)" : ""}`;
 }
 
 function requestItem(r) {
   const li = document.createElement("li");
   li.className = `request ${r.status}`;
-  const toName = r.to ? (byAddress(r.to)?.name ?? r.to.slice(0, 20) + "…") : "";
+  const toName = r.to ? recipientName(r.to) : "";
   const tx = r.txHash
     ? ` · block ${r.block} · <a href="${EXPLORER_TX}0x${r.txHash}" target="_blank" rel="noopener">view on explorer</a>`
     : r.txId ? " · waiting for the chain" : "";
@@ -336,6 +390,38 @@ try {
     try { localStorage.setItem("approvals-open", el("approvals-panel").open ? "1" : "0"); } catch { /* no storage */ }
   });
 } catch { /* no storage: stays collapsed */ }
+const PUBLIC_CHECK = "https://moddable-games.github.io/moddable-midnight/treasury.html";
+
+/** The contract behind MCC and the Agent Smart Contracts: its public state, and the metadata check. */
+async function loadContract() {
+  try {
+    const c = await api("/api/contract");
+    const mcc = metadata[c.mcc.tokenType];
+    const fmt = (n) => Number(n).toLocaleString();
+    el("contract").innerHTML = `
+      <div class="contract-grid">
+        <div class="fact"><div class="value">${fmt(c.mcc.minted)}</div><div class="label">MCC minted</div></div>
+        <div class="fact"><div class="value">${fmt(c.mcc.held)}</div><div class="label">MCC in the contract</div></div>
+        <div class="fact"><div class="value">${fmt(c.mcc.paidOut)}</div><div class="label">MCC paid in ${c.mcc.drawCount} draws</div></div>
+        <div class="fact"><div class="value">${c.asc.mandateCount}</div><div class="label">Agent Smart Contracts issued</div></div>
+        <div class="fact"><div class="value">${c.mcc.drawAmount}</div><div class="label">MCC per draw</div></div>
+        <div class="fact"><div class="value">${c.period ?? "none"}</div><div class="label">${c.paused ? "period (draws paused)" : "open period"}</div></div>
+      </div>
+      <ul class="contract-checks">
+        <li class="${c.mcc.addsUp ? "ok" : "bad"}">${c.mcc.addsUp ? "Supply adds up" : "Supply does NOT add up"}: minted = held + paid out</li>
+        <li class="${c.metadataVerified ? "ok" : "bad"}">${c.metadataVerified ? "Metadata verified" : "Metadata mismatch"} against the two digests stored on-chain</li>
+      </ul>
+      <dl class="addr">
+        <dt>Contract</dt><dd><a href="${EXPLORER}/contracts/${c.address}" target="_blank" rel="noopener">${c.address}</a></dd>
+        <dt>MCC token type</dt><dd>${c.mcc.tokenType}${mcc ? ` · <a href="https://ipfs.io/ipfs/${mcc.document.replace("ipfs://", "")}" target="_blank" rel="noopener" title="Resolves once pinned">${mcc.document}</a>` : ""}</dd>
+        <dt>On-chain metadata digests</dt><dd>MCC ${c.digests.treasury}<br>Agent Smart Contracts ${c.digests.mandates}</dd>
+      </dl>
+      <p class="hint">Anyone can check all of this without trusting this machine:
+        <a href="${PUBLIC_CHECK}" target="_blank" rel="noopener">the public verification page</a> reads the contract from Midnight's indexer and re-checks every file in their browser.</p>`;
+    el("contract-panel").hidden = false;
+  } catch { /* daemon down: the public page still works */ }
+}
+
 /** Token names and images, each checked by the daemon against digests stored on-chain. */
 async function loadMetadata() {
   try {
@@ -348,5 +434,5 @@ async function loadMetadata() {
 
 refresh();
 setInterval(refresh, 3000);
-loadMetadata();
-setInterval(loadMetadata, 60_000);
+loadMetadata().then(loadContract);
+setInterval(() => loadMetadata().then(loadContract), 60_000);

@@ -96,3 +96,50 @@ export async function verifiedMetadata() {
   cache = { at: Date.now(), value };
   return value;
 }
+
+/**
+ * The crew treasury's public state, for the wallet page's contract panel: what the ledger
+ * says, the contract's MCC balance, and what has been paid out in draws. The public
+ * verification page (web/treasury.html) does the same from the browser, trusting nothing
+ * here.
+ */
+export async function contractSummary() {
+  const anchors = JSON.parse(readFileSync(METADATA_DIR + "anchors.json", "utf8"));
+  const address = anchors.contract;
+  const { ledger } = await import("../src/managed/crew_treasury/contract/index.js");
+  const onChain = await indexerPublicDataProvider(PREVIEW.indexer, PREVIEW.indexerWS).queryContractState(address);
+  const state = ledger(onChain.data);
+  const mccType = hex(state.treasuryColor);
+
+  const query = `{ contractAction(address: "${address}") { ... on ContractCall { unshieldedBalances { tokenType amount } } }
+    contract(address: "${address}") { actions { ... on ContractCall { entryPoint transaction { ... on RegularTransaction {
+      transactionResult { status } unshieldedCreatedOutputs { owner tokenType value } } } } } } }`;
+  const res = await fetch(PREVIEW.indexer, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ query }) });
+  const data = (await res.json()).data;
+  const held = BigInt(data.contractAction?.unshieldedBalances?.find((b) => b.tokenType === mccType)?.amount ?? 0);
+  const paidOut = data.contract.actions
+    .filter((a) => a?.entryPoint === "draw")
+    .flatMap((a) => a.transaction?.unshieldedCreatedOutputs ?? [])
+    .filter((o) => o.tokenType === mccType)
+    .reduce((sum, o) => sum + BigInt(o.value), 0n);
+  const period = Buffer.from(state.currentPeriod);
+  const metadata = await verifiedMetadata();
+
+  return {
+    address,
+    mcc: {
+      tokenType: mccType,
+      minted: state.treasuryMinted.toString(),
+      held: held.toString(),
+      paidOut: paidOut.toString(),
+      addsUp: state.treasuryMinted === held + paidOut,
+      drawAmount: state.drawAmount.toString(),
+      drawCount: state.drawCount.toString(),
+    },
+    asc: { mandateCount: state.mandateCount.toString() },
+    period: period.every((b) => b === 0) ? null : period.subarray(0, period.indexOf(0) === -1 ? 32 : period.indexOf(0)).toString("utf8"),
+    paused: state.paused,
+    digests: { treasury: hex(state.treasuryMetadata), mandates: hex(state.mandateMetadata) },
+    metadataVerified: Object.values(metadata.tokens).every((t) => t.verified),
+  };
+}

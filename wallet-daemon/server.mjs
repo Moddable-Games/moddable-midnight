@@ -14,10 +14,10 @@ import http from "node:http";
 import { randomUUID } from "node:crypto";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import * as ledger from "@midnight-ntwrk/ledger-v8";
-import { MidnightBech32m, UnshieldedAddress } from "@midnight-ntwrk/wallet-sdk-address-format";
+import { MidnightBech32m, UnshieldedAddress, ShieldedAddress } from "@midnight-ntwrk/wallet-sdk-address-format";
 import { openWallet, isUsable, saveState, PREVIEW } from "./wallet.mjs";
 import { deploy, call, mandateCommitment } from "./deploy.mjs";
-import { verifiedMetadata } from "./metadata.mjs";
+import { verifiedMetadata, contractSummary } from "./metadata.mjs";
 import { ensureAgentTokens, agentForToken, evaluate, crewTreasury } from "./agents.mjs";
 
 const PORT = 9900;
@@ -111,17 +111,44 @@ function parseNight(text) {
   return star;
 }
 
-function createRequest({ wallet, kind, to, amount, contract, contractAddress, circuit, args, requestedBy, note }) {
+const NIGHT_TYPE = ledger.unshieldedToken().raw;
+
+/**
+ * A transfer's recipient decides its kind: an mn_addr is unshielded, an mn_shield-addr is
+ * shielded. NIGHT exists only unshielded, so it cannot go to a shielded address.
+ */
+function transferShape(to, token) {
+  if (!/^[0-9a-f]{64}$/.test(token)) throw new Error("token must be a 64-character hex token type");
+  const shielded = String(to ?? "").startsWith("mn_shield-addr_");
+  if (shielded && token === NIGHT_TYPE) throw new Error("NIGHT is unshielded only: send it to an mn_addr address");
+  if (shielded) MidnightBech32m.parse(to).decode(ShieldedAddress, PREVIEW.networkId);
+  else MidnightBech32m.parse(to).decode(UnshieldedAddress, PREVIEW.networkId);
+  return { shielded };
+}
+
+/** NIGHT has 6 decimals; our tokens (MCC, Agent Smart Contracts) have none. */
+function parseAmount(text, token) {
+  if (token === NIGHT_TYPE) return parseNight(text);
+  if (!/^\d+$/.test(String(text).trim())) throw new Error("amount must be a whole number of tokens");
+  const value = BigInt(String(text).trim());
+  if (value <= 0n) throw new Error("amount must be positive");
+  return value;
+}
+
+function createRequest({ wallet, kind, to, amount, token, contract, contractAddress, circuit, args, requestedBy, note }) {
   if (!wallets.has(wallet)) throw new Error(`unknown wallet ${wallet}`);
   if (!["transfer", "deploy", "call"].includes(kind)) throw new Error(`unsupported request kind ${kind}`);
-  if (kind === "transfer") MidnightBech32m.parse(to).decode(UnshieldedAddress, PREVIEW.networkId); // validate now
+  const tokenType = String(token ?? NIGHT_TYPE).toLowerCase();
+  const shape = kind === "transfer" ? transferShape(to, tokenType) : null; // validate now
   if (kind !== "transfer" && !/^[a-z0-9_]+$/.test(contract ?? "")) throw new Error("contract must be a compiled contract name");
   if (kind === "call" && (!contractAddress || !circuit)) throw new Error("a call needs contractAddress and circuit");
   const request = {
     id: randomUUID(),
     wallet, kind,
     to: to ?? null,
-    amount: kind === "transfer" ? parseNight(amount).toString() : null,
+    amount: kind === "transfer" ? parseAmount(amount, tokenType).toString() : null,
+    token: kind === "transfer" ? tokenType : null,
+    shielded: shape?.shielded ?? false,
     contract: contract ?? null,
     contractAddress: contractAddress ?? null,
     circuit: circuit ?? null,
@@ -138,7 +165,10 @@ function createRequest({ wallet, kind, to, amount, contract, contractAddress, ci
 }
 
 function describe(r) {
-  if (r.kind === "transfer") return `${r.wallet} -> ${r.to.slice(0, 22)}… ${Number(r.amount) / 1e6} NIGHT`;
+  if (r.kind === "transfer") {
+    const what = (r.token ?? NIGHT_TYPE) === NIGHT_TYPE ? `${Number(r.amount) / 1e6} NIGHT` : `${r.amount} of ${r.token.slice(0, 8)}…`;
+    return `${r.wallet} -> ${r.to.slice(0, 22)}… ${what}${r.shielded ? " (shielded)" : ""}`;
+  }
   if (r.kind === "deploy") return `${r.wallet} deploys ${r.contract}`;
   return `${r.wallet} calls ${r.contract}.${r.circuit}`;
 }
@@ -198,10 +228,15 @@ async function execute(request) {
   }
   if (record?.status !== "ready") throw new Error(`${record?.name ?? request.wallet} is still syncing`);
   const { facade, zswapKeys, dustKey, keystore } = record.handle;
-  const receiverAddress = MidnightBech32m.parse(request.to).decode(UnshieldedAddress, PREVIEW.networkId);
+  const token = request.token ?? NIGHT_TYPE;
+  const output = request.shielded
+    ? { type: "shielded", outputs: [{ amount: BigInt(request.amount), type: token,
+        receiverAddress: MidnightBech32m.parse(request.to).decode(ShieldedAddress, PREVIEW.networkId) }] }
+    : { type: "unshielded", outputs: [{ amount: BigInt(request.amount), type: token,
+        receiverAddress: MidnightBech32m.parse(request.to).decode(UnshieldedAddress, PREVIEW.networkId) }] };
   request.status = "building";
   const recipe = await facade.transferTransaction(
-    [{ type: "unshielded", outputs: [{ amount: BigInt(request.amount), receiverAddress, type: ledger.unshieldedToken().raw }] }],
+    [output],
     { shieldedSecretKeys: zswapKeys, dustSecretKey: dustKey },
     { ttl: new Date(Date.now() + 30 * 60_000), payFees: true },
   );
@@ -319,6 +354,9 @@ const server = http.createServer(async (req, res) => {
       const entries = await record.handle.facade.getAllFromTxHistory();
       return send(res, 200, JSON.parse(JSON.stringify(entries.slice(-20), (k, v) => typeof v === "bigint" ? v.toString() : v)), origin || "null");
     }
+    if (req.method === "GET" && url.pathname === "/api/contract") {
+      return send(res, 200, await contractSummary(), origin);
+    }
     if (req.method === "GET" && url.pathname === "/api/metadata") {
       return send(res, 200, await verifiedMetadata(), origin);
     }
@@ -362,7 +400,7 @@ async function agentRoute(req, res, url, origin) {
       ? createRequest({ wallet: agent, kind: "call", contract: "crew_treasury", contractAddress: crewTreasury(),
           circuit: "draw", args: [{ userAddress: own.address }], requestedBy, note: body.note ?? "treasury draw" })
       : body.kind === "transfer"
-        ? createRequest({ wallet: agent, kind: "transfer", to: body.to, amount: body.amount, requestedBy, note: body.note })
+        ? createRequest({ wallet: agent, kind: "transfer", to: body.to, amount: body.amount, token: body.token, requestedBy, note: body.note })
         : null;
     if (!request) return send(res, 400, { error: "kind must be transfer or draw" }, "null");
     const crewAddresses = new Set([...wallets.values()].map((w) => w.address).filter(Boolean));

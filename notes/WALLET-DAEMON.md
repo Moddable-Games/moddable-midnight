@@ -77,6 +77,52 @@ The NFTs are minted in the organiser's transaction but sent to the agents. Witho
 agents' encryption keys the coins would exist and never be visible to them (Kapa query
 11). The daemon passes those keys, and each agent's wallet reports its NFT.
 
+## Sending tokens, and shielded sends
+
+Each wallet's Send form lists what that wallet holds: NIGHT, public tokens such as MCC,
+and shielded tokens such as its Agent Smart Contract. The recipient's address decides the
+kind of transfer, using the wallet SDK's `transferTransaction`:
+
+- an `mn_addr_…` address gets an unshielded transfer (NIGHT, MCC)
+- an `mn_shield-addr_…` address gets a shielded transfer (Agent Smart Contracts). The
+  address carries the recipient's encryption key, so they can see the coin.
+- NIGHT exists only unshielded, and a request to send it to a shielded address is refused
+
+Tested on preview:
+
+| What | Block |
+|---|---|
+| 10 MCC, Floyd to Tzilo (40 change back to Floyd, per the indexer) | 993,649 |
+| Floyd's Agent Smart Contract to the organiser's shielded address | 993,656 |
+| The same NFT back to Floyd | 993,666 |
+
+Shielded sends needed a fix first. Since 28 August, no shielded address can be parsed
+with a fresh install of Midnight's address library, the official wallet CLI's included
+(friction finding 44).
+
+About the city's ShieldedToken Broker: it advertises "One atomic Midnight Preview ZSwap
+exchanges 0.01 NIGHT for 1 ShieldedToken". A swap is not a send. Both sides' inputs and
+outputs settle in one transaction, which the wallet SDK builds with `initSwap`, and the
+broker has to supply its half. Sending a token to the broker's shielded address would be
+a gift, and NIGHT cannot be sent to a shielded address at all. Testing the broker needs
+the city to accept a swap from an outside wallet, which is where finding 25 (no way to
+register an agent wallet) stops us.
+
+## Contract panel and public verification
+
+The page's contract panel (`GET /api/contract`) shows the crew treasury's public state:
+- MCC minted, held and paid out, and whether they add up
+- mandates issued, the draw amount and the open period
+- the two metadata digests, and whether our files match them
+
+For anyone who does not trust this machine, `web/treasury.html` is published on GitHub
+Pages. It does the same checks entirely in the visitor's browser:
+- reads the contract from the public indexer
+- decodes it with the compiled contract
+- re-derives MCC's and every Agent Smart Contract's token type
+- fetches the metadata from GitHub and checks each file against the on-chain digests
+  and CIDs
+
 ## Agents' route and limits
 
 `POST /api/agent/requests`, with a per-agent bearer token (made on first start, kept in
@@ -123,7 +169,9 @@ was not recorded, which the daemon now does at submission.
 
 - No other wallet shows our token names or images: preview serves no token metadata
   (finding 39). Our page shows them, verified against the contract.
-- The metadata files need pinning to IPFS before anyone else can fetch them by CID.
+- The metadata files need pinning to IPFS before anyone else can fetch them by CID. Pin
+  them as raw blocks (CIDv1, raw leaves) or the CIDs will differ from the ones anchored.
+  The seven CIDs were checked against the reference `multiformats` library.
 - The crew Worker runs in Cloudflare and cannot reach this machine. For the city agents to
   request spends themselves, the daemon should pull their requests from the Worker (with a
   shared secret) and pass them through the same policy.

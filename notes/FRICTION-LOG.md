@@ -959,3 +959,41 @@ differently.
 `sendUnshielded` beyond the balance fails locally as it will on-chain; use one name for a
 fallible-segment failure across midnight-js and the indexer; and throw an error whose
 message states the status rather than serialising the result.
+
+### 44. No shielded address can be parsed: a dependency's minor release capped Bech32 length
+
+Sending an Agent Smart Contract to a crew wallet's shielded address failed before any
+transaction was built:
+
+```
+MidnightBech32m.parse("mn_shield-addr_preview1rzvas…re52k")
+TypeError: invalid string length 132, expected (8..90)
+```
+
+`@midnight-ntwrk/wallet-sdk-address-format@3.1.2` parses every address with
+`bech32m.decodeToBytes(address)` from `@scure/base`, and depends on `"@scure/base": "^2.0.0"`:
+
+| `@scure/base` | `decodeToBytes` | Published |
+|---|---|---|
+| 2.0.0 to 2.3.0 | `decodeToBytes(str)`, calling `decode(str, false)`: no length limit, with the comment "Keep the byte helper unbounded" | up to 8 Aug 2026 |
+| 2.4.0 | `decodeToBytes(str, limit = 90)`: the BIP 173 cap | 28 Aug 2026 |
+
+Unshielded addresses are about 70 characters and still parse. Shielded addresses carry
+two keys and are 132, so since 28 August every fresh install resolves 2.4.0 and cannot
+read a shielded address at all. The official wallet CLI (`midnight-wallet-cli` 0.5.2,
+installed globally) resolved 2.4.0 too, and its own copy of the address library fails
+the same way on the same address.
+
+Our fix is a scoped npm override, so only the address library gets the older version:
+
+```json
+"overrides": { "@midnight-ntwrk/wallet-sdk-address-format": { "@scure/base": "2.3.0" } }
+```
+
+With it, shielded sends worked on preview: an Agent Smart Contract from Floyd to the
+organiser's shielded address (block 993,656) and back (993,666).
+
+**Suggested fix:** pass an explicit limit (`decodeToBytes(str, false)` or a length that
+fits shielded addresses) in `MidnightBech32m.parse`, and pin `@scure/base` exactly until
+then. A test that round-trips a shielded address through encode and parse would have
+caught it on the day 2.4.0 shipped.

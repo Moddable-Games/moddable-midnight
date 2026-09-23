@@ -87,7 +87,11 @@ export function App() {
               <a href={ONE_AM_EXPLORER.contract(CONTRACT_ADDRESS)} target="_blank" rel="noopener" className="text-white underline underline-offset-4 hover:text-cosmic-glow">
                 1AM explorer
               </a>
-              . Every figure below is read live from Midnight's public indexer.
+              . Every figure below is read live from Midnight's public indexer. The newer{" "}
+              <a href={`${import.meta.env.BASE_URL}treasury.html`} className="text-white underline underline-offset-4 hover:text-cosmic-glow">
+                crew treasury
+              </a>{" "}
+              has its own page.
             </p>
           </section>
         </div>
@@ -122,6 +126,9 @@ export function App() {
           </a>
           <a href={`${REPO}/blob/main/docs/INTEGRATION.md`} target="_blank" rel="noopener" className="hover:text-foreground">
             Integration docs
+          </a>
+          <a href={`${import.meta.env.BASE_URL}treasury.html`} className="hover:text-foreground">
+            Crew treasury: MCC and Agent Smart Contracts
           </a>
         </div>
       </footer>

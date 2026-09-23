@@ -27,13 +27,13 @@ Midnight and writing down every seam:
 |---|---|
 | **Contract** | [`tournament_pass.compact`](contracts/tournament_pass.compact): private entry passes plus a prize pool, claimed by proof |
 | **Tests** | 14 assertions, including an adversarial stolen-path case ([`src/`](src/README.md)) |
-| **Crew treasury (v2)** | [`crew_treasury.compact`](contracts/crew_treasury.compact): Midnight City Credits (MCC), one shielded Agent Smart Contract NFT per agent, private capped draws. [Audited](notes/AUDIT-crew-treasury.md) before deploy; live at [`e412fa7f…cac4b4`](https://preview.midnightexplorer.com/contracts/e412fa7fa89433c2d37bbf350eba95e61db6075d5189f0dc5f45c07583cac4b4) |
+| **Crew treasury (v2)** | [`crew_treasury.compact`](contracts/crew_treasury.compact): Midnight City Credits (MCC), one shielded Agent Smart Contract NFT per agent, private capped draws. [Audited](notes/AUDIT-crew-treasury.md) before deploy; live at [`e412fa7f…cac4b4`](https://preview.midnightexplorer.com/contracts/e412fa7fa89433c2d37bbf350eba95e61db6075d5189f0dc5f45c07583cac4b4). [Check the supply and metadata yourself](https://moddable-games.github.io/moddable-midnight/treasury.html) |
 | **Wallet** | A Firefox-friendly browser wallet over a local daemon holding the organiser's and three agents' wallets, with approvals and per-agent limits ([notes](notes/WALLET-DAEMON.md)) |
 | **Deployed** | [`2a7fe78c…e1c191`](https://preview.midnightexplorer.com/contracts/2a7fe78cdafc8126041298f307f699b319ed43e908e85287f8b72ad291e1c191) on the `preview` testnet, with a private claim made on-chain |
 | **Front end** | [Live read-only page](https://moddable-games.github.io/moddable-midnight/) decoding contract state from the public indexer ([`web/`](web/)) |
 | **Toolchain** | Compact compiler 0.31.1, runtime 0.16.0, Midnight.js 4.1.1, proof server 8.1.0 ([versions](docs/INTEGRATION.md#versions-that-work-together)) |
 | **Clock** | +77 minutes to deploy, +84 to a private claim on-chain, by an agent wallet ([timeline](notes/TIMELINE.md)) |
-| **Findings** | 43 logged for the contracts and wallet, plus a Midnight City set ([friction log](notes/FRICTION-LOG.md), [city findings](notes/midnight-city/FINDINGS.md)) |
+| **Findings** | 44 logged for the contracts and wallet, plus a Midnight City set ([friction log](notes/FRICTION-LOG.md), [city findings](notes/midnight-city/FINDINGS.md)) |
 | **Midnight City** | A three-agent fleet run inside IO Global's agentic sim ([notes](notes/midnight-city/README.md), [live page](https://moddable-games.github.io/moddable-midnight/city.html)) |
 
 ![The read-only front end: prize pool, passes and claims, public versus private data, and every contract transaction, decoded live from the preview indexer](docs/img/read-only-front-end.png)
@@ -133,7 +133,7 @@ throughout the build.
 | [`wallet-ui/`](wallet-ui/) | The browser wallet page |
 | [`metadata/`](metadata/) | Token artwork and metadata documents, addressed by IPFS CID |
 | [`spikes/`](spikes/) | Throwaway proofs, such as the minting spike and the drain regression |
-| [`web/`](web/) | React front end (Vite, shadcn, Tailwind), scaffolded with `midnight-dapp-dev` |
+| [`web/`](web/) | React front end (Vite, shadcn, Tailwind), scaffolded with `midnight-dapp-dev`: the tournament pass page and the crew treasury check |
 | [`api/`](api/) | Provider wiring for browser writes, from the same scaffold |
 | [`docs/`](docs/INTEGRATION.md) | Integration guide |
 | [`notes/`](notes/) | Friction log, timeline, knowledge base queries, audit and wallet notes |
@@ -156,7 +156,10 @@ reviewed as reference points and are the route to real token behaviour:
 - Deployed on preview by the organiser: 1,000,000 MCC minted, NFTs visible in each agent's own wallet, draws paid and repeat draws refused
 - Token metadata per Midnight's spec, images and documents addressed by IPFS CID, digests anchored in the contract and checked before the wallet shows a name or image
 - Agents can request spends through their own authenticated route: small crew transfers and treasury draws run at once, larger or external ones wait for the organiser
-- Friction findings 38 to 43 and Kapa queries 7 to 12
+- MCC and Agent Smart Contracts can be sent from the wallet page, including shielded sends to `mn_shield-addr` addresses; a contract panel shows the treasury's on-chain state
+- A public page checks MCC supply, payouts, both token types and all metadata against the chain, in the visitor's browser
+- Shielded addresses could not be parsed at all after a dependency's minor release; pinned around it (finding 44)
+- Friction findings 38 to 44 and Kapa queries 7 to 12
 
 #### 2026-09-21
 - Overburdened agents now sell anything a merchant will buy, not just their own trade good

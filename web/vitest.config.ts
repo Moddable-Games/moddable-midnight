@@ -16,6 +16,10 @@ export default defineConfig({
         __dirname,
         "../src/managed/tournament_pass/contract/index.js",
       ),
+      "@crew": path.resolve(
+        __dirname,
+        "../src/managed/crew_treasury/contract/index.js",
+      ),
     },
   },
 });

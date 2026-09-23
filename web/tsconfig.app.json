@@ -24,6 +24,9 @@
       ],
       "@contract": [
         "../src/managed/tournament_pass/contract/index.d.ts"
+      ],
+      "@crew": [
+        "../src/managed/crew_treasury/contract/index.d.ts"
       ]
     },
     "noEmit": true

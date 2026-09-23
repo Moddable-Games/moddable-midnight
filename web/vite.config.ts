@@ -23,9 +23,20 @@ export default defineConfig({
         __dirname,
         "../src/managed/tournament_pass/contract/index.js",
       ),
+      "@crew": path.resolve(
+        __dirname,
+        "../src/managed/crew_treasury/contract/index.js",
+      ),
     },
   },
   build: {
+    rollupOptions: {
+      // Two pages: the tournament pass (index) and the crew treasury check (treasury).
+      input: {
+        index: path.resolve(__dirname, "index.html"),
+        treasury: path.resolve(__dirname, "treasury.html"),
+      },
+    },
     target: "esnext",
     minify: false,
   },

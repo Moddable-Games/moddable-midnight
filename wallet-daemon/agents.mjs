@@ -59,6 +59,7 @@ export function evaluate(wallet, request, history, crewAddresses) {
       : { auto: false, reason: "draws need approval for this agent" };
   }
   if (request.kind !== "transfer") return { auto: false, reason: `${request.kind} always needs approval` };
+  if (request.token && request.token !== "0".repeat(64)) return { auto: false, reason: "only NIGHT transfers are approved automatically" };
 
   const amount = BigInt(request.amount);
   const perTransfer = BigInt(policy.autoApproveNight) * STAR_PER_NIGHT;
