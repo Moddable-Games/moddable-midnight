@@ -28,3 +28,7 @@ api/dist/
 
 # Local assistant instructions
 CLAUDE.md
+
+# Phase 0 spike artefacts: keep the contract source and compiled JS, not the keys
+spikes/managed/*/keys/
+spikes/managed/*/zkir/

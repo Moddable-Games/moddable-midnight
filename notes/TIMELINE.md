@@ -109,3 +109,12 @@ API, which returned the `ContractDeploy` action and block above.
 - The proof server runs locally on port 6300 whichever network is targeted,
   because it handles private data. That is one Docker container, not the full
   local devnet.
+
+## Resumed 23 September 2026, 09:1x (clock restarts at +106m)
+
+Second-round interview confirmed, so the work continues. Direction set with Mark
+on 23 Sep: a browser wallet for Firefox (none exists, findings 35 and 36), a v2
+contract with shielded NFT mandates and a real unshielded token treasury, and the
+tie-in to Midnight City: the city's ShieldedToken Broker spends NIGHT an agent can
+never earn in-game (city finding 7), so the treasury is what funds it.
+

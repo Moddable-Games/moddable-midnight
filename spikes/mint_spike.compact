@@ -1,0 +1,45 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// Phase 0 spike: can our pinned compiler (0.31.1) and the stable SDK mint and hold
+// tokens? Two questions in one contract: a fungible treasury supply, and a supply-1
+// token that would stand in for an agent mandate NFT.
+
+export ledger treasuryColor: Bytes<32>;
+
+export ledger mandateColor: Bytes<32>;
+
+export ledger minted: Counter;
+
+// Fungible: mint a supply to the contract itself, which is how a treasury holds funds.
+export circuit mintTreasury(amount: Uint<64>): Bytes<32> {
+  const color = mintUnshieldedToken(
+    pad(32, "moddable:spike:treasury"),
+    disclose(amount),
+    left<ContractAddress, UserAddress>(kernel.self())
+  );
+  treasuryColor = color;
+  minted.increment(1);
+  return color;
+}
+
+// Non-fungible: one unit of its own token type, sent straight to a holder.
+export circuit mintMandate(holder: UserAddress): Bytes<32> {
+  const color = mintUnshieldedToken(
+    pad(32, "moddable:spike:mandate"),
+    1,
+    right<ContractAddress, UserAddress>(disclose(holder))
+  );
+  mandateColor = color;
+  return color;
+}
+
+// Paying out of the treasury is what a draw would do.
+export circuit payOut(amount: Uint<64>, holder: UserAddress): [] {
+  sendUnshielded(
+    treasuryColor,
+    disclose(amount) as Uint<128>,
+    right<ContractAddress, UserAddress>(disclose(holder))
+  );
+}

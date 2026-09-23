@@ -742,3 +742,113 @@ Two changes made the page work under a sub-path: a `VITE_BASE` setting, and
 moving fonts and the hex grid from `public/` into `src/assets/` so Vite rewrites
 their URLs. The compiled contract's JavaScript is now committed (keys and
 circuits are not), so the build needs no Compact toolchain.
+
+## Resuming for round two (23 September 2026)
+
+### 38. `compact check` reports an IP address as the latest compiler version
+
+The toolchain's update check calls the GitHub releases API unauthenticated. When
+that is rate limited, the failure is not handled and the address from GitHub's
+error text is presented as a version number. On 23 September the session hook
+reported:
+
+```
+A compact compiler update is available. Your current version is v0.34.0,
+the latest version available is v187.13.192.
+```
+
+`v187.13.192` is not a release. Running the command directly shows where it came
+from:
+
+```
+$ compact check
+    1: Failed to load the compiler artifacts
+    2: Error while fetching compact releases
+    3: GitHub
+    4: API rate limit exceeded for 187.13.192.160.
+$ compact self check
+    HTTP status client error (403 rate limit exceeded) for url
+    (https://api.github.com/repos/midnightntwrk/compact/releases)
+```
+
+The rate-limited IP, `187.13.192.160`, is parsed as `v187.13.192`. A developer
+following the advice would try to install a version that does not exist, and an
+agent reading the same hook would do the same with more conviction. Anyone on a
+shared or NAT'd address hits the unauthenticated limit easily.
+
+**Suggested fix:** treat a non-2xx response as an error rather than parsing its
+body for a version, say "update check unavailable (GitHub rate limit)", and
+support an optional token for the check.
+
+### 39. The token metadata spec exists, but nothing serves it on preview
+
+Midnight's architecture repository specifies token metadata in detail: a signed
+JSON document carrying `ticker`, `name`, `image`, `description`, `decimals` and
+`supply`, keyed by the ledger-serialized token type, served over GraphQL by the
+indexer, CIP-26 style (`apis-and-common-types/metadata/Token Metadata.md`, ADR
+0015, status "Proposed").
+
+On preview, none of it is reachable. Introspecting the indexer's query type on 23
+September returns no token metadata query at all:
+
+```
+block, zswapMerkleTreeCollapsedUpdate, transactions, contractAction, contract,
+dustGenerationStatus, ..., poolMetadata, poolMetadataList, spoByPoolId, ...
+```
+
+The only `metadata` fields are `poolMetadata` and `poolMetadataList`, which are
+stake pool metadata. So a contract can mint a token today, but no name or image
+can travel with it, and a wallet has nothing to display beyond a 32-byte colour.
+ADR 0012 (manual token names in the wallet, superseded on paper) is still the
+practical state of the world.
+
+**Suggested fix:** state on the tokens documentation that metadata is not yet
+served on the public test networks, so builders know the image field is not
+available to them yet, and publish a timeline for the metadata server.
+
+### 40. `contract deploy` times out at 100% sync, on a wallet that can transfer
+
+Six attempts on 23 September, all `{"error":true,"code":"SYNC_TIMEOUT","message":"Wallet
+sync timed out","exitCode":4}`. The same wallet, in the same minutes, transferred 1 NIGHT
+successfully (`009cdea3b9c6…2ba6e4`), so the wallet, the proof server, DUST and submission
+all work. Running the deploy without `--json` shows where it stops:
+
+```
+✓ Wallet OK (9999000000 NIGHT, dust available)
+⠋ Starting mn serve...
+⠴ Syncing wallet... 100%
+╔═ Error: Wallet sync timed out
+```
+
+The wallet passes the CLI's own precondition check with DUST available, the deploy starts
+an internal `mn serve`, sync reaches **100%**, and the command then reports a sync
+timeout. A standalone `midnight serve` against this wallet, minutes earlier, printed
+`✓ Wallet synced` and `✓ Dust ready` and served reads happily.
+
+So this is not a slow catch-up: a completion predicate never becomes true even at 100%.
+Midnight's own deploy tutorial documents that hazard for exactly this situation:
+
+> "Wait for the shielded and unshielded channels to catch up. We do not gate on the dust
+> channel here: on the public networks it may never report 'strictly complete', which
+> would hang this wait forever."
+
+The CLI's transaction paths run with `requireStrictSync: true`. Whether DUST is the
+channel that never settles here is inference, not something we proved: the CLI prints a
+`waiting on: …` detail elsewhere (`Syncing wallet... (waiting on: dust, unshielded)`) but
+not on this path, so the stalling channel is not reported to the user at all.
+
+Costs to a builder: v1 deployed from this machine on 17 September, so the first assumption
+is local breakage. Two of the six attempts went on cache clearing, and an unrelated real
+bug was found on the way (a dead proof server container, which surfaced as `SYNC_TIMEOUT`
+on deploy and only as `PROOF_FAILURE` on transfer).
+
+**Suggested fix:** do not gate the deploy on a channel the documentation says may never
+complete on a public network; print which channel the wait is blocked on, as the sync
+detail does elsewhere; and distinguish "sync incomplete" from "proof server unreachable"
+in the error code.
+
+**Still true on 23 September:** finding 23. `midnight dust register` on a fresh agent
+wallet reported `SYNC_TIMEOUT` ("Timed out waiting for dust tokens. Try running: midnight
+dust register", which is the command that just failed) while the registration had in fact
+succeeded: `dust status` immediately after showed `registered: true, dustAvailable: true`.
+

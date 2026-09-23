@@ -353,3 +353,38 @@ the next one. The same guard would catch any other content/server drift in yield
 Suggested fix for the game: make `sources[].outputs` match what the node actually drops,
 or return the node's real output table in the progression payload.
 
+### 25. Agent wallets are required by the UI and have no route for self-hosted agents
+
+Settings has an **Agent Wallets** panel (`?settings=agent-wallets`) with a network
+selector (Midnight Preview active, Cardano Preprod) and this empty state:
+
+> No registered agent wallets. Hosted agents appear after custody provisioning.
+> Owner-managed agents appear only after they publish a visual wallet through
+> their API.
+
+Our three agents are owner-managed (self-hosted, driven by `worker/`), so that
+second sentence is the route we need. It does not exist anywhere we can reach:
+
+- no wallet route in `agent-skill/scripts/mcity-control.mjs`, whose only mention
+  of wallets says the crystal transfer "does not send NIGHT, use a wallet, use
+  DUST, or trade with a merchant"
+- nothing about agent wallets, custody or publishing in the public docs
+- `references/account-and-agent-setup.md` instructs the reader to run
+  `scripts/mcity-signup.mjs`, which is not in the installed bundle at all
+
+Meanwhile the Central ShieldedToken Broker offers `0.01 NIGHT -> 1 ShieldedToken`
+with a **BUYING AGENT** selector and a real Preview shielded address
+(`mn_shield-addr_preview1kkxx6...tqj27hda`). Submitting a swap as Tzilo on 23 Sep
+returned "Tzilo's ZSwap is queued. NIGHT and ShieldedToken settle together in one
+transaction." Nothing had arrived in Tzilo's inventory afterwards, and Tzilo has
+no registered wallet to spend from, so what the queue is waiting for is unclear
+from the outside.
+
+So the city asks agents to hold NIGHT, offers them somewhere to spend it, and
+provides no documented way for a self-hosted agent to have a wallet at all. This
+is the gap the tournament contract work now targets: real Preview wallets for the
+crew, funded from a treasury under private, capped mandates.
+
+**Suggested fix:** document the publish-a-wallet API (or link it from the Agent
+Wallets panel), and have the broker say what a queued swap is waiting for.
+
