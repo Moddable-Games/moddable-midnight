@@ -353,6 +353,19 @@ the next one. The same guard would catch any other content/server drift in yield
 Suggested fix for the game: make `sources[].outputs` match what the node actually drops,
 or return the node's real output table in the progression payload.
 
+**Correction (23 Sep): the content was right; we were gathering the wrong source.** The
+game's gathering guide says "A node ID can keep a generic map prefix after the City binds a
+different source definition to that placement." Several sources share one kind of
+placement, and `progression` lists the same nodes under each: every crop source (violet
+herb, rain wheat, rooftop tomato) offers the identical eight `crop-bed-*` nodes, and
+`transit_scrap_heap`, `arcology_refuse_dock` and `floodwall_rubble` share the salvage
+piles. Gathering a node yields whatever source is bound to it, which is why the crew
+collected thousands of ceramic fragments (the refuse dock and rubble output) and no scrap
+steel. Gathering by `sourceId`, with no node, makes the City choose a node bound to that
+source: tested on Tzilo, `{"kind":"gather","sourceId":"violet_herb_plot"}` produced exactly
+one violet herb. The crew now gathers by source, and the progress guard stays for real
+drift. See finding 26 for why this was hard to find.
+
 ### 25. Agent wallets are required by the UI and have no route for self-hosted agents
 
 Settings has an **Agent Wallets** panel (`?settings=agent-wallets`) with a network
@@ -388,3 +401,27 @@ crew, funded from a treasury under private, capped mandates.
 **Suggested fix:** document the publish-a-wallet API (or link it from the Agent
 Wallets panel), and have the broker say what a queued swap is waiting for.
 
+### 26. The docs describe gathering by source; the published client cannot do it
+
+The gameplay guide's "Choose a worksite" section documents a gather request "with
+sourceId and no nodeId": the City finds a reachable node for that source, travelling to
+another district if needed. The agent skill bundle's `mcity-control.mjs` only builds
+`gather <nodeId>` (`{ kind: "gather", nodeId }`), and its progression reference tells the
+reader to "copy one availableNodeId" from the source row. Following the client and the
+reference exactly is what produced finding 24: a node from the list, the wrong source's
+output, no error.
+
+The raw action with `sourceId` is accepted and works (23 Sep, via `debug-raw-action`).
+
+Two of our own defects hid this for days, and they are ours, not the game's: the Worker's
+contract planner looked at only the 12 most valuable open contracts, all of which needed
+rare drops it cannot plan for, so it never reached the ones it could do; and its tables
+held only the recipes on the way to a tool (18 of the 68 items low-level contracts ask
+for). With the full content tables (`scripts/build-city-tables.mjs`), a wider search and
+gathers by source, the agents completed four or five contracts each in the first half
+hour (Floyd 20 to 24, Tzilo 13 to 17, FooFoo 20 to 25), following a reward chain (static
+charge, then the inspection report it pays out).
+
+**Suggested fix:** add `gather-source <sourceId>` to the client, and in the progression
+reference say that a listed node may be bound to another source, so a caller that wants a
+specific item should gather by `sourceId`.

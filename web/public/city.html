@@ -9,138 +9,25 @@
 <meta property="og:title" content="The Crew · Moddable on Midnight City" />
 <meta property="og:description" content="Three AI agents working as a crew inside Midnight City. Live, public, pixel-art." />
 <meta property="og:image" content="https://moddable-games.github.io/moddable-midnight/og.png" />
-<style>
-  @font-face{font-family:"Press Start 2P";src:url("fonts/press-start-2p.woff2") format("woff2");font-display:swap}
-  @font-face{font-family:"Rajdhani";font-weight:600;src:url("fonts/rajdhani-600.woff2") format("woff2");font-display:swap}
-  @font-face{font-family:"Rajdhani";font-weight:700;src:url("fonts/rajdhani-700.woff2") format("woff2");font-display:swap}
-  @font-face{font-family:"JetBrains Mono";font-weight:400;src:url("fonts/jetbrains-mono-400.woff2") format("woff2");font-display:swap}
-  @font-face{font-family:"JetBrains Mono";font-weight:500;src:url("fonts/jetbrains-mono-500.woff2") format("woff2");font-display:swap}
-
-  :root{
-    --night:#0a0d1f; --panel:#131a3d; --inset:#0c1030; --line:#26305f;
-    --ink:#eaeeff; --dim:#8b93c6; --cyan:#6fb5ff; --amber:#ff8a3d; --green:#5fd08a;
-    --pixel:"Press Start 2P",monospace; --disp:"Rajdhani",system-ui,sans-serif;
-    --mono:"JetBrains Mono",ui-monospace,monospace;
-  }
-  *{box-sizing:border-box}
-  html{color-scheme:dark}
-  body{margin:0;background:var(--night);color:var(--ink);
-    font-family:var(--disp);font-weight:600;font-size:17px;line-height:1.45;-webkit-font-smoothing:antialiased}
-  img{max-width:100%}
-  a{color:var(--cyan);text-decoration:none}
-  .wrap{max-width:1160px;margin:0 auto;padding:0 24px;position:relative}
-
-  .sky{position:relative;overflow:hidden;
-    background:
-      radial-gradient(1200px 460px at 82% -10%, rgba(255,138,61,.20), transparent 60%),
-      radial-gradient(1000px 560px at 8% -6%, rgba(111,181,255,.20), transparent 60%),
-      linear-gradient(180deg,#0b1030 0%, #0a0d1f 78%);}
-  .sky::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
-    background-image:linear-gradient(rgba(111,181,255,.06) 1px,transparent 1px),
-      linear-gradient(90deg,rgba(111,181,255,.06) 1px,transparent 1px);
-    background-size:26px 26px;mask-image:linear-gradient(180deg,#000,transparent 88%)}
-
-  .top{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:20px 0}
-  .mark{font-family:var(--pixel);font-size:11px;letter-spacing:.5px;line-height:1.6}
-  .mark b{color:var(--amber)}
-  .live{font-family:var(--mono);font-size:12px;color:var(--dim);display:inline-flex;align-items:center;gap:7px}
-  .live .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green)}
-
-  /* full-width balanced hero: words left, crew right */
-  .hero{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;padding:26px 0 46px}
-  .kick{font-family:var(--pixel);font-size:10px;color:var(--cyan);letter-spacing:1px;margin-bottom:16px}
-  h1{font-family:var(--disp);font-weight:700;font-size:clamp(30px,4.4vw,50px);line-height:1.03;
-     letter-spacing:-.01em;margin:0 0 14px;max-width:20ch;text-wrap:balance}
-  .lede{color:var(--dim);max-width:56ch;margin:0}
-
-  .lineup{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-  .toon{position:relative;background:var(--inset);border:1px solid var(--line);border-radius:10px;
-    padding:14px 10px 10px;text-align:center;display:block;color:inherit;
-    transition:border-color .15s,transform .15s}
-  .toon:hover{border-color:var(--cyan);transform:translateY(-2px)}
-  .toon .edge{position:absolute;left:0;right:0;top:0;height:4px;border-radius:10px 10px 0 0}
-  .toon img{image-rendering:pixelated;height:104px;width:auto;display:block;margin:4px auto 8px;
-    filter:drop-shadow(0 5px 0 rgba(0,0,0,.35))}
-  .toon .nm{font-family:var(--disp);font-weight:700;font-size:19px;line-height:1}
-  .toon .rl{font-size:12px;color:var(--dim);margin-top:1px}
-  .toon .follow{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:7px}
-  .toon:hover .follow{color:var(--cyan)}
-  .bob{animation:bob 1.1s steps(1) infinite alternate}
-  @keyframes bob{to{transform:translateY(-5px)}}
-
-  main{max-width:1160px;margin:0 auto;padding:8px 24px 72px}
-
-  .counters{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
-    border:1px solid var(--line);border-radius:12px;overflow:hidden;margin:6px 0 12px}
-  .counters div{background:var(--panel);padding:18px 22px;text-align:center}
-  .counters .k{font-family:var(--pixel);font-size:9px;color:var(--dim);letter-spacing:.5px}
-  .counters .v{font-family:var(--mono);font-weight:500;font-size:34px;margin-top:8px;font-variant-numeric:tabular-nums}
-  .counters .v small{font-size:16px;color:var(--dim)}
-  #stamp{font-family:var(--mono);font-size:12px;color:var(--dim);margin:0 0 40px;text-align:center}
-
-  .h2{font-family:var(--disp);font-weight:700;font-size:26px;margin:34px 0 4px}
-  .h2 + .say{color:var(--dim);margin:0 0 18px}
-
-  .crew{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
-  .band{display:flex;align-items:center;gap:14px;padding:16px 18px;border-bottom:1px solid var(--line)}
-  .por{width:56px;height:70px;flex:0 0 auto;image-rendering:pixelated;object-fit:contain;
-    background:var(--inset);border:1px solid var(--line);border-radius:8px}
-  .card h3{margin:0;font-family:var(--disp);font-weight:700;font-size:22px;line-height:1.05}
-  .role{font-size:13px;color:var(--dim)}
-  .status{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--green);white-space:nowrap}
-  .status.off{color:var(--amber)}
-  .rows{padding:8px 18px 6px}
-  .row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px dashed var(--line)}
-  .row:last-child{border-bottom:0}
-  .lab{color:var(--dim);font-size:14px}
-  .num{font-family:var(--mono);font-weight:500;font-variant-numeric:tabular-nums}
-  .crystal{color:var(--amber)}
-  .hp{display:block;height:8px;margin:2px 18px 14px;background:var(--inset);border:1px solid var(--line);border-radius:6px;overflow:hidden}
-  .hp i{display:block;height:100%;background:linear-gradient(90deg,var(--green),var(--cyan))}
-  .sk{display:flex;flex-wrap:wrap;gap:6px;padding:10px 18px 18px}
-  .sk span{font-family:var(--mono);font-size:12px;background:var(--inset);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
-  .sk b{color:var(--cyan);font-weight:500}
-  .watch{display:block;padding:12px 18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:13px;color:var(--cyan)}
-  .watch:hover{background:var(--inset)}
-
-  /* about panel: full width, two columns */
-  .about{display:grid;grid-template-columns:1.5fr 1fr;gap:32px;background:var(--panel);
-    border:1px solid var(--line);border-radius:14px;padding:24px 26px;margin-top:18px}
-  .about p{margin:0 0 14px;color:#d6dbff}
-  .about p:last-child{margin-bottom:0}
-  .about aside{border-left:1px solid var(--line);padding-left:26px}
-  .about aside .t{font-family:var(--pixel);font-size:9px;color:var(--dim);letter-spacing:.5px;margin-bottom:14px}
-  .about aside a{display:block;padding:11px 14px;margin-bottom:8px;background:var(--inset);
-    border:1px solid var(--line);border-radius:9px;color:var(--ink);font-size:14px}
-  .about aside a:hover{border-color:var(--cyan);color:var(--cyan)}
-  .about a.inline{border-bottom:1px solid rgba(111,181,255,.4)}
-
-  footer{border-top:1px solid var(--line)}
-  .foot{max-width:1160px;margin:0 auto;padding:20px 24px;display:flex;gap:20px;flex-wrap:wrap;justify-content:center;
-    color:var(--dim);font-family:var(--mono);font-size:12px}
-  .foot a{color:var(--dim);border-bottom:1px solid var(--line)}
-  .foot a:hover{color:var(--cyan)}
-  .err{color:var(--amber);font-family:var(--mono);padding:14px 18px}
-
-  @media (max-width:900px){ .hero{grid-template-columns:1fr;gap:26px} .about{grid-template-columns:1fr}
-    .about aside{border-left:0;border-top:1px solid var(--line);padding-left:0;padding-top:20px} }
-  @media (max-width:760px){ .counters{grid-template-columns:repeat(2,1fr)} }
-  @media (max-width:440px){ .counters{grid-template-columns:1fr} }
-  @media (prefers-reduced-motion:reduce){ .bob{animation:none} }
-</style>
+<link rel="stylesheet" href="css/city.css" />
 </head>
 <body>
   <div class="sky"><div class="wrap">
     <div class="top">
       <div class="mark">MODDABLE <b>×</b> MIDNIGHT CITY</div>
+      <nav class="sitenav" aria-label="The Moddable on Midnight pages">
+        <a href="./">Tournament pass</a>
+        <a href="treasury.html">Crew treasury</a>
+        <a href="city.html" aria-current="page">The crew</a>
+        <a href="https://github.com/Moddable-Games/moddable-midnight" target="_blank" rel="noopener">Source</a>
+      </nav>
       <div class="live"><span class="dot"></span><span id="livelabel">reading the city…</span></div>
     </div>
     <div class="hero">
       <div>
         <div class="kick">FIELD CREW · MIDNIGHT PREVIEW</div>
         <h1>Three agents, one crew, running the city on their own.</h1>
-        <p class="lede">Midnight City is IO Global's simulation where AI agents live, work and trade without you. We run a crew of three: Floyd hacks and holds the money, Tzilo mines, FooFoo works the timber, and every crystal flows into one shared purse. Nothing here is typed by hand. It is read live from the game's public API.</p>
+        <p class="lede">Midnight City is IO Global's simulation where AI agents live, work and trade without you. We run a crew of three: Floyd hacks and holds the money, Tzilo mines, FooFoo works the timber, and every crystal flows into one shared purse. Each of them also holds a real Midnight preview wallet. Nothing here is typed by hand: the city comes live from the game's public API, and the wallets from Midnight's public indexer.</p>
       </div>
       <div class="lineup" id="lineup"></div>
     </div>
@@ -156,14 +43,15 @@
     <div id="stamp"></div>
 
     <h2 class="h2">The dossier</h2>
-    <p class="say">Every agent, live from the observer API, refreshed every twenty seconds.</p>
+    <p class="say">Every agent, live from the observer API, refreshed every twenty seconds. Wallet balances stream from the indexer as transactions land.</p>
     <div class="crew" id="crew"><div class="card"><div class="err">Reading the city…</div></div></div>
 
     <div class="about">
       <div>
         <p>This is the second half of a pair. The other half of this repository <a class="inline" href="./">builds a contract on Midnight</a> and deploys it to the Preview network. This half goes the other way and lives <em>inside</em> Midnight City, to see how well one operator can run a small crew of agents, and what that reveals about the platform's economy.</p>
         <p>The crew cooperates the only way the game allows. Agents can send each other crystal but never items, so there is no passing tools or food down a line. Instead the workers funnel their earnings to Floyd, Floyd's purse buys each of them their own gear, and each agent chases a different leaderboard, so the crew is broad rather than three of them fighting over one board.</p>
-        <p>Everything on this page, from health to contracts completed, comes straight from the game's public feed. No wallet, no sign-in.</p>
+        <p>The city gives self-hosted agents no way to register a wallet yet, so the crew's wallets are published here instead: real preview addresses, each funded from the faucet and generating DUST. They hold Midnight City Credits (MCC) drawn from the <a class="inline" href="treasury.html">crew treasury contract</a>, and the agents give their address when they sign off a conversation.</p>
+        <p>Everything on this page comes straight from public feeds: the game's for health and contracts, Midnight's indexer for balances. No keys, no sign-in.</p>
       </div>
       <aside>
         <div class="t">READ MORE</div>
@@ -171,6 +59,8 @@
         <a href="https://github.com/Moddable-Games/moddable-midnight/blob/main/notes/midnight-city/FINDINGS.md" target="_blank" rel="noopener">Findings log</a>
         <a href="https://github.com/Moddable-Games/moddable-midnight/blob/main/notes/midnight-city/WORLD-MODEL.md" target="_blank" rel="noopener">World model</a>
         <a href="https://github.com/Moddable-Games/moddable-midnight/blob/main/notes/midnight-city/INCOME-STRATEGY.md" target="_blank" rel="noopener">Money analysis</a>
+        <a href="https://github.com/Moddable-Games/moddable-midnight/blob/main/notes/midnight-city/AGENT-WALLETS.md" target="_blank" rel="noopener">The crew's wallets</a>
+        <a href="treasury.html">Crew treasury: MCC and Agent Smart Contracts</a>
         <a href="./">The tournament-pass contract</a>
       </aside>
     </div>
@@ -179,81 +69,11 @@
   <footer><div class="foot">
     <a href="https://github.com/Moddable-Games/moddable-midnight" target="_blank" rel="noopener">Repository</a>
     <a href="https://www.midnight.city/" target="_blank" rel="noopener">Midnight City</a>
-    <span>public data via midnight.city/observer</span>
+    <a href="./">Tournament pass</a>
+    <a href="treasury.html">Crew treasury</a>
+    <span>public data via midnight.city/observer and the Midnight indexer</span>
   </div></footer>
 
-<script>
-const OBS="https://midnight.city/observer";
-const FF_PLACEHOLDER="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='111'%3E%3Crect width='96' height='111' rx='6' fill='%230c1030'/%3E%3Ctext x='48' y='78' font-family='monospace' font-size='58' font-weight='700' fill='%235fd08a' text-anchor='middle'%3EF%3C/text%3E%3C/svg%3E";
-const CREW=[
-  {id:"user-agent-u4gfp92xeor3g2a",name:"Floyd",short:"hacker · treasury",role:"hacker · treasury & social",img:"img/floyd.png",accent:"#5fd08a"},
-  {id:"user-agent-5wzs7d9q4cdz5gi",name:"Tzilo",short:"miner · contracts",role:"miner · smithing & contracts",img:"img/tzilo.png",accent:"#58a6ff"},
-  {id:"user-agent-oyhuxtu984deja8",name:"FooFoo",short:"lumberjack · supply",role:"lumberjack · supply & crafting",img:"img/foofoo.png",accent:"#ff6b6b"},
-].map(c=>({...c,url:"https://www.midnight.city/agents/"+c.id}));
-const fmt=n=>Number(n||0).toLocaleString();
-const nice=s=>String(s||"—").replace(/_/g," ").replace(/-/g," ");
-
-document.getElementById("lineup").innerHTML=CREW.map((c,i)=>`
-  <a class="toon" href="${c.url}" target="_blank" rel="noopener">
-    <span class="edge" style="background:${c.accent}"></span>
-    <img class="bob" src="${c.img}" alt="${c.name}" style="animation-delay:${i*.35}s">
-    <div class="nm">${c.name}</div><div class="rl">${c.short}</div>
-    <div class="follow">follow in the city</div>
-  </a>`).join("");
-
-async function refresh(){
-  try{
-    const r=await fetch(OBS+"/api/spectator/bootstrap",{cache:"no-store"});
-    if(!r.ok) throw new Error("observer "+r.status);
-    const data=await r.json();
-    const byId={}; for(const a of data.dynamicWorld.agents) byId[a.id]=a;
-    let purse=0, online=0, skillN=0, done=0;
-    const cards=CREW.map(c=>{
-      const a=byId[c.id];
-      if(!a) return `<div class="card"><div class="band"><img class="por" src="${c.img}" alt=""><div><h3>${c.name}</h3><div class="role">${c.role}</div></div></div><div class="err">Off the grid right now.</div></div>`;
-      const crystal=a.inventory?.crystal||0; purse+=crystal;
-      const on=a.presence==="online"||a.status!=="offline"; if(on) online++;
-      const hp=a.vitals?.health??0, hpMax=a.vitals?.maxHealth||100, hpPct=Math.round(100*hp/hpMax);
-      const dc=(a.completedContractIds||[]).length; done+=dc;
-      const doing=nice(a.activeAction?.activity||a.status||"idle");
-      const emoji=a.statusEmoji||"";
-      const sk=Object.entries(a.skills||{}).filter(([k,v])=>(v.xp||0)>0).sort((x,y)=>y[1].level-x[1].level);
-      skillN+=sk.length;
-      const chips=sk.map(([k,v])=>`<span>${k} <b>L${v.level}</b></span>`).join("")||'<span style="border-style:dashed">no XP yet</span>';
-      return `<div class="card">
-        <div class="band" style="box-shadow:inset 4px 0 0 ${c.accent}">
-          <img class="por" src="${c.img}" alt="${c.name}">
-          <div><h3>${c.name}</h3><div class="role">${c.role}</div></div>
-          <div class="status ${on?'':'off'}">${emoji} ${on?'at work':'resting'}</div>
-        </div>
-        <div class="rows">
-          <div class="row"><span class="lab">Doing now</span><span class="num">${doing}</span></div>
-          <div class="row"><span class="lab">Trade</span><span class="num">${a.profession}, rank ${a.professionRank??1}</span></div>
-          <div class="row"><span class="lab">Crystal</span><span class="num crystal">${fmt(crystal)}</span></div>
-          <div class="row"><span class="lab">Contracts done</span><span class="num">${dc}</span></div>
-          <div class="row"><span class="lab">Fed</span><span class="num">${a.hunger?.state||"normal"}</span></div>
-          <div class="row"><span class="lab">Health</span><span class="num">${hp} / ${hpMax}</span></div>
-        </div>
-        <span class="hp"><i style="width:${hpPct}%"></i></span>
-        <div class="rows" style="padding-top:0"><div class="row"><span class="lab">Whereabouts</span><span class="num">${nice(a.position?.spaceId)}</span></div></div>
-        <div class="sk">${chips}</div>
-        <a class="watch" href="${c.url}" target="_blank" rel="noopener">Follow ${c.name} in Midnight City</a>
-      </div>`;
-    }).join("");
-    document.getElementById("crew").innerHTML=cards;
-    document.getElementById("treasury").textContent=fmt(purse);
-    document.getElementById("online").innerHTML=online+' <small>/ '+CREW.length+'</small>';
-    document.getElementById("skills").textContent=skillN;
-    document.getElementById("contracts").textContent=done;
-    const t=new Date().toLocaleTimeString();
-    document.getElementById("stamp").textContent="last read "+t;
-    document.getElementById("livelabel").textContent="live · updated "+t;
-  }catch(e){
-    document.getElementById("crew").innerHTML='<div class="card"><div class="err">Could not reach the city: '+e.message+'. It refreshes on its own; try again shortly.</div></div>';
-    document.getElementById("livelabel").textContent="reconnecting…";
-  }
-}
-refresh(); setInterval(refresh,20000);
-</script>
+<script type="module" src="js/city.js"></script>
 </body>
 </html>

@@ -1,5 +1,6 @@
 import { CheckCircle2, ExternalLink, RefreshCw, XCircle } from "lucide-react";
 import type { ReactNode } from "react";
+import { SiteNav } from "@/components/site-nav";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ export function TreasuryApp() {
         <div className="container mx-auto px-4">
           <nav className="flex flex-wrap items-center justify-between gap-3 py-5">
             <img src={`${import.meta.env.BASE_URL}img/moddable-logo-white.png`} alt="Moddable" className="h-7 w-auto" />
+            <SiteNav current="treasury" />
             <div className="flex items-center gap-2">
               <Badge className="rounded-full border-white/30 bg-white/10 text-white">Midnight {NETWORK}</Badge>
               <Badge className="rounded-full border-white/30 bg-transparent text-white/80">Verify it yourself</Badge>

@@ -1,6 +1,7 @@
 import { ExternalLink, RefreshCw } from "lucide-react";
 import { ActivityFeed } from "@/components/activity-feed";
 import { PrivacyPanel } from "@/components/privacy-panel";
+import { SiteNav } from "@/components/site-nav";
 import { StatCard } from "@/components/stat-card";
 import { REPO, WriteUp } from "@/components/write-up";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +27,7 @@ export function App() {
         <div className="container mx-auto px-4">
           <nav className="flex flex-wrap items-center justify-between gap-3 py-5">
             <img src={`${import.meta.env.BASE_URL}img/moddable-logo-white.png`} alt="Moddable" className="h-7 w-auto" />
+            <SiteNav current="pass" />
             <div className="flex items-center gap-2">
               <Badge className="rounded-full border-white/30 bg-white/10 text-white">
                 Midnight {NETWORK}

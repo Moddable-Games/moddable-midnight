@@ -30,12 +30,15 @@ export function heldBonus(inv, skill) {
     .map((id) => TOOLS[id].bonus));
 }
 
-// The nearest tool worth crafting: in a useful skill, within reach, better than what we
-// carry, not sold by any merchant (those are bought instead), and craftable at all.
+// The nearest tool worth crafting: for the agent's own trade (which is its rank) or fishing
+// (its food), within reach, better than what we carry, not sold by any merchant (those are
+// bought instead, for any skill it practises), and craftable at all. Crafting a tool for a
+// side skill costs more work time than the tool ever saves.
 export function toolToCraft(agent, inv, skills, soldIds) {
   const level = (skill) => Number(skills?.[skill]?.level ?? 0);
+  const craftFor = [agent.skill, "fishing"];
   return Object.entries(TOOLS)
-    .filter(([id, t]) => toolSkills(agent, skills).includes(t.skill) &&
+    .filter(([id, t]) => craftFor.includes(t.skill) &&
       t.level <= level(t.skill) + LOOKAHEAD_LEVELS &&
       t.bonus > heldBonus(inv, t.skill) &&
       !soldIds.has(id) &&
@@ -51,27 +54,55 @@ export function nextStep(item, qty, ctx, depth = 0, chain = []) {
   if (depth > MAX_DEPTH) return { stuck: `too deep at ${item}` };
   const level = (skill) => Number(ctx.skills?.[skill]?.level ?? 0);
 
-  // Raw inputs: gather from any source we can use.
+  // Raw inputs: gather from any source we can use. By sourceId, not nodeId: several sources
+  // share one kind of map placement (every crop source lists the same crop beds), and a node
+  // gives whatever source the City bound to it, so gathering a listed node for violet herb
+  // brought wheat or nothing. With a sourceId the City picks a node that gives that source.
   for (const src of SOURCES_BY_ITEM[item] ?? []) {
     const nodes = ctx.nodes[src.sourceId] ?? [];
     if (nodes.length && level(src.skill) >= src.level) {
-      const nodeId = nodes[(ctx.round ?? 0) % nodes.length];
-      return { act: { label: `GATHER ${item} for ${chain[0] ?? item}`, action: { kind: "gather", nodeId } } };
+      return { act: { label: `GATHER ${item} for ${chain[0] ?? item}`, action: { kind: "gather", sourceId: src.sourceId } } };
     }
   }
 
-  // Crafted inputs: satisfy the recipe's inputs first, then craft one batch.
+  // Crafted inputs: try every recipe that makes the item. A recipe we lack the level for is
+  // not worth gathering inputs for yet; it is reported as blocked so a tool plan can train
+  // the skill. Otherwise satisfy the inputs first, then craft one batch.
+  let blocked = null;
   for (const recipeId of RECIPES_FOR[item] ?? []) {
     const recipe = RECIPES[recipeId];
     const path = [...chain, recipeId];
+    if (level(recipe.skill) < recipe.level) {
+      blocked ??= { blocked: { skill: recipe.skill, chain: path } };
+      continue;
+    }
+    let missing = null;
     for (const [input, need] of Object.entries(recipe.inputs)) {
       const step = nextStep(input, need, ctx, depth + 1, path);
-      if (!step.have) return step;
+      if (!step.have) { missing = step; break; }
     }
-    if (level(recipe.skill) < recipe.level) return { blocked: { skill: recipe.skill, chain: path } };
-    return { act: { label: `CRAFT ${recipeId} for ${chain[0] ?? item}`, action: { kind: "craft", recipeId, batches: 1 } } };
+    if (!missing) return { act: { label: `CRAFT ${recipeId} for ${chain[0] ?? item}`, action: { kind: "craft", recipeId, batches: 1 } } };
+    if (missing.act) return missing;
+    if (missing.blocked) blocked ??= missing;
   }
-  return { stuck: `no source or recipe for ${item}` };
+  return blocked ?? { stuck: `no source or recipe for ${item}` };
+}
+
+// Whether the whole chain for an item can be completed now: held, gatherable from a listed
+// node at our level, or craftable at our level from inputs that are themselves feasible.
+// Used before starting a contract, so an agent never gathers towards a goal it cannot finish.
+export function feasible(item, qty, ctx, depth = 0) {
+  if (count(ctx.inv, item) >= qty) return true;
+  if (depth > MAX_DEPTH) return false;
+  const level = (skill) => Number(ctx.skills?.[skill]?.level ?? 0);
+  if ((SOURCES_BY_ITEM[item] ?? []).some((src) => (ctx.nodes[src.sourceId] ?? []).length && level(src.skill) >= src.level)) {
+    return true;
+  }
+  return (RECIPES_FOR[item] ?? []).some((recipeId) => {
+    const recipe = RECIPES[recipeId];
+    return level(recipe.skill) >= recipe.level &&
+      Object.entries(recipe.inputs).every(([input, need]) => feasible(input, need, ctx, depth + 1));
+  });
 }
 
 // Every recipe reachable from an item's recipe chain.

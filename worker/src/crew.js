@@ -96,13 +96,15 @@ async function actRound(client, { agent, lease, progression, needs }, state, { t
     return;
   }
 
-  // A goal that repeats without the item ever arriving is unreachable in practice (content
-  // and server disagree on some node yields), so drop it for a while and move on.
+  // A goal whose next step repeats without the item ever arriving is unreachable in practice
+  // (content and server disagree on some node yields), so drop it for a while and move on.
+  // Only the same step repeating counts: a long chain (gather, gather, craft, move, deliver)
+  // is progress, however many actions it takes.
   state.goalTries ??= {};
   if (decision.goal) {
-    const tries = state.goalTries[agent.name]?.goal === decision.goal
-      ? state.goalTries[agent.name].tries + 1 : 1;
-    state.goalTries[agent.name] = { goal: decision.goal, tries };
+    const last = state.goalTries[agent.name];
+    const tries = last?.goal === decision.goal && last?.step === decision.label ? last.tries + 1 : 1;
+    state.goalTries[agent.name] = { goal: decision.goal, step: decision.label, tries };
     if (tries > GOAL_TRIES) {
       state.skipContracts ??= {};
       (state.skipContracts[agent.name] ??= {})[decision.goal] = Date.now() + SKIP_MS;

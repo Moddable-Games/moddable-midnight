@@ -4,7 +4,7 @@
 // 1c) Floyd funds a worker's tool  2) shed load when overburdened  3) deliver a ready contract
 // 4) sell a big pile  5) work a contract, and self-supply a tool nobody sells (gather, craft,
 // train); the two alternate by round so neither starves the other
-// 6) sell surplus  7) workers fund Floyd, keeping a food buffer  8) work.
+// 6) sell surplus, only when crystal is short  7) workers fund Floyd, keeping a food buffer  8) work.
 // Nothing is crafted except for a tool plan, a contract or food, so no surplus builds up.
 import { FOOD_IDS } from "./food-ids.js";
 import { TOOLS } from "./tools.js";
@@ -17,6 +17,12 @@ import { CONTRACTS } from "./contracts.js";
 export const FOOD_MERCHANT = "Central Smoothies Matcha Outlet";
 export const DEFAULT_MEAL_COST = 23;
 const FOOD_BUFFER_MEALS = 3;
+
+// Selling earns crystal but no XP (merchant trades never award skill XP, per the game's
+// progression reference), and every sale is a walk to a Central merchant and back. So an
+// agent sells only when it needs crystal, or to shed load; otherwise that time goes into
+// work and contracts, which is what climbs rank.
+const CRYSTAL_FLOOR = 1000;
 
 // Fishing is free: Canal Eddy needs no rod at fishing level 1, and each gather yields one
 // fish, one river eel and one canal carp. One fish restored about 50 hunger in play.
@@ -147,7 +153,8 @@ export function decide(agent, docs, opts) {
   }
 
   // 4) crafting must not starve selling: sell first once the pile passes 5x the threshold
-  if (goods >= agent.sellAt * 5 && sellable > 0) return withFund(sell());
+  const needsCrystal = crystal < CRYSTAL_FLOOR || fundRequest > 0;
+  if (needsCrystal && goods >= agent.sellAt * 5 && sellable > 0) return withFund(sell());
 
   // 5) a contract step and a tool step, alternating by round so neither starves the other
   const ctx = { inv, skills, nodes: nodesBySource(caps), round: opts.round, foodFloor: FOOD_STOCK, skip: opts.skipContracts ?? {} };
@@ -166,7 +173,7 @@ export function decide(agent, docs, opts) {
   }
 
   // 6) sell surplus
-  if (goods >= agent.sellAt && sellable > 0) return withFund(sell());
+  if (needsCrystal && goods >= agent.sellAt && sellable > 0) return withFund(sell());
 
   // 7) workers fund the treasury, keeping a food buffer (sends have a weekly allowance)
   const buffer = mealCost * FOOD_BUFFER_MEALS;

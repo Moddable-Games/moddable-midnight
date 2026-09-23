@@ -58,3 +58,18 @@ State confirmed on 23 September, after registration (`midnight dust status`):
 The registrations for Tzilo and FooFoo both exited `SYNC_TIMEOUT` while having
 succeeded, as Floyd's had earlier: three reproductions of finding 23 in one hour,
 on wallets created that morning.
+
+## Spreading the addresses
+
+Since 23 September the agents hand out their own addresses in the city:
+
+- every conversation an agent closes ends with its unshielded address and a line asking
+  for tips towards the crew's work on wallets for city agents (`worker/src/wallets.js`)
+- at most once every six hours, each agent shouts the same to whoever shares its space
+  (the skill bundle asks for the player's authorization before shouting; the operator gave
+  it for this)
+
+The crew page (https://moddable-games.github.io/moddable-midnight/city.html) shows each
+agent's addresses and live NIGHT and MCC balances from the public indexer, and how much of
+its NIGHT is generating DUST. The DUST balance itself is private to the wallet.
+

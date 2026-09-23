@@ -150,6 +150,10 @@ reviewed as reference points and are the route to real token behaviour:
 ## Changelog
 
 #### 2026-09-23
+- Crew contract planner fixed: full recipe and source tables from the game's content, a search that looks past contracts it cannot source, and gathers by source rather than by node; the agents went from no contract steps to four or five contracts each in half an hour
+- Workers sell only when they need crystal (trades earn no XP and cost a walk); crafted tools only for an agent's own trade
+- Agents sign off conversations with their wallet address and a tip ask, and shout it now and then
+- The crew page shows each agent's addresses, live NIGHT and MCC, and NIGHT generating DUST; all three pages link to each other
 - A browser wallet for Firefox, backed by a local wallet daemon that holds the organiser's and three agents' wallets, saves sync progress, and sends nothing without approval
 - Crew treasury contract (v2): organiser-only minting of Midnight City Credits (MCC), a one-of-one shielded Agent Smart Contract NFT per agent, and private draws limited to one per mandate per organiser-opened period
 - Audited before deploy with Midnight's security review and verification tooling; the critical finding (a caller-chosen period let one mandate drain the treasury) was confirmed by attack and fixed, with the report in `notes/AUDIT-crew-treasury.md`

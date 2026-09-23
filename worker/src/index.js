@@ -5,6 +5,9 @@ import { runTick } from "./crew.js";
 import { DEFAULT_MEAL_COST } from "./decide.js";
 
 const STATE_KEY = "state";
+const TRIES_SAVE_MS = 4 * 60 * 1000;
+
+const important = ({ goalTries, savedAt, ...rest }) => rest;
 
 function emptyState() {
   return {
@@ -20,7 +23,9 @@ function emptyState() {
     movedFor: {},          // agent name -> contract whose area it has travelled to
     delivered: {},         // agent name -> contracts we delivered (progression lags a tick)
     skipContracts: {},     // agent name -> { contractId: until } goals that made no progress
-    goalTries: {},         // agent name -> { goal, tries } progress counter for the current goal
+    goalTries: {},         // agent name -> { goal, step, tries } repeats of the current goal's step
+    lastShout: {},         // agent name -> ms of its last wallet shout
+    savedAt: 0,            // ms of the last KV write
     contentVersion: null,  // game content hash; a change means the game shipped an update
   };
 }
@@ -32,7 +37,8 @@ async function loadState(env) {
 
 async function tick(env) {
   const state = await loadState(env);
-  const before = JSON.stringify(state);
+  const before = JSON.stringify(important(state));
+  const triesBefore = JSON.stringify(state.goalTries);
   const lines = [];
   const log = (line) => { lines.push(line); console.log(line); };
 
@@ -46,8 +52,15 @@ async function tick(env) {
   client.charge(3); // the KV reads above and the write below
   await runTick(env, client, state, log);
 
-  // Free KV allows 1,000 writes a day and a tick runs 1,440 times, so write only on change.
-  if (JSON.stringify(state) !== before) await env.CREW_STATE.put(STATE_KEY, JSON.stringify(state));
+  // Free KV allows 1,000 writes a day and a tick runs 1,440 times, so write only on change,
+  // and let the goal step counter (which moves most rounds) ride along at most every few
+  // minutes: losing a few counts only delays giving up on a stuck goal.
+  const changed = JSON.stringify(important(state)) !== before;
+  const triesChanged = JSON.stringify(state.goalTries) !== triesBefore;
+  if (changed || (triesChanged && Date.now() - (state.savedAt ?? 0) > TRIES_SAVE_MS)) {
+    state.savedAt = Date.now();
+    await env.CREW_STATE.put(STATE_KEY, JSON.stringify(state));
+  }
   log(`subrequests left ${client.remaining()}`);
   return lines;
 }

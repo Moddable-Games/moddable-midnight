@@ -2,10 +2,13 @@
 // agent holds the goods, so candidates come from the content table: at or below the agent's
 // level in that contract's skill, not already completed, and reachable with one planner step.
 import { CONTRACTS } from "./contracts.js";
-import { nextStep } from "./planner.js";
+import { nextStep, feasible } from "./planner.js";
 import { FOOD_IDS } from "./food-ids.js";
 
-const MAX_CANDIDATES = 12;   // keep the per-tick planning cheap
+// Enough to look past every contract we cannot source. With 12, the most valuable open
+// contracts (ledgers and reports that only rare drops give) used the whole budget and the
+// reachable ones below them were never tried.
+const MAX_CANDIDATES = 60;
 
 const count = (inv, id) => Number(inv?.[id] ?? 0) || 0;
 const holdsAll = (inv, reqs) => reqs.every((r) => count(inv, r.itemId) >= r.quantity);
@@ -45,6 +48,7 @@ export function pursue(ctx, completed) {
     if ((skip[id] ?? 0) > Date.now()) continue; // goal that stopped making progress
     if (!sparesFood(ctx.inv, contract.requirements, ctx.foodFloor ?? 0)) continue;
     checked += 1;
+    if (!contract.requirements.every((req) => feasible(req.itemId, req.quantity, ctx))) continue;
     for (const req of contract.requirements) {
       if (count(ctx.inv, req.itemId) >= req.quantity) continue;
       const step = nextStep(req.itemId, req.quantity, ctx, 0, [id]);
