@@ -134,3 +134,24 @@ Phase 0 is the cost of re-entry after six days away: a dead container, a broken
 deploy path, and an ecosystem gap (no agent wallets in the city, blocked upstream
 on Passport #113). None of it was contract work, and all of it is logged.
 
+## Clock paused 23 September 10:26 UTC (at +197m)
+
+08:55 to 10:26 UTC is 91 minutes. Splitting it honestly, because the headline number is
+only worth something if it says what it measures:
+
+| What | Minutes | Counted? |
+|---|---|---|
+| Midnight tooling and ecosystem: spikes, six failed deploys, dead proof server, agent wallets, faucet, DUST, Passport research, findings 38 to 41 | ~55 | yes |
+| Building the browser wallet (UI, connector client, indexer balance subscription) | ~24 | yes |
+| Fixing my own defects in that wallet (malformed `signData`, stale sockets marking live connections dead, a readiness probe that tested the handshake rather than the data) | ~12 | yes, but it is not Midnight's fault |
+
+The third row is mine, not the ecosystem's, and the total would flatter this project if it
+were quietly dropped. It stays in, labelled. The first row is the honest measure of what it
+costs to pick this work up after six days away: a container that had exited, a deploy path
+that fails at 100% sync, and a wallet gap blocked upstream since July.
+
+All times in this file are UTC. An earlier version of this entry said 155 minutes, from
+comparing a UTC start against a local-time clock; corrected on the spot.
+
+Running total: **+197m**. Contract v2 is not started; the spike contract compiles and has
+never deployed.

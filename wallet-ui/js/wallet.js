@@ -74,8 +74,10 @@ class Wallet {
       socket.onclose = () => {
         for (const [, entry] of this.pending) entry.reject(new Error("connection closed"));
         this.pending.clear();
+        // A retry during a long sync leaves older sockets behind; when one of those finally
+        // closes it must not knock out the connection that replaced it.
         const state = connections.get(this.port);
-        if (state) { state.status = "off"; render(); }
+        if (state && state.wallet === this) { state.status = "off"; state.lastTry = Date.now(); render(); }
       };
       socket.onmessage = (event) => {
         const message = JSON.parse(event.data);
@@ -89,6 +91,8 @@ class Wallet {
     });
   }
 
+  close() { try { this.socket?.close(); } catch { /* already gone */ } }
+
   call(method, params) {
     const id = ++this.nextId;
     this.socket.send(JSON.stringify({ jsonrpc: "2.0", id, method, params }));
@@ -101,12 +105,15 @@ class Wallet {
   }
 
   async snapshot() {
+    // One cheap call first: a syncing server rejects everything, and asking for six at once
+    // writes six errors into its terminal every attempt.
+    const probe = await this.call("getUnshieldedBalances");
     const [status, config, unshielded, shielded, balances, dust] = await Promise.all([
       this.call("getConnectionStatus"),
       this.call("getConfiguration"),
       this.call("getUnshieldedAddress"),
       this.call("getShieldedAddresses"),
-      this.call("getUnshieldedBalances"),
+      Promise.resolve(probe),
       this.call("getDustBalance"),
     ]);
     return {
@@ -123,7 +130,9 @@ class Wallet {
 }
 
 async function connect(port, { quiet = false } = {}) {
-  if (connections.has(port) && connections.get(port).status === "on") return;
+  const existing = connections.get(port);
+  if (existing?.status === "on") return;
+  existing?.wallet?.close?.();
   const wallet = new Wallet(port);
   connections.set(port, { wallet, status: "busy" });
   render();
@@ -134,7 +143,7 @@ async function connect(port, { quiet = false } = {}) {
     connections.set(port, { wallet, status: "on", networkId, snapshot });
     log(`connected to port ${port} (${networkId}, ${formatNight(snapshot.night)} NIGHT)`, "ok");
   } catch (error) {
-    connections.set(port, { wallet, status: "off", error: error.message });
+    connections.set(port, { wallet, status: "off", error: error.message, lastTry: Date.now() });
     if (!quiet) log(`port ${port}: ${error.message}`, "bad");
   }
   render();
@@ -142,8 +151,13 @@ async function connect(port, { quiet = false } = {}) {
 
 async function refresh() {
   for (const [port, state] of connections) {
-    // A server still syncing answers "Wallet not synced yet"; keep trying quietly.
-    if (state.status === "off") { connect(port, { quiet: true }); continue; }
+    // A server still syncing answers "Wallet not synced yet". Retry slowly: each attempt
+    // prints an error in its terminal, and a sync takes minutes (finding 41).
+    if (state.status === "off") {
+      const now = Date.now();
+      if (now - (state.lastTry ?? 0) > 45000) { state.lastTry = now; connect(port, { quiet: true }); }
+      continue;
+    }
     if (state.status !== "on") continue;
     try {
       state.snapshot = await state.wallet.snapshot();
