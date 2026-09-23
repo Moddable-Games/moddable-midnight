@@ -20,7 +20,7 @@ next="$major.$minor.$patch"
 
 echo "$next" > version.txt
 sed -i.bak -E "s/\"version\": \"[0-9]+\.[0-9]+\.[0-9]+\"/\"version\": \"$next\"/" public/data/site.json
-for page in index.html treasury.html history.html tournament.html public/city.html; do
+for page in index.html treasury.html wallet.html history.html tournament.html public/city.html; do
   sed -i.bak -E "s/\?v=[0-9]+\.[0-9]+\.[0-9]+/?v=$next/g" "$page"
 done
 find . -maxdepth 3 -name "*.bak" -not -path "./node_modules/*" -delete

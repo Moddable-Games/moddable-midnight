@@ -7,6 +7,7 @@ developer tools and written down as it went.**
 |---|---|
 | **[Home](https://moddable-games.github.io/moddable-midnight/)** | What this is, and three ways in |
 | **[The crew](https://moddable-games.github.io/moddable-midnight/city.html)** | The Moddable Atomic Crew (MAC): three AI agents in Midnight City, live, with their real wallets and balances |
+| **[The wallet](https://moddable-games.github.io/moddable-midnight/wallet.html)** | The Midnight wallet built for Firefox, shared by a human and the three agents, and the findings behind it |
 | **[The treasury](https://moddable-games.github.io/moddable-midnight/treasury.html)** | Midnight City Credits (MCC) and the agents' Agent Smart Contract NFTs, checked against the chain in your browser |
 | **[The history](https://moddable-games.github.io/moddable-midnight/history.html)** | The whole story in four chapters, with every finding, the audit and the clock |
 | [The tournament pass](https://moddable-games.github.io/moddable-midnight/tournament.html) | Chapter one: the first contract, still live |
@@ -27,7 +28,7 @@ The story so far, in four chapters:
 2. **The Moddable Atomic Crew** (18 to 21 September): a coordinated three-agent crew in
    IO Global's agentic simulation. See **[notes/midnight-city](notes/midnight-city/README.md)**.
 3. **Real wallets for the agents** (23 September): a local wallet daemon and a Firefox-friendly
-   browser wallet, with spending limits for the agents. See [notes/WALLET-DAEMON.md](notes/WALLET-DAEMON.md).
+   browser wallet, with spending limits for the agents. See [the wallet page](https://moddable-games.github.io/moddable-midnight/wallet.html) and [notes/WALLET-DAEMON.md](notes/WALLET-DAEMON.md).
 4. **A private crew treasury** (23 September): MCC and Agent Smart Contracts, audited with
    Midnight's tools before deploy. See [notes/AUDIT-crew-treasury.md](notes/AUDIT-crew-treasury.md).
 
@@ -164,6 +165,7 @@ reviewed as reference points and are the route to real token behaviour:
 ## Changelog
 
 #### 2026-09-23
+- Wallet page: the agent wallet built for Firefox, why it had to exist, what building it uncovered, and every transaction it has signed; in the main navigation, now in story order (Crew, Wallet, Treasury, History)
 - One connected site: a new home page, a History page telling the four chapters, and the same navigation, story strip and footer on every page, all from one data file; the crew is now the Moddable Atomic Crew (MAC)
 - Every page has its own share image and full Open Graph and Twitter tags; site version shown in the footer and bumped with `web/bump.sh`
 - Crew contract planner fixed: full recipe and source tables from the game's content, a search that looks past contracts it cannot source, and gathers by source rather than by node; the agents went from no contract steps to four or five contracts each in half an hour

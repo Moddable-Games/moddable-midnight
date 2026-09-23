@@ -27,9 +27,7 @@ export async function renderFrame(current) {
     story.innerHTML = `
       <div class="story-head"><span>PART OF ONE STORY, IN FOUR CHAPTERS</span><a href="history.html">Read the whole history</a></div>
       <ol>${site.chapters.map((c) => {
-        const href = c.page !== undefined ? page(c.page) : repo(c.doc);
-        const target = c.page !== undefined ? "" : ' target="_blank" rel="noopener"';
-        return `<li><a href="${esc(href)}"${target}${c.key === current ? ' aria-current="page"' : ""}>
+        return `<li><a href="${esc(page(c.page))}"${c.key === current ? ' aria-current="page"' : ""}>
           <span class="when">${c.number}. ${esc(c.when)}</span><span class="title">${esc(c.title)}</span></a></li>`;
       }).join("")}</ol>`;
   }

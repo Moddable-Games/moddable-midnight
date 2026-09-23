@@ -53,15 +53,9 @@ export function HistoryApp() {
                 <h3 className="font-display text-2xl font-semibold">{chapter.title}</h3>
                 <p className="mt-1 max-w-3xl text-muted-foreground text-pretty">{chapter.summary}</p>
                 <p className="mt-2">
-                  {chapter.page !== undefined ? (
-                    <a href={pageHref(chapter.page)} className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline">
-                      {chapter.pageLabel} <ArrowRight className="size-4" />
-                    </a>
-                  ) : (
-                    <a href={repoHref(chapter.doc ?? "")} target="_blank" rel="noopener" className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline">
-                      {chapter.docLabel} <ExternalLink className="size-4" />
-                    </a>
-                  )}
+                  <a href={pageHref(chapter.page)} className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline">
+                    {chapter.pageLabel} <ArrowRight className="size-4" />
+                  </a>
                 </p>
               </li>
             ))}

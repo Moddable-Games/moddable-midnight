@@ -36,6 +36,7 @@ export default defineConfig({
       input: {
         index: path.resolve(__dirname, "index.html"),
         treasury: path.resolve(__dirname, "treasury.html"),
+        wallet: path.resolve(__dirname, "wallet.html"),
         history: path.resolve(__dirname, "history.html"),
         tournament: path.resolve(__dirname, "tournament.html"),
       },

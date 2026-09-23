@@ -1,0 +1,124 @@
+{
+  "why": [
+    {
+      "title": "No Midnight wallet could be found for Firefox, although the docs list one",
+      "href": "notes/FRICTION-LOG.md#36-no-midnight-wallet-could-be-found-for-firefox-although-the-docs-list-one",
+      "finding": "Friction 36"
+    },
+    {
+      "title": "Lace on Firefox cannot set up a Midnight wallet",
+      "href": "notes/FRICTION-LOG.md#35-lace-on-firefox-cannot-set-up-a-midnight-wallet-and-fails-with-file-not-found",
+      "finding": "Friction 35"
+    },
+    {
+      "title": "City agents are asked to hold NIGHT, with no route to register a wallet",
+      "href": "notes/midnight-city/FINDINGS.md#25-agent-wallets-are-required-by-the-ui-and-have-no-route-for-self-hosted-agents",
+      "finding": "City 25"
+    },
+    {
+      "title": "The CLI's connector needs a terminal to approve writes, and re-syncs on every start",
+      "href": "notes/FRICTION-LOG.md#41-the-connector-server-needs-a-terminal-to-approve-writes-and-re-syncs-on-every-start",
+      "finding": "Friction 41"
+    },
+    {
+      "title": "Contract deploys time out at 100% sync on a wallet that can transfer",
+      "href": "notes/FRICTION-LOG.md#40-contract-deploy-times-out-at-100-sync-on-a-wallet-that-can-transfer",
+      "finding": "Friction 40"
+    }
+  ],
+  "found": [
+    {
+      "title": "The official packages load two copies of the ledger, and deploys fail",
+      "href": "notes/FRICTION-LOG.md#42-midnight-js-protocol-pins-ledger-v8-exactly-so-the-official-packages-load-it-twice",
+      "finding": "Friction 42"
+    },
+    {
+      "title": "No shielded address can be parsed after a dependency's minor release",
+      "href": "notes/FRICTION-LOG.md#44-no-shielded-address-can-be-parsed-a-dependencys-minor-release-capped-bech32-length",
+      "finding": "Friction 44"
+    },
+    {
+      "title": "DUST registration succeeds, then reports failure",
+      "href": "notes/FRICTION-LOG.md#23-dust-registration-succeeds-then-reports-failure",
+      "finding": "Friction 23"
+    },
+    {
+      "title": "The token metadata spec exists, but nothing serves it on preview",
+      "href": "notes/FRICTION-LOG.md#39-the-token-metadata-spec-exists-but-nothing-serves-it-on-preview",
+      "finding": "Friction 39"
+    }
+  ],
+  "features": [
+    {
+      "title": "Four wallets, one process",
+      "body": "The organiser's wallet and the three agents', built exactly as Midnight's wallet CLI builds them, with sync progress saved and resumed so a restart takes seconds, not minutes."
+    },
+    {
+      "title": "Nothing moves without a human",
+      "body": "Every payment, deploy and contract call waits in the page's Approvals panel. The page is the only thing allowed to approve, and only from this machine."
+    },
+    {
+      "title": "Agents with spending limits",
+      "body": "Each agent has its own token and can spend only from its own wallet. Small transfers to the crew and treasury draws run at once; anything larger, or to an outside address, waits for the organiser."
+    },
+    {
+      "title": "NIGHT, MCC and shielded NFTs",
+      "body": "Send NIGHT and Midnight City Credits to any address, and Agent Smart Contracts to shielded addresses, which carry the recipient's key so they can see what arrives."
+    },
+    {
+      "title": "Balances nobody has to host",
+      "body": "Balances stream from Midnight's public indexer, so they show even with the wallet process stopped. Token names and images appear only once checked against digests stored on-chain."
+    },
+    {
+      "title": "Contracts too",
+      "body": "The same wallets deploy and call contracts with Midnight's standard libraries: they deployed the crew treasury, minted its supply and appointed the agents."
+    }
+  ],
+  "transactions": [
+    {
+      "what": "Crew treasury deployed by the organiser",
+      "block": 992293,
+      "hash": "2b1fc5000583bd05ec66662b5e203f1530527b078ae557865b51c05fb1f07a60"
+    },
+    {
+      "what": "1,000,000 Midnight City Credits minted into it",
+      "block": 992298,
+      "hash": "1f7a5eb34a1cac47a4e26c383b30da5eb8447194f729664d428555d927fe5c64"
+    },
+    {
+      "what": "Floyd appointed; his Agent Smart Contract minted to his shielded wallet",
+      "block": 992303,
+      "hash": "33956d3e9a9e0f1d9df1fe26c558284a176e0e606528a19b6ca6a9f8ea54b97d"
+    },
+    {
+      "what": "Floyd draws 50 MCC from the treasury",
+      "block": 992331,
+      "hash": "24c9540c20333eb3be80f588593a0b06655f8ea6a69d98c09e8fb43992c5717b"
+    },
+    {
+      "what": "Metadata digests anchored in the contract",
+      "block": 992402,
+      "hash": "573d98a83693ac97fc222726654f1a7e17c4dd9796504f4ee677cd52ed6a3485"
+    },
+    {
+      "what": "Tzilo sends FooFoo 0.5 NIGHT, approved automatically within its limits",
+      "block": 992456,
+      "hash": "f12456d8983dbce94e79d6587703e23178f46824f2af34cba2b2d20c3124ae4a"
+    },
+    {
+      "what": "Floyd sends Tzilo 10 MCC",
+      "block": 993649,
+      "hash": "8801e84bdbaaa360d409397db164e12bc7deccd769b526bd631e24b8fa0bf3d9"
+    },
+    {
+      "what": "Floyd's Agent Smart Contract sent to the organiser's shielded address",
+      "block": 993656,
+      "hash": "323acf353ebf6c2f879a283963bebca95d2361bf6eabcaf31330670fcb4a3adf"
+    },
+    {
+      "what": "The same NFT sent back to Floyd",
+      "block": 993666,
+      "hash": "00d288db018f31bc44ed3b7940852e4e17b4464477df5cb94bcb8c302266cf2f"
+    }
+  ]
+}

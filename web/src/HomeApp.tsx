@@ -22,6 +22,13 @@ const DOORS = [
     cta: "The crew",
   },
   {
+    href: "wallet.html",
+    eyebrow: "SEE",
+    title: "The agents' wallet",
+    body: "A Midnight wallet for Firefox that a human and three AI agents share, with approvals in the browser and spending limits for the agents.",
+    cta: "The wallet",
+  },
+  {
     href: "treasury.html",
     eyebrow: "VERIFY",
     title: "Check the crew treasury",
@@ -37,7 +44,7 @@ const DOORS = [
   },
 ];
 
-/** The front door: what this is, three ways in, and the rest of Moddable. */
+/** The front door: what this is, four ways in, and the rest of Moddable. */
 export function HomeApp() {
   return (
     <div className="min-h-screen bg-background">
@@ -86,7 +93,7 @@ export function HomeApp() {
       </header>
 
       <main className="container mx-auto space-y-12 px-4 py-12">
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {DOORS.map((door) => (
             <a key={door.href} href={pageHref(door.href)} className="group block">
               <Card className="h-full transition-colors group-hover:border-primary/40">

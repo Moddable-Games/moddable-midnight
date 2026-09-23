@@ -1,8 +1,8 @@
-import { type PageKey, SITE, pageHref, repoHref } from "@/lib/site";
+import { type PageKey, SITE, pageHref } from "@/lib/site";
 
 /**
- * Where this page sits in the story: the four chapters in order, the current one marked.
- * Each chapter links to its live page, or to its notes when it has no page of its own.
+ * Where this page sits in the story: the four chapters in order, the current one marked,
+ * each linking to its live page.
  */
 export function StoryStrip({ current }: { current?: PageKey }) {
   return (
@@ -18,13 +18,10 @@ export function StoryStrip({ current }: { current?: PageKey }) {
       <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {SITE.chapters.map((chapter) => {
           const here = chapter.key === current;
-          const external = chapter.page === undefined;
-          const href = external ? repoHref(chapter.doc ?? "") : pageHref(chapter.page ?? "");
           return (
             <li key={chapter.key}>
               <a
-                href={href}
-                {...(external ? { target: "_blank", rel: "noopener" } : {})}
+                href={pageHref(chapter.page)}
                 aria-current={here ? "page" : undefined}
                 className={`block h-full rounded-xl border p-3 transition-colors ${
                   here ? "border-primary bg-primary/5" : "hover:border-primary/40"

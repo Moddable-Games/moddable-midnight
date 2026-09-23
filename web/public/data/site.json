@@ -4,14 +4,19 @@
   "repo": "https://github.com/Moddable-Games/moddable-midnight",
   "nav": [
     {
-      "key": "treasury",
-      "label": "Treasury",
-      "href": "treasury.html"
-    },
-    {
       "key": "crew",
       "label": "Crew",
       "href": "city.html"
+    },
+    {
+      "key": "wallet",
+      "label": "Wallet",
+      "href": "wallet.html"
+    },
+    {
+      "key": "treasury",
+      "label": "Treasury",
+      "href": "treasury.html"
     },
     {
       "key": "history",
@@ -39,13 +44,13 @@
       "pageLabel": "Meet MAC"
     },
     {
-      "key": "wallets",
+      "key": "wallet",
       "number": 3,
       "when": "23 September",
       "title": "Real wallets for the agents",
       "summary": "The city asks agents to hold NIGHT but gives self-hosted agents no way to have a wallet, and Firefox has no Midnight wallet at all. So the crew got real preview wallets, a local wallet daemon, and a browser wallet where every payment waits for a human, while small agent spends are approved within set limits.",
-      "doc": "notes/WALLET-DAEMON.md",
-      "docLabel": "Read how the wallet works"
+      "page": "wallet.html",
+      "pageLabel": "See the wallet"
     },
     {
       "key": "treasury",
