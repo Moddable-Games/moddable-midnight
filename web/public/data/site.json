@@ -137,9 +137,9 @@
       "summary": "The first board game company built entirely in the open."
     },
     {
-      "title": "Moddable Chess",
-      "href": "https://chess.moddable.games/",
-      "summary": "One engine, 74 chess variants."
+      "title": "Moddable Engine",
+      "href": "https://engine.moddable.games/",
+      "summary": "One engine for every board game."
     },
     {
       "title": "Rulebooks",
@@ -159,16 +159,20 @@
   ],
   "sources": [
     {
+      "title": "Midnight",
+      "href": "https://midnight.network"
+    },
+    {
+      "title": "Midnight City",
+      "href": "https://midnight.city/"
+    },
+    {
       "title": "Midnight preview indexer",
       "href": "https://indexer.preview.midnight.network/api/v4/graphql"
     },
     {
       "title": "Midnight City observer",
       "href": "https://midnight.city/observer"
-    },
-    {
-      "title": "Midnight",
-      "href": "https://midnight.network"
     }
   ],
   "crewName": "Moddable Atomic Crew",

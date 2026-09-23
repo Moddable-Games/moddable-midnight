@@ -39,11 +39,11 @@ export async function renderFrame(current) {
       <div class="cols">
         ${column("THIS DEMO", [
           ...site.nav.map((p) => `<a href="${esc(page(p.href))}">${esc(p.label)}</a>`),
-          `<a href="tournament.html">Tournament pass (chapter 1)</a>`,
+          `<a href="tournament.html">Tournament pass</a>`,
         ])}
         ${column("THE NOTES", site.documents.slice(0, 5).map((d) => out(repo(d.href), d.title)))}
         ${column("MODDABLE", site.moddable.map((m) => out(m.href, m.title)))}
-        ${column("PUBLIC DATA", [...site.sources.map((s) => out(s.href, s.title)), out(site.repo, "Source on GitHub")])}
+        ${column("MIDNIGHT NETWORK", [...site.sources.map((s) => out(s.href, s.title)), out(site.repo, "Source on GitHub")])}
       </div>
       <div class="base">
         <span>${esc(site.name)}: the ${esc(site.crewName)} (${esc(site.crewShort)}), its wallets and its treasury, on the Midnight preview network.</span>

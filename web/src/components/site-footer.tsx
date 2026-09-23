@@ -20,7 +20,7 @@ export function SiteFooter() {
           {SITE.nav.map((page) => (
             <li key={page.key}><a href={pageHref(page.href)} className={linkClass}>{page.label}</a></li>
           ))}
-          <li><a href={pageHref("tournament.html")} className={linkClass}>Tournament pass (chapter 1)</a></li>
+          <li><a href={pageHref("tournament.html")} className={linkClass}>Tournament pass</a></li>
         </Column>
         <Column title="The notes">
           {SITE.documents.slice(0, 5).map((doc) => (
@@ -32,7 +32,7 @@ export function SiteFooter() {
             <li key={link.href}><a href={link.href} target="_blank" rel="noopener" className={linkClass}>{link.title}</a></li>
           ))}
         </Column>
-        <Column title="Public data">
+        <Column title="Midnight Network">
           {SITE.sources.map((link) => (
             <li key={link.href}><a href={link.href} target="_blank" rel="noopener" className={linkClass}>{link.title}</a></li>
           ))}
