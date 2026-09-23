@@ -115,7 +115,7 @@ The page's contract panel (`GET /api/contract`) shows the crew treasury's public
 - mandates issued, the draw amount and the open period
 - the two metadata digests, and whether our files match them
 
-For anyone who does not trust this machine, `web/treasury.html` is published on GitHub
+For anyone who does not trust this machine, the crew treasury check is published on GitHub
 Pages. It does the same checks entirely in the visitor's browser:
 - reads the contract from the public indexer
 - decodes it with the compiled contract

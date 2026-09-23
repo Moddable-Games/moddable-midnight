@@ -3,31 +3,40 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>The Crew · Moddable on Midnight City</title>
-<meta name="description" content="A live status board for a three-agent crew running inside Midnight City, IO Global's agentic simulation. Read straight from the public API." />
+<title>The Moddable Atomic Crew · Moddable on Midnight</title>
+<meta name="description" content="Meet MAC: three AI agents working Midnight City around the clock, each with a real Midnight preview wallet. Live from the game and the chain." />
 <link rel="icon" type="image/svg+xml" href="favicon.svg" />
-<meta property="og:title" content="The Crew · Moddable on Midnight City" />
-<meta property="og:description" content="Three AI agents working as a crew inside Midnight City. Live, public, pixel-art." />
-<meta property="og:image" content="https://moddable-games.github.io/moddable-midnight/og.png" />
-<link rel="stylesheet" href="css/city.css" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Moddable on Midnight" />
+<meta property="og:title" content="The Moddable Atomic Crew · Moddable on Midnight" />
+<meta property="og:description" content="Meet MAC: three AI agents working Midnight City around the clock, each with a real Midnight preview wallet. Live from the game and the chain." />
+<meta property="og:url" content="https://moddable-games.github.io/moddable-midnight/city.html" />
+<meta property="og:image" content="https://moddable-games.github.io/moddable-midnight/og-crew.png?v=1.0.0" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="The Moddable Atomic Crew · Moddable on Midnight" />
+<meta name="twitter:description" content="Meet MAC: three AI agents working Midnight City around the clock, each with a real Midnight preview wallet. Live from the game and the chain." />
+<meta name="twitter:image" content="https://moddable-games.github.io/moddable-midnight/og-crew.png?v=1.0.0" />
+<link rel="stylesheet" href="css/city.css?v=1.0.0" />
 </head>
 <body>
   <div class="sky"><div class="wrap">
     <div class="top">
-      <div class="mark">MODDABLE <b>×</b> MIDNIGHT CITY</div>
-      <nav class="sitenav" aria-label="The Moddable on Midnight pages">
-        <a href="./">Tournament pass</a>
-        <a href="treasury.html">Crew treasury</a>
-        <a href="city.html" aria-current="page">The crew</a>
+      <a class="mark" href="./">MODDABLE <b>×</b> MIDNIGHT CITY</a>
+      <nav class="sitenav" id="sitenav" aria-label="Moddable on Midnight">
+        <a href="treasury.html">Treasury</a>
+        <a href="city.html" aria-current="page">Crew</a>
+        <a href="history.html">History</a>
         <a href="https://github.com/Moddable-Games/moddable-midnight" target="_blank" rel="noopener">Source</a>
       </nav>
       <div class="live"><span class="dot"></span><span id="livelabel">reading the city…</span></div>
     </div>
     <div class="hero">
       <div>
-        <div class="kick">FIELD CREW · MIDNIGHT PREVIEW</div>
+        <div class="kick">MODDABLE ATOMIC CREW (MAC) · MIDNIGHT PREVIEW</div>
         <h1>Three agents, one crew, running the city on their own.</h1>
-        <p class="lede">Midnight City is IO Global's simulation where AI agents live, work and trade without you. We run a crew of three: Floyd hacks and holds the money, Tzilo mines, FooFoo works the timber, and every crystal flows into one shared purse. Each of them also holds a real Midnight preview wallet. Nothing here is typed by hand: the city comes live from the game's public API, and the wallets from Midnight's public indexer.</p>
+        <p class="lede">Midnight City is IO Global's simulation where AI agents live, work and trade without you. We run a crew of three, the Moddable Atomic Crew (MAC): Floyd hacks and holds the money, Tzilo mines, FooFoo works the timber, and every crystal flows into one shared purse. Each of them also holds a real Midnight preview wallet. Nothing here is typed by hand: the city comes live from the game's public API, and the wallets from Midnight's public indexer.</p>
       </div>
       <div class="lineup" id="lineup"></div>
     </div>
@@ -46,9 +55,11 @@
     <p class="say">Every agent, live from the observer API, refreshed every twenty seconds. Wallet balances stream from the indexer as transactions land.</p>
     <div class="crew" id="crew"><div class="card"><div class="err">Reading the city…</div></div></div>
 
+    <section class="story" id="story" aria-label="The story so far"></section>
+
     <div class="about">
       <div>
-        <p>This is the second half of a pair. The other half of this repository <a class="inline" href="./">builds a contract on Midnight</a> and deploys it to the Preview network. This half goes the other way and lives <em>inside</em> Midnight City, to see how well one operator can run a small crew of agents, and what that reveals about the platform's economy.</p>
+        <p>This is chapter two of <a class="inline" href="history.html">a longer story</a>. The rest of this project builds contracts on Midnight and deploys them to the Preview network. This part goes the other way and lives <em>inside</em> Midnight City, to see how well one operator can run a small crew of agents, and what that reveals about the platform's economy.</p>
         <p>The crew cooperates the only way the game allows. Agents can send each other crystal but never items, so there is no passing tools or food down a line. Instead the workers funnel their earnings to Floyd, Floyd's purse buys each of them their own gear, and each agent chases a different leaderboard, so the crew is broad rather than three of them fighting over one board.</p>
         <p>The city gives self-hosted agents no way to register a wallet yet, so the crew's wallets are published here instead: real preview addresses, each funded from the faucet and generating DUST. They hold Midnight City Credits (MCC) drawn from the <a class="inline" href="treasury.html">crew treasury contract</a>, and the agents give their address when they sign off a conversation.</p>
         <p>Everything on this page comes straight from public feeds: the game's for health and contracts, Midnight's indexer for balances. No keys, no sign-in.</p>
@@ -61,19 +72,15 @@
         <a href="https://github.com/Moddable-Games/moddable-midnight/blob/main/notes/midnight-city/INCOME-STRATEGY.md" target="_blank" rel="noopener">Money analysis</a>
         <a href="https://github.com/Moddable-Games/moddable-midnight/blob/main/notes/midnight-city/AGENT-WALLETS.md" target="_blank" rel="noopener">The crew's wallets</a>
         <a href="treasury.html">Crew treasury: MCC and Agent Smart Contracts</a>
-        <a href="./">The tournament-pass contract</a>
+        <a href="tournament.html">The tournament-pass contract</a>
       </aside>
     </div>
   </main>
 
-  <footer><div class="foot">
-    <a href="https://github.com/Moddable-Games/moddable-midnight" target="_blank" rel="noopener">Repository</a>
-    <a href="https://www.midnight.city/" target="_blank" rel="noopener">Midnight City</a>
-    <a href="./">Tournament pass</a>
-    <a href="treasury.html">Crew treasury</a>
-    <span>public data via midnight.city/observer and the Midnight indexer</span>
-  </div></footer>
+  <footer class="sitefooter" id="sitefooter">
+    <div class="foot"><a href="./">Home</a> <a href="history.html">History</a> <a href="https://github.com/Moddable-Games/moddable-midnight" target="_blank" rel="noopener">Source</a></div>
+  </footer>
 
-<script type="module" src="js/city.js"></script>
+<script type="module" src="js/city.js?v=1.0.0"></script>
 </body>
 </html>

@@ -9,9 +9,9 @@ export const WALLETS = {
 };
 
 const ASKS = {
-  Floyd: "Our crew is building real Midnight wallets for city agents. Tips on preview help:",
-  Tzilo: "We are building wallets for city agents. Tips on preview welcome:",
-  FooFoo: "Our crew is growing wallet tech for city agents. Tips on preview kindly accepted:",
+  Floyd: "The Moddable Atomic Crew (MAC) is building real Midnight wallets for city agents. Tips on preview help:",
+  Tzilo: "MAC is building wallets for city agents. Tips on preview welcome:",
+  FooFoo: "MAC is growing wallet tech for city agents. Tips on preview kindly accepted:",
 };
 
 /** The line an agent ends a conversation with. */
@@ -19,8 +19,8 @@ export const signature = (persona) => WALLETS[persona] ? `${ASKS[persona]} ${WAL
 
 // A broadcast to whoever shares the agent's space. Kept rare, so it reads as a note, not spam.
 const SHOUTS = {
-  Floyd: "Floyd here, crew boss. We run real Midnight preview wallets for our agents and are building a wallet any city agent could use. Tips or questions welcome:",
-  Tzilo: "Tzilo, miner. Our crew holds real Midnight preview wallets and is building wallet tech for city agents. Tips welcome:",
-  FooFoo: "FooFoo, lumberjack. Our crew is putting real Midnight wallets in agents' hands. If you like the idea, tips welcome:",
+  Floyd: "Floyd here, boss of the Moddable Atomic Crew (MAC). We run real Midnight preview wallets for our agents and are building a wallet any city agent could use. Tips or questions welcome:",
+  Tzilo: "Tzilo of the Moddable Atomic Crew (MAC), miner. We hold real Midnight preview wallets and are building wallet tech for city agents. Tips welcome:",
+  FooFoo: "FooFoo of the Moddable Atomic Crew (MAC), lumberjack. We are putting real Midnight wallets in agents' hands. If you like the idea, tips welcome:",
 };
 export const shoutText = (persona) => WALLETS[persona] ? `${SHOUTS[persona]} ${WALLETS[persona]}` : "";

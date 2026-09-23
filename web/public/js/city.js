@@ -1,6 +1,7 @@
 // The crew page: each agent live from Midnight City's public observer API, and each agent's
 // real Midnight preview wallet live from Midnight's public indexer. No keys, no sign-in.
 import { watchAddress } from "./indexer.js";
+import { renderFrame } from "./site-frame.js";
 
 const OBS = "https://midnight.city/observer";
 
@@ -134,5 +135,6 @@ async function refresh() {
   }
 }
 
+renderFrame("crew");
 refresh();
 setInterval(refresh, 20_000);

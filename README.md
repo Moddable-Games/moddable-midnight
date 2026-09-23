@@ -1,6 +1,15 @@
 # moddable-midnight
 
-**[View the live contract page](https://moddable-games.github.io/moddable-midnight/)**
+**An AI crew with real Midnight wallets and a private treasury, built with Midnight's own AI
+developer tools and written down as it went.**
+
+| See it live | |
+|---|---|
+| **[Home](https://moddable-games.github.io/moddable-midnight/)** | What this is, and three ways in |
+| **[The crew](https://moddable-games.github.io/moddable-midnight/city.html)** | The Moddable Atomic Crew (MAC): three AI agents in Midnight City, live, with their real wallets and balances |
+| **[The treasury](https://moddable-games.github.io/moddable-midnight/treasury.html)** | Midnight City Credits (MCC) and the agents' Agent Smart Contract NFTs, checked against the chain in your browser |
+| **[The history](https://moddable-games.github.io/moddable-midnight/history.html)** | The whole story in four chapters, with every finding, the audit and the clock |
+| [The tournament pass](https://moddable-games.github.io/moddable-midnight/tournament.html) | Chapter one: the first contract, still live |
 
 A proof of concept on [Midnight](https://midnight.network), the data-protection
 blockchain, exploring what selective disclosure offers a games platform, and a
@@ -11,15 +20,20 @@ game mechanics need a player to prove something without revealing everything:
 that they are entitled to enter, that a result is genuine, that a prize is owed.
 That is the shape Midnight is built for, so this repository tests it directly.
 
-This repository now holds two experiments, both in the spirit of building on
-Midnight and writing down every seam:
+The story so far, in four chapters:
 
-1. **Building _on_ Midnight** — the tournament-pass Compact contract below,
+1. **A private tournament pass** (17 September): the tournament-pass Compact contract below,
    deployed to the `preview` network with a private claim made on-chain.
-2. **Operating _inside_ Midnight City** — running a coordinated three-agent crew
-   in IO Global's agentic simulation, with a live status page and a full set of
-   findings. See **[notes/midnight-city](notes/midnight-city/README.md)** and the
-   **[live fleet status](https://moddable-games.github.io/moddable-midnight/city.html)**.
+2. **The Moddable Atomic Crew** (18 to 21 September): a coordinated three-agent crew in
+   IO Global's agentic simulation. See **[notes/midnight-city](notes/midnight-city/README.md)**.
+3. **Real wallets for the agents** (23 September): a local wallet daemon and a Firefox-friendly
+   browser wallet, with spending limits for the agents. See [notes/WALLET-DAEMON.md](notes/WALLET-DAEMON.md).
+4. **A private crew treasury** (23 September): MCC and Agent Smart Contracts, audited with
+   Midnight's tools before deploy. See [notes/AUDIT-crew-treasury.md](notes/AUDIT-crew-treasury.md).
+
+More from Moddable: [moddable.games](https://moddable.games/) ·
+[Moddable Chess](https://chess.moddable.games/) · [Rulebooks](https://rules.moddable.games/) ·
+[Tools API](https://tools.moddable.games/) · [GitHub](https://github.com/Moddable-Games)
 
 ## At a glance
 
@@ -30,7 +44,7 @@ Midnight and writing down every seam:
 | **Crew treasury (v2)** | [`crew_treasury.compact`](contracts/crew_treasury.compact): Midnight City Credits (MCC), one shielded Agent Smart Contract NFT per agent, private capped draws. [Audited](notes/AUDIT-crew-treasury.md) before deploy; live at [`e412fa7f…cac4b4`](https://preview.midnightexplorer.com/contracts/e412fa7fa89433c2d37bbf350eba95e61db6075d5189f0dc5f45c07583cac4b4). [Check the supply and metadata yourself](https://moddable-games.github.io/moddable-midnight/treasury.html) |
 | **Wallet** | A Firefox-friendly browser wallet over a local daemon holding the organiser's and three agents' wallets, with approvals and per-agent limits ([notes](notes/WALLET-DAEMON.md)) |
 | **Deployed** | [`2a7fe78c…e1c191`](https://preview.midnightexplorer.com/contracts/2a7fe78cdafc8126041298f307f699b319ed43e908e85287f8b72ad291e1c191) on the `preview` testnet, with a private claim made on-chain |
-| **Front end** | [Live read-only page](https://moddable-games.github.io/moddable-midnight/) decoding contract state from the public indexer ([`web/`](web/)) |
+| **Front end** | [Live read-only page](https://moddable-games.github.io/moddable-midnight/tournament.html) decoding contract state from the public indexer ([`web/`](web/)) |
 | **Toolchain** | Compact compiler 0.31.1, runtime 0.16.0, Midnight.js 4.1.1, proof server 8.1.0 ([versions](docs/INTEGRATION.md#versions-that-work-together)) |
 | **Clock** | +77 minutes to deploy, +84 to a private claim on-chain, by an agent wallet ([timeline](notes/TIMELINE.md)) |
 | **Findings** | 44 logged for the contracts and wallet, plus a Midnight City set ([friction log](notes/FRICTION-LOG.md), [city findings](notes/midnight-city/FINDINGS.md)) |
@@ -133,7 +147,7 @@ throughout the build.
 | [`wallet-ui/`](wallet-ui/) | The browser wallet page |
 | [`metadata/`](metadata/) | Token artwork and metadata documents, addressed by IPFS CID |
 | [`spikes/`](spikes/) | Throwaway proofs, such as the minting spike and the drain regression |
-| [`web/`](web/) | React front end (Vite, shadcn, Tailwind), scaffolded with `midnight-dapp-dev`: the tournament pass page and the crew treasury check |
+| [`web/`](web/) | The site (Vite, React, shadcn, Tailwind, scaffolded with `midnight-dapp-dev`): home, treasury check, history, tournament pass, and the static crew page; shared data in `public/data/site.json`, version via `bump.sh` |
 | [`api/`](api/) | Provider wiring for browser writes, from the same scaffold |
 | [`docs/`](docs/INTEGRATION.md) | Integration guide |
 | [`notes/`](notes/) | Friction log, timeline, knowledge base queries, audit and wallet notes |
@@ -150,6 +164,8 @@ reviewed as reference points and are the route to real token behaviour:
 ## Changelog
 
 #### 2026-09-23
+- One connected site: a new home page, a History page telling the four chapters, and the same navigation, story strip and footer on every page, all from one data file; the crew is now the Moddable Atomic Crew (MAC)
+- Every page has its own share image and full Open Graph and Twitter tags; site version shown in the footer and bumped with `web/bump.sh`
 - Crew contract planner fixed: full recipe and source tables from the game's content, a search that looks past contracts it cannot source, and gathers by source rather than by node; the agents went from no contract steps to four or five contracts each in half an hour
 - Workers sell only when they need crystal (trades earn no XP and cost a walk); crafted tools only for an agent's own trade
 - Agents sign off conversations with their wallet address and a tip ask, and shout it now and then

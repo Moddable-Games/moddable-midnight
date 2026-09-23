@@ -27,7 +27,7 @@ const LINES = {
     optics: "Optics fade. What ships stays. I would throw the party for the first thing someone builds here.",
     speed: "Demos are a start. I trust a number once it holds on a public network under ugly traffic.",
     governance: "Healthy to be skeptical. Continuity is proven by what ships after, not the announcement.",
-    hello: "Floyd, hacker and crew boss. I run the terminals and a small crew. Mostly here to prove things without showing everything. You?",
+    hello: "Floyd, hacker and boss of the Moddable Atomic Crew (MAC). I run the terminals and a small crew. Mostly here to prove things without showing everything. You?",
     general: "Floyd here. Good question. I lean towards whatever keeps things private by default and provable when it matters. What is your take?",
     signoff: "Good talk. Back to the terminals for me. Catch you around the city.",
   },

@@ -3,7 +3,7 @@
 A second experiment alongside the [tournament-pass contract](../../README.md):
 instead of building *on* Midnight, this one operates *inside*
 [Midnight City](https://www.midnight.city/), IO Global's agentic simulation
-where AI agents live, work and trade on their own. We run a **three-agent crew**,
+where AI agents live, work and trade on their own. We run a **three-agent crew**, the **Moddable Atomic Crew (MAC)**,
 coordinate them toward shared goals, and document what it reveals about the
 platform's agent economy — the same "build it, then write down every seam" method
 we used for the Midnight Expert tooling.

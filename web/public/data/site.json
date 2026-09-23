@@ -1,0 +1,171 @@
+{
+  "version": "1.0.0",
+  "name": "Moddable on Midnight",
+  "repo": "https://github.com/Moddable-Games/moddable-midnight",
+  "nav": [
+    {
+      "key": "treasury",
+      "label": "Treasury",
+      "href": "treasury.html"
+    },
+    {
+      "key": "crew",
+      "label": "Crew",
+      "href": "city.html"
+    },
+    {
+      "key": "history",
+      "label": "History",
+      "href": "history.html"
+    }
+  ],
+  "chapters": [
+    {
+      "key": "tournament",
+      "number": 1,
+      "when": "17 September 2026",
+      "title": "A private tournament pass",
+      "summary": "An empty repository to a deployed Midnight contract in 77 minutes, built with Midnight's AI developer tools and timed throughout. Players prove they hold an entry pass and claim a prize without revealing which pass or who they are; the first private claim landed on-chain at 84 minutes.",
+      "page": "tournament.html",
+      "pageLabel": "See the contract live"
+    },
+    {
+      "key": "crew",
+      "number": 2,
+      "when": "18 to 21 September",
+      "title": "The Moddable Atomic Crew",
+      "summary": "Three AI agents, Floyd, Tzilo and FooFoo, run as one crew, the Moddable Atomic Crew (MAC), in IO Global's agent simulation: working, fishing for food, crafting tools, delivering contracts and answering every conversation, from an always-on Cloudflare Worker.",
+      "page": "city.html",
+      "pageLabel": "Meet MAC"
+    },
+    {
+      "key": "wallets",
+      "number": 3,
+      "when": "23 September",
+      "title": "Real wallets for the agents",
+      "summary": "The city asks agents to hold NIGHT but gives self-hosted agents no way to have a wallet, and Firefox has no Midnight wallet at all. So the crew got real preview wallets, a local wallet daemon, and a browser wallet where every payment waits for a human, while small agent spends are approved within set limits.",
+      "doc": "notes/WALLET-DAEMON.md",
+      "docLabel": "Read how the wallet works"
+    },
+    {
+      "key": "treasury",
+      "number": 4,
+      "when": "23 September",
+      "title": "A private crew treasury",
+      "summary": "The organiser mints Midnight City Credits (MCC) and appoints each agent with a shielded Agent Smart Contract NFT. Agents draw an allowance once per period by proving they hold a mandate, without revealing which. Audited with Midnight's own tools before deploy, which caught a way to drain it.",
+      "page": "treasury.html",
+      "pageLabel": "Check it against the chain"
+    }
+  ],
+  "documents": [
+    {
+      "title": "Friction log",
+      "href": "notes/FRICTION-LOG.md",
+      "summary": "44 numbered findings from building on Midnight with its AI tooling, each with evidence and a suggested fix."
+    },
+    {
+      "title": "Midnight City findings",
+      "href": "notes/midnight-city/FINDINGS.md",
+      "summary": "26 findings from running the crew inside the simulation, including our own mistakes and corrections."
+    },
+    {
+      "title": "Security audit",
+      "href": "notes/AUDIT-crew-treasury.md",
+      "summary": "The crew treasury audited with Midnight's review and verification tools: what they caught, what they missed, what only the chain could answer."
+    },
+    {
+      "title": "Timeline",
+      "href": "notes/TIMELINE.md",
+      "summary": "The clock, from an empty repository onwards, timed from git history and command output, breaks excluded."
+    },
+    {
+      "title": "Knowledge base queries",
+      "href": "notes/KAPA-QUERIES.md",
+      "summary": "Every question put to Midnight's Kapa knowledge server, what came back, and what it changed."
+    },
+    {
+      "title": "Wallet daemon",
+      "href": "notes/WALLET-DAEMON.md",
+      "summary": "The browser wallet, the agents' spending limits, token metadata, and every on-chain result checked against the public indexer."
+    },
+    {
+      "title": "The crew's wallets",
+      "href": "notes/midnight-city/AGENT-WALLETS.md",
+      "summary": "Each agent's preview address, how it was funded, and how the agents share it around the city."
+    },
+    {
+      "title": "Integration guide",
+      "href": "docs/INTEGRATION.md",
+      "summary": "Endpoints, public versus private data, real indexer responses, CLI commands and the SDK versions that work together."
+    }
+  ],
+  "highlights": [
+    {
+      "title": "The documented Merkle membership pattern has a security gap",
+      "href": "notes/FRICTION-LOG.md#9-skill-guidance-for-merkle-membership-has-a-security-gap"
+    },
+    {
+      "title": "Contract deploys time out at 100% sync on a wallet that can transfer",
+      "href": "notes/FRICTION-LOG.md#40-contract-deploy-times-out-at-100-sync-on-a-wallet-that-can-transfer"
+    },
+    {
+      "title": "The official packages load two copies of the ledger",
+      "href": "notes/FRICTION-LOG.md#42-midnight-js-protocol-pins-ledger-v8-exactly-so-the-official-packages-load-it-twice"
+    },
+    {
+      "title": "No shielded address can be parsed after a dependency's minor release",
+      "href": "notes/FRICTION-LOG.md#44-no-shielded-address-can-be-parsed-a-dependencys-minor-release-capped-bech32-length"
+    },
+    {
+      "title": "City agents are asked to hold NIGHT but cannot register a wallet",
+      "href": "notes/midnight-city/FINDINGS.md#25-agent-wallets-are-required-by-the-ui-and-have-no-route-for-self-hosted-agents"
+    },
+    {
+      "title": "Gathering by map node gave the wrong item; the docs and the client disagree",
+      "href": "notes/midnight-city/FINDINGS.md#26-the-docs-describe-gathering-by-source-the-published-client-cannot-do-it"
+    }
+  ],
+  "moddable": [
+    {
+      "title": "Moddable Games",
+      "href": "https://moddable.games/",
+      "summary": "The first board game company built entirely in the open."
+    },
+    {
+      "title": "Moddable Chess",
+      "href": "https://chess.moddable.games/",
+      "summary": "One engine, 74 chess variants."
+    },
+    {
+      "title": "Rulebooks",
+      "href": "https://rules.moddable.games/",
+      "summary": "Official rulebooks for Moddable's games."
+    },
+    {
+      "title": "Tools API",
+      "href": "https://tools.moddable.games/",
+      "summary": "AI-callable tools for board game play."
+    },
+    {
+      "title": "Moddable on GitHub",
+      "href": "https://github.com/Moddable-Games",
+      "summary": "Every engine and rulebook, open source."
+    }
+  ],
+  "sources": [
+    {
+      "title": "Midnight preview indexer",
+      "href": "https://indexer.preview.midnight.network/api/v4/graphql"
+    },
+    {
+      "title": "Midnight City observer",
+      "href": "https://midnight.city/observer"
+    },
+    {
+      "title": "Midnight",
+      "href": "https://midnight.network"
+    }
+  ],
+  "crewName": "Moddable Atomic Crew",
+  "crewShort": "MAC"
+}

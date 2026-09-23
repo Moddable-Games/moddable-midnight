@@ -1,6 +1,8 @@
 import { CheckCircle2, ExternalLink, RefreshCw, XCircle } from "lucide-react";
 import type { ReactNode } from "react";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
+import { StoryStrip } from "@/components/story-strip";
 import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,8 +13,6 @@ import {
   CREW_TREASURY,
   type CrewSnapshot,
   IPFS_GATEWAY,
-  METADATA_TREE,
-  REPO_URL,
   type TokenDocument,
 } from "@/lib/crew-treasury";
 import { formatTime, shortHex } from "@/lib/format";
@@ -38,7 +38,9 @@ export function TreasuryApp() {
         <div className="mg-hero-hex -z-10" />
         <div className="container mx-auto px-4">
           <nav className="flex flex-wrap items-center justify-between gap-3 py-5">
-            <img src={`${import.meta.env.BASE_URL}img/moddable-logo-white.png`} alt="Moddable" className="h-7 w-auto" />
+            <a href={import.meta.env.BASE_URL} aria-label="Home">
+              <img src={`${import.meta.env.BASE_URL}img/moddable-logo-white.png`} alt="Moddable" className="h-7 w-auto" />
+            </a>
             <SiteNav current="treasury" />
             <div className="flex items-center gap-2">
               <Badge className="rounded-full border-white/30 bg-white/10 text-white">Midnight {NETWORK}</Badge>
@@ -96,17 +98,18 @@ export function TreasuryApp() {
               <a href={ONE_AM_EXPLORER.contract(CREW_TREASURY)} target="_blank" rel="noopener" className="text-white underline underline-offset-4 hover:text-cosmic-glow">
                 1AM explorer
               </a>
-              . The earlier tournament pass contract is on the{" "}
-              <a href={import.meta.env.BASE_URL} className="text-white underline underline-offset-4 hover:text-cosmic-glow">
-                main page
+              . The crew's first contract, a{" "}
+              <a href={`${import.meta.env.BASE_URL}tournament.html`} className="text-white underline underline-offset-4 hover:text-cosmic-glow">
+                private tournament pass
               </a>
-              .
+              , is still live too.
             </p>
           </section>
         </div>
       </header>
 
       <main className="container mx-auto space-y-10 px-4 py-10">
+        <StoryStrip current="treasury" />
         {error && (
           <p className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive">
             Could not read the contract: {error}
@@ -117,14 +120,7 @@ export function TreasuryApp() {
         <OnChainOffChain />
       </main>
 
-      <footer className="border-t">
-        <div className="container mx-auto flex flex-wrap gap-x-6 gap-y-2 px-4 py-6 text-sm text-muted-foreground">
-          <a href={REPO_URL} target="_blank" rel="noopener" className="hover:text-foreground">Source</a>
-          <a href={`${REPO_URL}/blob/main/notes/AUDIT-crew-treasury.md`} target="_blank" rel="noopener" className="hover:text-foreground">Security audit</a>
-          <a href={`${REPO_URL}/blob/main/notes/WALLET-DAEMON.md`} target="_blank" rel="noopener" className="hover:text-foreground">Wallet notes</a>
-          <a href={METADATA_TREE} target="_blank" rel="noopener" className="hover:text-foreground">Metadata files</a>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

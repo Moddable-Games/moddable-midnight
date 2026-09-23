@@ -3,7 +3,9 @@ import { ActivityFeed } from "@/components/activity-feed";
 import { PrivacyPanel } from "@/components/privacy-panel";
 import { SiteNav } from "@/components/site-nav";
 import { StatCard } from "@/components/stat-card";
-import { REPO, WriteUp } from "@/components/write-up";
+import { SiteFooter } from "@/components/site-footer";
+import { StoryStrip } from "@/components/story-strip";
+import { SITE } from "@/lib/site";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useTournament } from "@/hooks/use-tournament";
@@ -26,8 +28,10 @@ export function App() {
         <div className="mg-hero-hex -z-10" />
         <div className="container mx-auto px-4">
           <nav className="flex flex-wrap items-center justify-between gap-3 py-5">
-            <img src={`${import.meta.env.BASE_URL}img/moddable-logo-white.png`} alt="Moddable" className="h-7 w-auto" />
-            <SiteNav current="pass" />
+            <a href={import.meta.env.BASE_URL} aria-label="Home">
+              <img src={`${import.meta.env.BASE_URL}img/moddable-logo-white.png`} alt="Moddable" className="h-7 w-auto" />
+            </a>
+            <SiteNav />
             <div className="flex items-center gap-2">
               <Badge className="rounded-full border-white/30 bg-white/10 text-white">
                 Midnight {NETWORK}
@@ -62,7 +66,7 @@ export function App() {
                 <ExternalLink className="size-4" />
               </a>
               <a
-                href={REPO}
+                href={SITE.repo}
                 target="_blank"
                 rel="noopener"
                 className="inline-flex h-10 items-center gap-2 rounded-full border border-white/40 px-5 text-sm font-semibold text-white transition-colors hover:bg-white/10"
@@ -100,6 +104,7 @@ export function App() {
       </header>
 
       <main className="container mx-auto space-y-8 px-4 py-10">
+        <StoryStrip current="tournament" />
         {error && (
           <p className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive">
             Could not read the contract: {error}
@@ -112,28 +117,10 @@ export function App() {
 
         {snapshot && <Dashboard snapshot={snapshot} />}
 
-        <WriteUp />
+
       </main>
 
-      <footer className="border-t">
-        <div className="container mx-auto flex flex-wrap gap-x-6 gap-y-2 px-4 py-6 text-sm text-muted-foreground">
-          <a href={REPO} target="_blank" rel="noopener" className="hover:text-foreground">
-            Source
-          </a>
-          <a href={`${REPO}/blob/main/notes/FRICTION-LOG.md`} target="_blank" rel="noopener" className="hover:text-foreground">
-            Friction log
-          </a>
-          <a href={`${REPO}/blob/main/notes/TIMELINE.md`} target="_blank" rel="noopener" className="hover:text-foreground">
-            Timeline
-          </a>
-          <a href={`${REPO}/blob/main/docs/INTEGRATION.md`} target="_blank" rel="noopener" className="hover:text-foreground">
-            Integration docs
-          </a>
-          <a href={`${import.meta.env.BASE_URL}treasury.html`} className="hover:text-foreground">
-            Crew treasury: MCC and Agent Smart Contracts
-          </a>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

@@ -31,10 +31,13 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      // Two pages: the tournament pass (index) and the crew treasury check (treasury).
+      // The React pages: home, the crew treasury check, the history, and chapter one's
+      // tournament pass. The crew page (city.html) is static, in public/.
       input: {
         index: path.resolve(__dirname, "index.html"),
         treasury: path.resolve(__dirname, "treasury.html"),
+        history: path.resolve(__dirname, "history.html"),
+        tournament: path.resolve(__dirname, "tournament.html"),
       },
     },
     target: "esnext",
