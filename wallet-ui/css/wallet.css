@@ -215,3 +215,13 @@ button.small { padding: 5px 12px; font-size: 13px; }
 .status-syncing, .status-opening { color: var(--warn); }
 .status-error { color: var(--bad); }
 .request.confirmed .state { color: var(--ok); }
+
+/* tokens other than NIGHT */
+.tokens { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 6px; }
+.tokens li {
+  display: grid; grid-template-columns: 1fr auto auto auto; gap: 12px; align-items: center;
+  padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); font-size: 14px;
+}
+.tok-kind { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #58a6ff; }
+.tok-amount { font-variant-numeric: tabular-nums; font-weight: 650; }
+.tokens code { font-size: 11px; color: var(--ink-dim); }

@@ -155,3 +155,16 @@ comparing a UTC start against a local-time clock; corrected on the spot.
 
 Running total: **+197m**. Contract v2 is not started; the spike contract compiles and has
 never deployed.
+
+## Resumed 23 September, 10:3x UTC, after the usage limit reset
+
+| # | Step | When (UTC) |
+|---|---|---|
+| 46 | Wallet rebuilt in our own process from the CLI's packages; sync progress per channel shows the slow leg is shielded, not DUST (finding 40 corrected) | 10:40 |
+| 47 | Wallet daemon: four wallets in one process, approvals in the browser, state saved and resumed | 10:55 |
+| 48 | First payment through the daemon, confirmed on chain (block 990,835) | 11:34 |
+| 49 | Deploy fails on two copies of `ledger-v8` (finding 42); moved the daemon onto the repo's pinned tree | 11:43 |
+| 50 | **Contract deployed** through the daemon (block 990,961) | 11:46 |
+| 51 | **Fungible token minted**, 1,000,000 held by the contract (block 990,970) | 11:47 |
+| 52 | **NFT minted** to Floyd's wallet, supply 1 (block 990,983) | 11:49 |
+

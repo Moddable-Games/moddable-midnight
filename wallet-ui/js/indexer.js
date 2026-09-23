@@ -27,6 +27,7 @@ const SUBSCRIPTION = `subscription Balances($address: UnshieldedAddress!) {
 export function watchAddress(address, onUpdate, onError) {
   let created = 0n;
   let spent = 0n;
+  let tokens = new Map(); // token type -> balance, for everything that is not NIGHT
   let transactions = 0;
   let caughtUp = false;
   let socket;
@@ -35,6 +36,7 @@ export function watchAddress(address, onUpdate, onError) {
 
   const emit = () => onUpdate({
     night: (created - spent).toString(),
+    tokens: [...tokens].filter(([, v]) => v !== 0n).map(([type, v]) => ({ type, amount: v.toString() })),
     transactions,
     caughtUp,
   });
@@ -66,10 +68,14 @@ export function watchAddress(address, onUpdate, onError) {
         }
         transactions += 1;
         for (const utxo of payload.createdUtxos ?? []) {
-          if (utxo.owner === address && utxo.tokenType === NIGHT_TOKEN) created += BigInt(utxo.value);
+          if (utxo.owner !== address) continue;
+          if (utxo.tokenType === NIGHT_TOKEN) created += BigInt(utxo.value);
+          else tokens.set(utxo.tokenType, (tokens.get(utxo.tokenType) ?? 0n) + BigInt(utxo.value));
         }
         for (const utxo of payload.spentUtxos ?? []) {
-          if (utxo.owner === address && utxo.tokenType === NIGHT_TOKEN) spent += BigInt(utxo.value);
+          if (utxo.owner !== address) continue;
+          if (utxo.tokenType === NIGHT_TOKEN) spent += BigInt(utxo.value);
+          else tokens.set(utxo.tokenType, (tokens.get(utxo.tokenType) ?? 0n) - BigInt(utxo.value));
         }
         emit();
         return;
@@ -83,7 +89,7 @@ export function watchAddress(address, onUpdate, onError) {
     socket.onclose = () => {
       if (closed) return;
       // The stream ends when the indexer drops idle sockets; pick up where we left off.
-      retry = setTimeout(() => { created = 0n; spent = 0n; transactions = 0; open(); }, 5000);
+      retry = setTimeout(() => { created = 0n; spent = 0n; tokens = new Map(); transactions = 0; open(); }, 5000);
     };
   };
 

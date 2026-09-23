@@ -18,6 +18,13 @@ const ROSTER = [
     address: "mn_addr_preview1qkehtq54t8damevjy953sdua2qtad6adyer4cersc3ql9sw8envsg7kw3g" },
 ];
 
+// Tokens minted by our own contracts. Midnight has no token metadata service yet (friction
+// log finding 39), so names and descriptions for our tokens live here.
+const KNOWN_TOKENS = {
+  "f3f4d88611d5af314fb32ef0e380fed5807aaac806362c05fc7f79bcf1b8b91d": { name: "Crew treasury token", kind: "fungible" },
+  "7dab3653f25ff22bc04439dcd9aeea313432886baba621fcfa1bd8e33512deb0": { name: "Crew mandate", kind: "NFT" },
+};
+
 const chain = new Map();   // wallet -> { night, transactions, caughtUp } from the indexer
 let daemon = null;         // latest /api/wallets, or null if the daemon is not running
 let requests = [];
@@ -74,6 +81,18 @@ function statusText(d) {
   return d.status;
 }
 
+function tokenList(tokens) {
+  if (!tokens?.length) return "";
+  const rows = tokens.map((t) => {
+    const known = KNOWN_TOKENS[t.type];
+    return `<li><span class="tok-name">${known ? known.name : "Unknown token"}</span>
+      <span class="tok-kind">${known?.kind ?? ""}</span>
+      <span class="tok-amount">${t.amount}</span>
+      <code title="${t.type}">${t.type.slice(0, 10)}…</code></li>`;
+  }).join("");
+  return `<ul class="tokens">${rows}</ul>`;
+}
+
 function card(entry) {
   const d = daemon?.find((w) => w.wallet === entry.wallet);
   const c = chain.get(entry.wallet);
@@ -93,6 +112,7 @@ function card(entry) {
       <div class="balance"><div class="value">${dust(d?.dust)}</div><div class="label">DUST</div></div>
       <div class="balance"><div class="value">${c?.transactions ?? "—"}</div><div class="label">transactions</div></div>
     </div>
+    ${tokenList(c?.tokens)}
     <p class="note">${entry.role}${entry.agentId ? ` <a href="https://www.midnight.city/agents/${entry.agentId}" target="_blank" rel="noopener">see in the city</a>` : ""}</p>
     <dl class="addr"><dt>Unshielded</dt><dd>${entry.address}</dd></dl>
   `;
