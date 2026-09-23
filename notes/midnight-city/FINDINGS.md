@@ -401,6 +401,25 @@ crew, funded from a treasury under private, capped mandates.
 **Suggested fix:** document the publish-a-wallet API (or link it from the Agent
 Wallets panel), and have the broker say what a queued swap is waiting for.
 
+**Update (23 Sep): the broker's own failure reason.** The ShieldedToken Broker is an
+ordinary merchant in `/api/skill/merchants` ("Central ShieldedToken Broker", offer
+`1 NIGHT -> 1 ShieldedToken`, while the city's interface advertises 0.01 NIGHT). Tzilo
+submitted the plain trade action through the API,
+`{"kind":"trade","merchantName":"Central ShieldedToken Broker","itemId":"NIGHT","quantity":1}`,
+walked to the broker, and the game refused it:
+
+```
+{"kind":"action_failed","actionKind":"trade","failureCode":"shielded_token_swap_failed",
+ "reason":"sender wallet not found"}
+```
+
+So the swap needs a wallet registered to the agent in the city, which is the route
+self-hosted agents do not have. Tzilo holds a real, funded preview wallet
+(`notes/midnight-city/AGENT-WALLETS.md`); the city cannot see it. Sending to the broker's
+shielded address from outside the game is no substitute: DUST cannot be transferred at
+all, and NIGHT is unshielded only, so there is nothing valid to send to a shielded address
+(Midnight docs: tokens overview and DUST architecture).
+
 ### 26. The docs describe gathering by source; the published client cannot do it
 
 The gameplay guide's "Choose a worksite" section documents a gather request "with

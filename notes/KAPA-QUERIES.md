@@ -263,6 +263,23 @@ too. The one required field we skip is `signatures` (Schnorr over secp256k1): no
 preview verifies or serves the documents yet (finding 39), so the on-chain anchor does
 that job.
 
+### 13. Can DUST be sent to another address?
+
+**Asked:** "Can DUST be transferred to another address on Midnight, or is it
+non-transferable?"
+
+**Returned:** consistent answers from the tokenomics whitepaper, the DUST architecture
+page, the glossary and the ledger spec (`spec/dust.md`): DUST is "shielded,
+non-transferable, consumable", usable only to pay the holder's own fees; a DUST "spend" is a
+self-spend with the same owner. The tokens overview adds that NIGHT is always unshielded
+and there is no mechanism to move a token between shielded and unshielded state. What can
+move is DUST *generation*: NIGHT can be redesignated to generate DUST at another address.
+
+**What it changed:** **answered a user report.** Neither DUST nor NIGHT could be sent from
+our wallet to the city's ShieldedToken Broker, which publishes only a shielded address. Both
+refusals are correct behaviour, not a wallet bug. The broker's real route, a trade by the
+agent inside the game, fails with "sender wallet not found" (city finding 25).
+
 ## Assessment so far
 
 **Strong:**
