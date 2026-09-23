@@ -832,20 +832,39 @@ Midnight's own deploy tutorial documents that hazard for exactly this situation:
 > channel here: on the public networks it may never report 'strictly complete', which
 > would hang this wait forever."
 
-The CLI's transaction paths run with `requireStrictSync: true`. Whether DUST is the
-channel that never settles here is inference, not something we proved: the CLI prints a
-`waiting on: …` detail elsewhere (`Syncing wallet... (waiting on: dust, unshielded)`) but
-not on this path, so the stalling channel is not reported to the user at all.
+The CLI's transaction paths run with `requireStrictSync: true`. **Correction, same day:**
+we first guessed DUST was the channel that never settles, since the docs warn about it. It
+is not. Rebuilding the wallet in our own process from the CLI's own packages, with sync
+progress printed per channel, showed:
+
+```
+restored from wallet CLI cache at 0.1s
+0.4s   unshielded=true
+0.7s   unshielded=true dust=true
+88s    shielded 128,678 / 252,943
+257s   shielded 252,943 / 252,943   USABLE — NIGHT 5000, DUST 293.07
+```
+
+DUST settles in under a second from cache. The slow channel is **shielded**: this wallet's
+shielded sync walks about 253,000 events and takes around four minutes. The CLI source
+explains the rest. Its sync predicate takes a mode: `transfer` calls it with `"lite"`
+(unshielded and DUST only), which is why transfers work; `contract deploy` uses `"full"`,
+which also waits for shielded. And the CLI never persisted shielded progress
+(`balance --json` reports `shieldedSynced: false` every time), so **every deploy attempt
+restarted the shielded scan from zero and hit its timeout before finishing**. Six attempts,
+six restarts of the same four-minute scan, none of it saved.
+
+Our wallet daemon saves every channel's state every minute, so the scan happens once:
+Tzilo's wallet, synced once, now opens `ready` in under a second.
 
 Costs to a builder: v1 deployed from this machine on 17 September, so the first assumption
 is local breakage. Two of the six attempts went on cache clearing, and an unrelated real
 bug was found on the way (a dead proof server container, which surfaced as `SYNC_TIMEOUT`
 on deploy and only as `PROOF_FAILURE` on transfer).
 
-**Suggested fix:** do not gate the deploy on a channel the documentation says may never
-complete on a public network; print which channel the wait is blocked on, as the sync
-detail does elsewhere; and distinguish "sync incomplete" from "proof server unreachable"
-in the error code.
+**Suggested fix:** persist shielded sync progress between runs, as the CLI already does for
+DUST; print which channel a wait is blocked on, as the sync detail does elsewhere; and
+distinguish "sync incomplete" from "proof server unreachable" in the error code.
 
 **Still true on 23 September:** finding 23. `midnight dust register` on a fresh agent
 wallet reported `SYNC_TIMEOUT` ("Timed out waiting for dust tokens. Try running: midnight

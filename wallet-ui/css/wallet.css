@@ -181,3 +181,37 @@ code { font-family: var(--mono); font-size: 0.92em; color: var(--ink); }
 
 .card.watch-only { border-left-color: #58a6ff; }
 .card.watch-only .hint { margin: 0; font-size: 12px; }
+
+/* daemon status line */
+.daemon { margin: 10px 0 0; font-size: 13px; font-family: var(--mono); color: var(--ink-dim); }
+.daemon.on::before, .daemon.off::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: middle; }
+.daemon.on::before { background: var(--ok); }
+.daemon.off::before { background: var(--warn); }
+
+/* approvals */
+#approvals-panel.attention { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.requests { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.request { padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); }
+.request .what { font-size: 15px; }
+.request .meta { font-size: 12px; color: var(--ink-dim); font-family: var(--mono); margin-top: 4px; }
+.request .meta a { color: var(--ink); }
+.request.pending { border-color: var(--accent); }
+.request.submitted .state { color: var(--ok); }
+.request.failed .state, .request.rejected .state { color: var(--bad); }
+.request.approved .state, .request.building .state, .request.signing .state, .request.proving .state, .request.submitting .state { color: var(--warn); }
+.request .actions { margin-top: 10px; }
+
+/* send form on each card */
+.send { display: flex; gap: 8px; margin: 14px 0 10px; flex-wrap: wrap; }
+.send select, .send input {
+  padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--ink); font: inherit; font-size: 14px;
+}
+.send select { flex: 1 1 160px; }
+.send input { width: 110px; font-family: var(--mono); }
+button:disabled { opacity: 0.4; cursor: not-allowed; filter: none; }
+button.small { padding: 5px 12px; font-size: 13px; }
+.status-ready { color: var(--ok); }
+.status-syncing, .status-opening { color: var(--warn); }
+.status-error { color: var(--bad); }
+.request.confirmed .state { color: var(--ok); }

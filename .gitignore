@@ -32,3 +32,7 @@ CLAUDE.md
 # Phase 0 spike artefacts: keep the contract source and compiled JS, not the keys
 spikes/managed/*/keys/
 spikes/managed/*/zkir/
+
+# the daemon borrows the wallet CLI's known-good SDK install
+wallet-daemon/node_modules
+wallet-daemon/state/

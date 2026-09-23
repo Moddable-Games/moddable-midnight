@@ -9,19 +9,15 @@
 <body>
   <header class="bar">
     <h1>Midnight wallet</h1>
-    <p class="sub">A browser wallet for Firefox, where no Midnight wallet extension exists. Keys stay in the CLI wallet; this asks it for state, and every write needs approval in its terminal.</p>
+    <p class="sub">A browser wallet for Firefox, where no Midnight wallet extension exists. One organiser and three AI agents. Balances are live from the public indexer; every payment waits for your approval here.</p>
+    <p class="daemon" id="daemon">Looking for the wallet daemon…</p>
   </header>
 
   <main>
-    <section class="panel" id="connection">
-      <h2>Wallet servers</h2>
-      <p class="hint">Each <code>midnight serve</code> instance serves one wallet on its own port.</p>
-      <ul class="ports" id="ports"></ul>
-      <form class="add" id="add-form">
-        <label for="port">Add a port</label>
-        <input type="number" id="port" name="port" value="9936" min="1" max="65535">
-        <button type="submit">Connect</button>
-      </form>
+    <section class="panel" id="approvals-panel">
+      <h2>Approvals</h2>
+      <p class="hint">Nothing leaves a wallet until you approve it. Requests from agents land here too.</p>
+      <ol class="requests" id="requests"></ol>
     </section>
 
     <section class="wallets" id="wallets"></section>
@@ -33,7 +29,7 @@
   </main>
 
   <footer class="bar foot">
-    <p>Reads are auto-approved by the wallet server. Signing prompts a human in the terminal, including when an agent asks.</p>
+    <p>Keys stay in the local wallet daemon. This page asks it for state and sends it your decisions. It answers only this page, on this machine.</p>
   </footer>
 
   <script type="module" src="js/wallet.js"></script>

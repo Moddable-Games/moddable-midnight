@@ -1,37 +1,30 @@
-// Browser wallet for Midnight, talking to one or more `midnight serve` instances.
-// Firefox has no Midnight wallet extension (friction log findings 35, 36), so this is the
-// missing piece: the CLI wallet holds the keys, this shows their state and asks for writes.
-
+// Browser wallet for Midnight, driving the local wallet daemon (wallet-daemon/server.mjs).
+// Balances come live from the public indexer even when the daemon is down; the daemon adds
+// DUST, sending, and the approval queue.
 import { watchAddress } from "./indexer.js";
 
-const DEFAULT_PORTS = [9932, 9933, 9934, 9935];
-// One `midnight serve` per wallet; the connector does not report which wallet it holds.
-const WALLETS = {
-  9932: { name: "Organiser", who: "You (human)", wallet: "moddable-preview",
-          note: "Treasury. Deploys the contracts and funds the crew.", kind: "human",
-          address: "mn_addr_preview1zh5vgfsj5v0d85xps8lxjv8wata8cfwafc54tkgy8umsgms35c3s4gsema" },
-  9933: { name: "Floyd", who: "AI agent", wallet: "agent-floyd",
-          note: "Hacker, crew boss in Midnight City.", kind: "agent",
-          agentId: "user-agent-u4gfp92xeor3g2a",
-          address: "mn_addr_preview1wg2ef7spxl8wfahg890z5q4kuhtc234ks7rx65djg3dc9f5ltx4sr69gyw" },
-  9934: { name: "Tzilo", who: "AI agent", wallet: "agent-tzilo",
-          note: "Miner in Midnight City.", kind: "agent",
-          agentId: "user-agent-5wzs7d9q4cdz5gi",
-          address: "mn_addr_preview12t3k3nkssja6ksfjqkkx5sfdzue9j33fpztgsheyszrpu63yq77s0epzru" },
-  9935: { name: "FooFoo", who: "AI agent", wallet: "agent-foofoo",
-          note: "Lumberjack in Midnight City.", kind: "agent",
-          agentId: "user-agent-oyhuxtu984deja8",
-          address: "mn_addr_preview1qkehtq54t8damevjy953sdua2qtad6adyer4cersc3ql9sw8envsg7kw3g" },
-};
-const label = (port) => WALLETS[port] ?? { name: `Port ${port}`, who: "unknown", wallet: "", note: "", kind: "" };
-const NIGHT = "0".repeat(64);
-const REFRESH_MS = 10000;
+const DAEMON = "http://127.0.0.1:9900";
+const EXPLORER_TX = "https://preview.midnightexplorer.com/transactions/";
 
-const connections = new Map(); // port -> { socket, status, name, snapshot }
-const chain = new Map();       // port -> { night, transactions, caughtUp } straight from the indexer
-const portsEl = document.getElementById("ports");
-const walletsEl = document.getElementById("wallets");
-const logEl = document.getElementById("log");
+// Known wallets, so the page can show live balances before the daemon answers.
+const ROSTER = [
+  { wallet: "moddable-preview", name: "Organiser", kind: "human", role: "Treasury. Deploys the contracts and funds the crew.",
+    address: "mn_addr_preview1zh5vgfsj5v0d85xps8lxjv8wata8cfwafc54tkgy8umsgms35c3s4gsema" },
+  { wallet: "agent-floyd", name: "Floyd", kind: "agent", role: "Hacker, crew boss in Midnight City.", agentId: "user-agent-u4gfp92xeor3g2a",
+    address: "mn_addr_preview1wg2ef7spxl8wfahg890z5q4kuhtc234ks7rx65djg3dc9f5ltx4sr69gyw" },
+  { wallet: "agent-tzilo", name: "Tzilo", kind: "agent", role: "Miner in Midnight City.", agentId: "user-agent-5wzs7d9q4cdz5gi",
+    address: "mn_addr_preview12t3k3nkssja6ksfjqkkx5sfdzue9j33fpztgsheyszrpu63yq77s0epzru" },
+  { wallet: "agent-foofoo", name: "FooFoo", kind: "agent", role: "Lumberjack in Midnight City.", agentId: "user-agent-oyhuxtu984deja8",
+    address: "mn_addr_preview1qkehtq54t8damevjy953sdua2qtad6adyer4cersc3ql9sw8envsg7kw3g" },
+];
+
+const chain = new Map();   // wallet -> { night, transactions, caughtUp } from the indexer
+let daemon = null;         // latest /api/wallets, or null if the daemon is not running
+let requests = [];
+const drafts = new Map();  // wallet -> { to, amount } so polling does not wipe what you typed
+const seen = new Map();    // request id -> last status, to log changes once
+
+const el = (id) => document.getElementById(id);
 
 function log(message, kind = "") {
   const li = document.createElement("li");
@@ -39,244 +32,204 @@ function log(message, kind = "") {
   const time = document.createElement("time");
   time.textContent = new Date().toLocaleTimeString();
   li.append(time, document.createTextNode(message));
-  logEl.prepend(li);
-  while (logEl.children.length > 100) logEl.lastElementChild.remove();
+  el("log").prepend(li);
+  while (el("log").children.length > 100) el("log").lastElementChild.remove();
 }
 
-function formatNight(raw) {
-  if (raw === undefined || raw === null) return "0";
+function night(raw) {
+  if (raw === undefined || raw === null) return "—";
   const star = BigInt(raw);
   const whole = star / 1000000n;
   const fraction = (star % 1000000n).toString().padStart(6, "0").replace(/0+$/, "");
   return fraction ? `${whole}.${fraction}` : `${whole}`;
 }
 
-function formatDust(raw) {
-  if (!raw) return "0";
-  const specks = BigInt(raw);
-  return (Number(specks / 1000000000n) / 1000000).toFixed(3);
+function dust(raw) {
+  if (!raw) return "—";
+  return (Number(BigInt(raw) / 1000000000n) / 1e6).toFixed(3);
 }
 
-/** One JSON-RPC connection to a wallet server. */
-class Wallet {
-  constructor(port) {
-    this.port = port;
-    this.pending = new Map();
-    this.nextId = 0;
-  }
+const byAddress = (address) => ROSTER.find((r) => r.address === address);
+const nameOf = (wallet) => ROSTER.find((r) => r.wallet === wallet)?.name ?? wallet;
 
-  open() {
-    return new Promise((resolve, reject) => {
-      const socket = new WebSocket(`ws://localhost:${this.port}`);
-      this.socket = socket;
-      socket.onopen = () => resolve();
-      socket.onerror = () => reject(new Error(`no wallet server on port ${this.port}`));
-      socket.onclose = () => {
-        for (const [, entry] of this.pending) entry.reject(new Error("connection closed"));
-        this.pending.clear();
-        // A retry during a long sync leaves older sockets behind; when one of those finally
-        // closes it must not knock out the connection that replaced it.
-        const state = connections.get(this.port);
-        if (state && state.wallet === this) { state.status = "off"; state.lastTry = Date.now(); render(); }
-      };
-      socket.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-        if (typeof message.id !== "number") return;
-        const entry = this.pending.get(message.id);
-        if (!entry) return;
-        this.pending.delete(message.id);
-        if (message.error) entry.reject(new Error(message.error.message));
-        else entry.resolve(message.result);
-      };
-    });
-  }
-
-  close() { try { this.socket?.close(); } catch { /* already gone */ } }
-
-  call(method, params) {
-    const id = ++this.nextId;
-    this.socket.send(JSON.stringify({ jsonrpc: "2.0", id, method, params }));
-    return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      setTimeout(() => {
-        if (this.pending.delete(id)) reject(new Error(`${method} timed out; check the wallet server's terminal for an approval prompt`));
-      }, 180000);
-    });
-  }
-
-  async snapshot() {
-    // One cheap call first: a syncing server rejects everything, and asking for six at once
-    // writes six errors into its terminal every attempt.
-    const probe = await this.call("getUnshieldedBalances");
-    const [status, config, unshielded, shielded, balances, dust] = await Promise.all([
-      this.call("getConnectionStatus"),
-      this.call("getConfiguration"),
-      this.call("getUnshieldedAddress"),
-      this.call("getShieldedAddresses"),
-      Promise.resolve(probe),
-      this.call("getDustBalance"),
-    ]);
-    return {
-      networkId: status.networkId,
-      indexer: config.indexerUri,
-      prover: config.proverServerUri,
-      unshieldedAddress: unshielded.unshieldedAddress,
-      shieldedAddress: shielded.shieldedAddress,
-      night: balances[NIGHT] ?? "0",
-      dust: dust.balance,
-      dustCap: dust.cap,
-    };
-  }
+async function api(path, options = {}) {
+  const res = await fetch(DAEMON + path, { headers: { "Content-Type": "application/json" }, ...options });
+  const body = await res.json();
+  if (!res.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+  return body;
 }
 
-async function connect(port, { quiet = false } = {}) {
-  const existing = connections.get(port);
-  if (existing?.status === "on") return;
-  existing?.wallet?.close?.();
-  const wallet = new Wallet(port);
-  connections.set(port, { wallet, status: "busy" });
-  render();
-  try {
-    await wallet.open();
-    const { networkId } = await wallet.call("connect", { networkId: "preview" });
-    const snapshot = await wallet.snapshot();
-    connections.set(port, { wallet, status: "on", networkId, snapshot });
-    log(`connected to port ${port} (${networkId}, ${formatNight(snapshot.night)} NIGHT)`, "ok");
-  } catch (error) {
-    connections.set(port, { wallet, status: "off", error: error.message, lastTry: Date.now() });
-    if (!quiet) log(`port ${port}: ${error.message}`, "bad");
+// ------------------------------------------------------------------------------------------
+// Rendering
+// ------------------------------------------------------------------------------------------
+
+function statusText(d) {
+  if (!d) return "watch only";
+  if (d.status === "ready") return "ready to send";
+  if (d.status === "error") return `error: ${d.error}`;
+  if (d.shieldedProgress?.target) {
+    const pct = Math.min(100, Math.round((100 * d.shieldedProgress.applied) / d.shieldedProgress.target));
+    return `syncing ${pct}%`;
   }
-  render();
+  return d.status;
 }
 
-async function refresh() {
-  for (const [port, state] of connections) {
-    // A server still syncing answers "Wallet not synced yet". Retry slowly: each attempt
-    // prints an error in its terminal, and a sync takes minutes (finding 41).
-    if (state.status === "off") {
-      const now = Date.now();
-      if (now - (state.lastTry ?? 0) > 45000) { state.lastTry = now; connect(port, { quiet: true }); }
-      continue;
-    }
-    if (state.status !== "on") continue;
-    try {
-      state.snapshot = await state.wallet.snapshot();
-    } catch (error) {
-      state.status = "off";
-      log(`port ${port}: ${error.message}`, "bad");
-    }
-  }
-  render();
-}
+function card(entry) {
+  const d = daemon?.find((w) => w.wallet === entry.wallet);
+  const c = chain.get(entry.wallet);
+  const article = document.createElement("article");
+  article.className = `card ${d?.status === "ready" ? "" : "watch-only"}`;
 
-/** Signing is the human-in-the-loop demonstration: it prompts in the server's terminal. */
-async function requestSignature(port) {
-  const state = connections.get(port);
-  if (!state || state.status !== "on") return;
-  const payload = `moddable-midnight wallet check ${new Date().toISOString()}`;
-  const hex = Array.from(new TextEncoder().encode(payload)).map((b) => b.toString(16).padStart(2, "0")).join("");
-  log(`${label(port).name}: asking the wallet to sign. Approve it in the terminal running this wallet's server.`);
-  try {
-    // The server wants a string plus an encoding, and signs with the unshielded key.
-    const result = await state.wallet.call("signData", {
-      data: hex,
-      options: { encoding: "hex", keyType: "unshielded" },
-    });
-    log(`${label(port).name}: signed — ${JSON.stringify(result).slice(0, 90)}`, "ok");
-  } catch (error) {
-    log(`${label(port).name}: ${error.message}`, "bad");
-  }
-}
-
-function card(port, state) {
-  const el = document.createElement("article");
-  const who = label(port);
-  const s = state?.snapshot;              // local wallet server, when one is running
-  const c = chain.get(port);              // the indexer, always
-  const night = s ? formatNight(s.night) : c ? formatNight(c.night) : "—";
-  const source = s ? "wallet server" : c?.caughtUp ? "live from the indexer" : "reading the chain…";
-  el.className = "card" + (s ? "" : " watch-only");
-  el.innerHTML = `
+  article.innerHTML = `
     <header>
       <div>
-        <h3>${who.name} <span class="tag ${who.kind}">${who.who}</span></h3>
-        <div class="net">${who.wallet} · preview · ${s ? ":" + port : "watch only"}</div>
+        <h3>${entry.name} <span class="tag ${entry.kind}">${entry.kind === "human" ? "You (human)" : "AI agent"}</span></h3>
+        <div class="net">${entry.wallet} · preview</div>
       </div>
-      <span class="net">${source}</span>
+      <span class="net status-${d?.status ?? "none"}">${statusText(d)}</span>
     </header>
     <div class="balances">
-      <div class="balance"><div class="value">${night}</div><div class="label">NIGHT</div></div>
-      ${s ? `<div class="balance"><div class="value">${formatDust(s.dust)}</div><div class="label">DUST</div></div>` : ""}
-      ${c ? `<div class="balance"><div class="value">${c.transactions}</div><div class="label">transactions</div></div>` : ""}
+      <div class="balance"><div class="value">${night(d?.night ?? c?.night)}</div><div class="label">NIGHT</div></div>
+      <div class="balance"><div class="value">${dust(d?.dust)}</div><div class="label">DUST</div></div>
+      <div class="balance"><div class="value">${c?.transactions ?? "—"}</div><div class="label">transactions</div></div>
     </div>
-    <p class="note">${who.note}${who.agentId ? ` <a href="https://www.midnight.city/agents/${who.agentId}" target="_blank" rel="noopener">see in the city</a>` : ""}</p>
-    <dl class="addr">
-      <dt>Unshielded</dt><dd>${s?.unshieldedAddress ?? who.address ?? ""}</dd>
-      ${s ? `<dt>Shielded</dt><dd>${s.shieldedAddress}</dd>` : ""}
-    </dl>
+    <p class="note">${entry.role}${entry.agentId ? ` <a href="https://www.midnight.city/agents/${entry.agentId}" target="_blank" rel="noopener">see in the city</a>` : ""}</p>
+    <dl class="addr"><dt>Unshielded</dt><dd>${entry.address}</dd></dl>
   `;
-  const actions = document.createElement("div");
-  actions.className = "actions";
-  if (s) {
-    const sign = document.createElement("button");
-    sign.textContent = "Request signature";
-    sign.addEventListener("click", () => requestSignature(port));
-    actions.append(sign);
-  } else {
-    const hint = document.createElement("p");
-    hint.className = "hint";
-    hint.textContent = `Balance is live. To sign with this wallet: midnight serve --port ${port} --wallet ${who.wallet} --network preview`;
-    actions.append(hint);
-  }
+
+  const draft = drafts.get(entry.wallet) ?? { to: "", amount: "" };
+  const form = document.createElement("form");
+  form.className = "send";
+  form.innerHTML = `
+    <select name="to" aria-label="Send to">
+      <option value="">Send NIGHT to…</option>
+      ${ROSTER.filter((r) => r.wallet !== entry.wallet)
+        .map((r) => `<option value="${r.address}" ${draft.to === r.address ? "selected" : ""}>${r.name}</option>`).join("")}
+    </select>
+    <input name="amount" type="text" inputmode="decimal" placeholder="amount" value="${draft.amount}" aria-label="Amount in NIGHT">
+    <button type="submit" ${d?.status === "ready" ? "" : "disabled"}>Request</button>
+  `;
+  form.addEventListener("input", () => drafts.set(entry.wallet, { to: form.elements.to.value, amount: form.elements.amount.value }));
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const to = form.elements.to.value;
+    const amount = form.elements.amount.value.trim();
+    if (!to || !amount) return log("Pick a recipient and an amount first", "bad");
+    try {
+      await api("/api/requests", {
+        method: "POST",
+        body: JSON.stringify({ wallet: entry.wallet, kind: "transfer", to, amount, requestedBy: "you, in the browser" }),
+      });
+      drafts.delete(entry.wallet);
+      document.activeElement?.blur?.();
+      log(`${entry.name}: sending ${amount} NIGHT to ${byAddress(to)?.name} is waiting for your approval above`, "ok");
+      await refresh();
+    } catch (error) {
+      log(`${entry.name}: ${error.message}`, "bad");
+    }
+  });
+  article.append(form);
+
   const copy = document.createElement("button");
-  copy.className = "ghost";
+  copy.className = "ghost small";
+  copy.type = "button";
   copy.textContent = "Copy address";
   copy.addEventListener("click", async () => {
-    await navigator.clipboard.writeText(s?.unshieldedAddress ?? who.address ?? "");
-    log(`${who.name}: address copied`);
+    await navigator.clipboard.writeText(entry.address);
+    log(`${entry.name}: address copied`);
   });
-  actions.append(copy);
-  el.append(actions);
-  return el;
+  article.append(copy);
+  return article;
+}
+
+function requestItem(r) {
+  const li = document.createElement("li");
+  li.className = `request ${r.status}`;
+  const toName = byAddress(r.to)?.name ?? r.to.slice(0, 20) + "…";
+  const tx = r.txHash
+    ? ` · block ${r.block} · <a href="${EXPLORER_TX}0x${r.txHash}" target="_blank" rel="noopener">view on explorer</a>`
+    : r.txId ? " · waiting for the chain" : "";
+  li.innerHTML = `
+    <div class="what"><b>${nameOf(r.wallet)}</b> sends <b>${night(r.amount)} NIGHT</b> to <b>${toName}</b></div>
+    <div class="meta">requested by ${r.requestedBy} · ${new Date(r.createdAt).toLocaleTimeString()} · <span class="state">${r.status}</span>${r.error ? ` — ${r.error}` : ""}${tx}</div>
+  `;
+  if (r.status === "pending") {
+    const actions = document.createElement("div");
+    actions.className = "actions";
+    const approve = document.createElement("button");
+    approve.textContent = "Approve";
+    approve.addEventListener("click", () => decide(r.id, "approve"));
+    const reject = document.createElement("button");
+    reject.className = "ghost";
+    reject.textContent = "Reject";
+    reject.addEventListener("click", () => decide(r.id, "reject"));
+    actions.append(approve, reject);
+    li.append(actions);
+  }
+  return li;
 }
 
 function render() {
-  portsEl.replaceChildren(...[...connections.entries()].map(([port, state]) => {
-    const li = document.createElement("li");
-    const dot = document.createElement("span");
-    dot.className = `dot ${state.status === "on" ? "on" : state.status === "busy" ? "busy" : "off"}`;
-    li.append(dot, document.createTextNode(`${label(port).name} :${port}${state.error ? " — " + state.error : ""}`));
-    if (state.status !== "on") {
-      const retry = document.createElement("button");
-      retry.className = "ghost";
-      retry.textContent = "retry";
-      retry.addEventListener("click", () => connect(port));
-      li.append(retry);
-    }
-    return li;
-  }));
+  const ready = daemon ? daemon.filter((w) => w.status === "ready").length : 0;
+  el("daemon").textContent = daemon
+    ? `Wallet daemon connected · ${ready} of ${daemon.length} wallets ready to send`
+    : "Wallet daemon not running: balances are live, sending is off. Start it with: node wallet-daemon/server.mjs";
+  el("daemon").className = `daemon ${daemon ? "on" : "off"}`;
 
-  const cards = Object.keys(WALLETS).map(Number).map((port) => {
-    const state = connections.get(port);
-    return card(port, state?.status === "on" && state.snapshot ? state : null);
-  });
-  for (const [port, state] of connections) {
-    if (!WALLETS[port] && state.status === "on" && state.snapshot) cards.push(card(port, state));
+  // Do not rebuild the cards while you are typing into one; it would steal the focus.
+  if (!document.activeElement?.closest?.(".send")) el("wallets").replaceChildren(...ROSTER.map(card));
+
+  const open = requests.filter((r) => r.status === "pending");
+  const recent = requests.filter((r) => r.status !== "pending").slice(0, 8);
+  const items = [...open, ...recent].map(requestItem);
+  if (!items.length) {
+    const empty = document.createElement("li");
+    empty.className = "hint";
+    empty.textContent = "No requests yet. Use a wallet's Send form below.";
+    items.push(empty);
   }
-  walletsEl.replaceChildren(...cards);
+  el("requests").replaceChildren(...items);
+  el("approvals-panel").classList.toggle("attention", open.length > 0);
 }
 
-document.getElementById("add-form").addEventListener("submit", (event) => {
-  event.preventDefault();
-  const port = Number(document.getElementById("port").value);
-  if (port) connect(port);
-});
+// ------------------------------------------------------------------------------------------
+// Decisions and polling
+// ------------------------------------------------------------------------------------------
 
-for (const [port, who] of Object.entries(WALLETS)) {
-  if (!who.address) continue;
-  watchAddress(who.address, (update) => { chain.set(Number(port), update); render(); },
-    (error) => log(`${who.name}: indexer ${error.message}`, "bad"));
+async function decide(id, verdict) {
+  try {
+    const r = await api(`/api/requests/${id}/${verdict}`, { method: "POST" });
+    log(verdict === "approve"
+      ? `Approved: ${nameOf(r.wallet)} → ${night(r.amount)} NIGHT. Building, proving and submitting; about a minute.`
+      : `Rejected: ${nameOf(r.wallet)} → ${night(r.amount)} NIGHT`, verdict === "approve" ? "ok" : "");
+  } catch (error) {
+    log(error.message, "bad");
+  }
+  await refresh();
 }
-log("balances are live from the public indexer; wallet servers add signing");
-for (const port of DEFAULT_PORTS) connect(port, { quiet: true });
-setInterval(refresh, REFRESH_MS);
+
+async function refresh() {
+  try {
+    daemon = await api("/api/wallets");
+    requests = await api("/api/requests");
+    for (const r of requests) {
+      const before = seen.get(r.id);
+      if (before && before !== r.status && ["confirmed", "failed"].includes(r.status)) {
+        log(`${nameOf(r.wallet)} → ${night(r.amount)} NIGHT: ${r.status}${r.block ? " in block " + r.block : ""}${r.error ? " — " + r.error : ""}`,
+          r.status === "confirmed" ? "ok" : "bad");
+      }
+      seen.set(r.id, r.status);
+    }
+  } catch {
+    daemon = null;
+  }
+  render();
+}
+
+for (const entry of ROSTER) {
+  watchAddress(entry.address, (update) => { chain.set(entry.wallet, update); render(); },
+    (error) => log(`${entry.name}: indexer ${error.message}`, "bad"));
+}
+log("Balances are live from the public indexer. The wallet daemon adds sending and approvals.");
+refresh();
+setInterval(refresh, 3000);
