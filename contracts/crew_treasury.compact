@@ -1,0 +1,230 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// Crew treasury: an organisation funds AI agents privately, within limits.
+//
+// The organiser mints a real fungible treasury token and issues each agent a mandate:
+// a commitment in a Merkle tree, plus a one-of-a-kind shielded NFT sent to the agent's
+// wallet as a receipt of appointment. An agent draws from the treasury by proving, in
+// zero knowledge, that it holds some mandate, at most once per period. The organiser opens
+// each period; agents cannot choose it. The draw reveals a nullifier and the payee, never
+// which mandate was used.
+//
+// Audited with Midnight's compact-core security review before first deploy: it found that a
+// caller-chosen period let one mandate drain the treasury (confirmed by a simulator attack,
+// ten draws in one block), plus the issues fixed below. See notes/AUDIT-crew-treasury.md.
+//
+// It is v1's tournament pass generalised: a pass becomes a mandate, a prize claim becomes
+// a capped draw, and the prize pool becomes an actual token.
+//
+// Public on-chain:  organiser identity hash, crew id, treasury token and supply, the draw
+//                   amount, the current period, the pause flag, mandate commitments, spent
+//                   draw nullifiers, counts, and the two metadata digests.
+// Private:          secrets, nonces, Merkle paths, and so which mandate made which draw.
+
+export { MerkleTreePath };
+
+export { MerkleTreeDigest };
+
+// ---------------------------------------------------------------------------
+// Ledger
+// ---------------------------------------------------------------------------
+
+// Organiser identity, bound to a secret held off-chain (not to ownPublicKey(), which a
+// prover can claim freely).
+export sealed ledger organiser: Bytes<32>;
+
+// Domain separator for this treasury, so mandates and draws cannot be replayed against
+// another deployment.
+export sealed ledger crewId: Bytes<32>;
+
+// The treasury token, minted by this contract and held by it until drawn.
+export ledger treasuryColor: Bytes<32>;
+
+export ledger treasuryMinted: Uint<64>;
+
+// What one draw pays out, in treasury token units. Set by the organiser.
+export ledger drawAmount: Uint<64>;
+
+// Issued mandates. Historic, so a path computed before a later issue stays valid.
+export ledger mandates: HistoricMerkleTree<16, Bytes<32>>;
+
+export ledger mandateCount: Counter;
+
+// Mandates already issued. Each commitment may be issued once, so each NFT is one of one.
+export ledger issued: Set<Bytes<32>>;
+
+// The spending period, opened by the organiser. Draws are limited to one per mandate per
+// period, so at most mandateCount x drawAmount leaves the treasury each period. All zeros
+// means no period is open yet, and nothing can be drawn.
+export ledger currentPeriod: Bytes<32>;
+
+// Organiser's emergency stop for all draws.
+export ledger paused: Boolean;
+
+// One nullifier per (mandate, period) drawn.
+export ledger spentDraws: Set<Bytes<32>>;
+
+export ledger drawCount: Counter;
+
+// SHA-256 of each token kind's metadata document (name, ticker, description, image by IPFS
+// CID). The documents live off-chain; these digests make them tamper-evident. Fixed slots,
+// so the organiser cannot attach metadata to tokens this contract did not issue.
+export ledger treasuryMetadata: Bytes<32>;
+
+export ledger mandateMetadata: Bytes<32>;
+
+// ---------------------------------------------------------------------------
+// Witnesses (implemented in ../src/crew-witnesses.ts)
+// ---------------------------------------------------------------------------
+
+// The caller's long-lived 32-byte secret: the organiser's for organiser actions, an
+// agent's for draws.
+witness localSecretKey(): Bytes<32>;
+
+// Blinding nonce for the caller's mandate.
+witness mandateNonce(): Bytes<32>;
+
+// Authentication path for a mandate, read from the local copy of the ledger. Only its
+// siblings are trusted; the leaf is recomputed in-circuit.
+witness findMandatePath(commitment: Bytes<32>): MerkleTreePath<16, Bytes<32>>;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+circuit deriveOrganiser(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:crew:organiser:"), sk]);
+}
+
+// A mandate is a commitment to the agent's secret under a per-mandate nonce, so the
+// organiser can publish it without learning or revealing the secret. The crew id is inside,
+// so the same agent secret gives unrelated commitments in different crews.
+circuit deriveMandateCommitment(sk: Bytes<32>, nonce: Bytes<32>, cid: Bytes<32>): Bytes<32> {
+  return persistentCommit<Vector<3, Bytes<32>>>([pad(32, "moddable:crew:mandate:"), cid, sk], nonce);
+}
+
+// One nullifier per mandate per period. A different domain from the commitment, and the
+// period is inside the hash, so draws in different periods cannot be linked to each other
+// or to the mandate.
+circuit deriveDrawNullifier(sk: Bytes<32>, nonce: Bytes<32>, cid: Bytes<32>, period: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<5, Bytes<32>>>([pad(32, "moddable:crew:draw:"), cid, period, sk, nonce]);
+}
+
+circuit assertOrganiser(): [] {
+  const sk = localSecretKey();
+  assert(disclose(organiser == deriveOrganiser(sk)), "Caller is not the organiser");
+}
+
+// ---------------------------------------------------------------------------
+// Constructor
+// ---------------------------------------------------------------------------
+
+constructor(cid: Bytes<32>, amountPerDraw: Uint<64>) {
+  organiser = disclose(deriveOrganiser(localSecretKey()));
+  crewId = disclose(cid);
+  drawAmount = disclose(amountPerDraw);
+}
+
+// ---------------------------------------------------------------------------
+// Organiser
+// ---------------------------------------------------------------------------
+
+// Mint treasury supply into the contract. Only the organiser can; the spike's mint was
+// open to anyone.
+export circuit mintTreasury(amount: Uint<64>): Bytes<32> {
+  assertOrganiser();
+  assert(amount > 0, "Mint amount must be positive");
+  const color = mintUnshieldedToken(
+    pad(32, "moddable:crew:treasury"),
+    disclose(amount),
+    left<ContractAddress, UserAddress>(kernel.self())
+  );
+  treasuryColor = color;
+  treasuryMinted = (treasuryMinted + disclose(amount)) as Uint<64>;
+  return color;
+}
+
+// Appoint an agent: record its mandate commitment, and send it a one-of-a-kind shielded
+// NFT (an "Agent Smart Contract") as a receipt of appointment. The NFT is not a credential:
+// drawing requires the mandate's secret, not the NFT. Its token type and coin nonce are both
+// derived from the commitment, which can be issued only once.
+export circuit issueMandate(commitment: Bytes<32>, holder: ZswapCoinPublicKey): Bytes<32> {
+  assertOrganiser();
+  assert(!issued.member(disclose(commitment)), "Mandate already issued");
+  issued.insert(disclose(commitment));
+  mandates.insert(disclose(commitment));
+  mandateCount.increment(1);
+  const domain = persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:crew:mandate-nft:"), disclose(commitment)]);
+  const coinNonce = persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:crew:nft-nonce:"), disclose(commitment)]);
+  const coin = mintShieldedToken(
+    domain,
+    1,
+    coinNonce,
+    left<ZswapCoinPublicKey, ContractAddress>(disclose(holder))
+  );
+  return coin.color;
+}
+
+// Open a new spending period. Only the organiser can, so agents cannot mint fresh periods to
+// draw again (the audit's critical finding).
+export circuit openPeriod(period: Bytes<32>): [] {
+  assertOrganiser();
+  assert(disclose(period) != default<Bytes<32>>, "A period cannot be all zeros");
+  assert(disclose(period) != currentPeriod, "That period is already open");
+  currentPeriod = disclose(period);
+}
+
+export circuit setPaused(value: Boolean): [] {
+  assertOrganiser();
+  paused = disclose(value);
+}
+
+export circuit setDrawAmount(amount: Uint<64>): [] {
+  assertOrganiser();
+  drawAmount = disclose(amount);
+}
+
+// Publish the digests of the two tokens' metadata documents.
+export circuit setMetadata(treasuryDigest: Bytes<32>, mandateDigest: Bytes<32>): [] {
+  assertOrganiser();
+  treasuryMetadata = disclose(treasuryDigest);
+  mandateMetadata = disclose(mandateDigest);
+}
+
+// ---------------------------------------------------------------------------
+// Agents
+// ---------------------------------------------------------------------------
+
+// Player-side helper: the commitment an agent hands the organiser to be appointed.
+export circuit makeMandateCommitment(): Bytes<32> {
+  return deriveMandateCommitment(localSecretKey(), mandateNonce(), crewId);
+}
+
+// Draw the fixed amount once in the current period, paid to `recipient`, proving only that
+// the caller holds some mandate. Nothing links the draw to a particular mandate. Paying the
+// same recipient every period links an agent's own draws, so use fresh payout addresses.
+export circuit draw(recipient: UserAddress): [] {
+  assert(!paused, "Draws are paused");
+  assert(currentPeriod != default<Bytes<32>>, "No period open");
+  assert(treasuryMinted > 0, "Treasury not funded");
+  assert(drawAmount > 0, "Draw amount is zero");
+  const sk = localSecretKey();
+  const nonce = mandateNonce();
+
+  // Rebuild the mandate, then bind the supplied path to it. Without the rebinding a
+  // prover could hand back any member's path.
+  const commitment = deriveMandateCommitment(sk, nonce, crewId);
+  const supplied = findMandatePath(commitment);
+  const bound = MerkleTreePath<16, Bytes<32>> { leaf: commitment, path: supplied.path };
+  const root = merkleTreePathRoot<16, Bytes<32>>(bound);
+  assert(mandates.checkRoot(disclose(root)), "No such mandate");
+
+  const nullifier = deriveDrawNullifier(sk, nonce, crewId, currentPeriod);
+  assert(!spentDraws.member(disclose(nullifier)), "Already drawn this period");
+  spentDraws.insert(disclose(nullifier));
+  drawCount.increment(1);
+
+  sendUnshielded(treasuryColor, drawAmount as Uint<128>, right<ContractAddress, UserAddress>(disclose(recipient)));
+}

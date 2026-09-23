@@ -168,3 +168,14 @@ never deployed.
 | 51 | **Fungible token minted**, 1,000,000 held by the contract (block 990,970) | 11:47 |
 | 52 | **NFT minted** to Floyd's wallet, supply 1 (block 990,983) | 11:49 |
 
+| 53 | v2 crew treasury written and compiled; 21 simulator tests pass | 13:42 |
+| 54 | `compact-core:audit-compact`: one Critical, a caller-chosen period drains the treasury; confirmed by running the attack (10 draws from one mandate) | 13:47 |
+| 55 | Audit fixes applied; drain now stops at one draw; 30 tests pass | 13:51 |
+| 56 | `midnight-verify` on the fixed contract: witnesses confirmed, one new gap (an open "period zero") | 13:54 |
+| 57 | Gap fixed, 32 tests, full proving keys built | 13:59 |
+| 58 | **v2 deployed by the organiser's wallet** (block 992,293); 1,000,000 MCC minted (992,298) | 14:00 |
+| 59 | **Agent Smart Contracts issued** to Floyd, Tzilo, FooFoo, each visible in the agent's own wallet (992,303 to 992,322) | 14:02 |
+| 60 | Period opened; Floyd draws 50 MCC (992,331); his second draw refused | 14:05 |
+| 61 | Token metadata built, subjects re-derived from chain, digests anchored with `setMetadata` (992,402) | 14:10 |
+| 62 | Agents' route with limits: small crew transfers auto-approved, larger and external ones held; per-wallet queue after a concurrent send failed | 14:19 |
+| 63 | Overdraw tested on preview: refused as a partial success, treasury and nullifier intact (992,518, 992,552) | 14:24 |

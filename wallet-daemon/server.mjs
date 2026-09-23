@@ -16,7 +16,9 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import * as ledger from "@midnight-ntwrk/ledger-v8";
 import { MidnightBech32m, UnshieldedAddress } from "@midnight-ntwrk/wallet-sdk-address-format";
 import { openWallet, isUsable, saveState, PREVIEW } from "./wallet.mjs";
-import { deploy, call } from "./deploy.mjs";
+import { deploy, call, mandateCommitment } from "./deploy.mjs";
+import { verifiedMetadata } from "./metadata.mjs";
+import { ensureAgentTokens, agentForToken, evaluate, crewTreasury } from "./agents.mjs";
 
 const PORT = 9900;
 const ALLOWED_ORIGINS = new Set(["http://localhost:5173", "http://127.0.0.1:5173"]);
@@ -79,6 +81,9 @@ function summary(record) {
     restoredFrom: record.restoredFrom ?? null,
     night: s ? (s.unshielded.balances[NIGHT] ?? 0n).toString() : null,
     dust,
+    // Shielded tokens are visible only to their holder, so they come from the wallet, not the
+    // public indexer. Token type (hex) -> amount.
+    shielded: s ? Object.fromEntries(Object.entries(s.shielded.balances ?? {}).map(([t, v]) => [t, v.toString()])) : null,
     sync: record.ready ?? null,
     shieldedProgress: record.shieldedProgress ?? null,
   };
@@ -138,9 +143,24 @@ function describe(r) {
   return `${r.wallet} calls ${r.contract}.${r.circuit}`;
 }
 
-/** JSON cannot carry bigints or addresses; arguments arrive tagged and are converted here. */
-function coerce(arg) {
+/**
+ * JSON cannot carry bigints or addresses; arguments arrive tagged and are converted here.
+ * `coinPublicKeyOf` names a daemon wallet that will receive shielded coins from the call, so
+ * it is added to `recipients` and its encryption key goes with the call. `mandateOf` is that
+ * agent's mandate commitment, computed locally from its own secret.
+ */
+async function coerce(arg, request, recipients) {
   if (arg && typeof arg === "object") {
+    if ("coinPublicKeyOf" in arg) {
+      const target = wallets.get(arg.coinPublicKeyOf);
+      if (!target?.handle) throw new Error(`${arg.coinPublicKeyOf} is not open in the daemon`);
+      recipients.push(target.handle);
+      return { bytes: Uint8Array.from(Buffer.from(target.handle.zswapKeys.coinPublicKey, "hex")) };
+    }
+    if ("mandateOf" in arg) {
+      if (!wallets.has(arg.mandateOf)) throw new Error(`unknown wallet ${arg.mandateOf}`);
+      return mandateCommitment(arg.mandateOf, request.contractAddress);
+    }
     if ("uint" in arg) return BigInt(arg.uint);
     if ("userAddress" in arg) {
       const address = MidnightBech32m.parse(arg.userAddress).decode(UnshieldedAddress, PREVIEW.networkId);
@@ -160,9 +180,12 @@ async function execute(request) {
       request.status = phase;
       if (txId) { request.txId = txId; saveRequests(); }
     };
+    const recipients = [];
+    const args = [];
+    for (const arg of request.args) args.push(await coerce(arg, request, recipients));
     const out = request.kind === "deploy"
-      ? await deploy(record.handle, request.contract, { args: request.args.map(coerce), onPhase })
-      : await call(record.handle, request.contract, request.contractAddress, request.circuit, request.args.map(coerce), { onPhase });
+      ? await deploy(record.handle, request.contract, { args, onPhase })
+      : await call(record.handle, request.contract, request.contractAddress, request.circuit, args, { onPhase, recipients });
     Object.assign(request, {
       contractAddress: out.contractAddress ?? request.contractAddress,
       txId: out.txId, txHash: out.txHash, block: out.block, chainStatus: out.status,
@@ -191,7 +214,7 @@ async function execute(request) {
   request.txId = await facade.submitTransaction(finalized);
   request.status = "submitted";
   request.completedAt = new Date().toISOString();
-  confirm(request);
+  await confirm(request);
 }
 
 /** Wait for the chain to show the transaction, and record its real hash and block. */
@@ -214,6 +237,27 @@ async function confirm(request) {
   }
 }
 
+const lanes = new Map(); // wallet -> promise of its last queued transaction
+
+async function inLane(wallet, job) {
+  const previous = lanes.get(wallet) ?? Promise.resolve();
+  const next = previous.catch(() => {}).then(async () => {
+    await untilReady(wallet);
+    return job();
+  });
+  lanes.set(wallet, next);
+  return next;
+}
+
+/** After its own transaction lands, a wallet re-syncs briefly before it can build another. */
+async function untilReady(wallet, limitMs = 5 * 60_000) {
+  const started = Date.now();
+  while (Date.now() - started < limitMs) {
+    if (wallets.get(wallet)?.ready?.all) return;
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+}
+
 async function decide(id, approve) {
   const request = requests.find((r) => r.id === id);
   if (!request) throw new Error("no such request");
@@ -227,8 +271,10 @@ async function decide(id, approve) {
   request.status = "approved";
   request.decidedAt = new Date().toISOString();
   saveRequests();
-  // Proving takes a while; answer now and let the browser watch the status change.
-  execute(request)
+  // Proving takes a while; answer now and let the browser watch the status change. One
+  // transaction per wallet at a time: until the last one lands, its coins are spent and its
+  // change has not come back, so a second would fail with "Insufficient funds".
+  inLane(request.wallet, () => execute(request))
     .catch((error) => { request.status = "failed"; request.error = error.message; })
     .finally(() => { saveRequests(); console.log(`request ${id.slice(0, 8)}: ${request.status}${request.contractAddress ? " contract " + request.contractAddress : ""}${request.txHash ? " tx " + request.txHash : ""}${request.block ? " block " + request.block : ""}${request.error ? " (" + request.error + ")" : ""}`); });
   return request;
@@ -273,9 +319,13 @@ const server = http.createServer(async (req, res) => {
       const entries = await record.handle.facade.getAllFromTxHistory();
       return send(res, 200, JSON.parse(JSON.stringify(entries.slice(-20), (k, v) => typeof v === "bigint" ? v.toString() : v)), origin || "null");
     }
+    if (req.method === "GET" && url.pathname === "/api/metadata") {
+      return send(res, 200, await verifiedMetadata(), origin);
+    }
     if (req.method === "GET" && url.pathname === "/api/requests") {
       return send(res, 200, [...requests].reverse(), origin);
     }
+    if (url.pathname.startsWith("/api/agent/")) return await agentRoute(req, res, url, origin);
     if (!fromUI) return send(res, 403, { error: "writes are only accepted from the wallet UI" }, "null");
     if (req.method === "POST" && url.pathname === "/api/requests") {
       return send(res, 201, createRequest(await readBody(req)), origin);
@@ -290,6 +340,46 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
+/**
+ * Agents' route. An agent's token binds it to its own wallet; the policy in agents.mjs decides
+ * whether each request runs at once or waits in the wallet page for the organiser.
+ */
+async function agentRoute(req, res, url, origin) {
+  // Agents are programs, not pages: refusing any browser origin keeps a web page from
+  // borrowing a token that happens to be in reach.
+  if (origin) return send(res, 403, { error: "agents call without a browser origin" }, "null");
+  const agent = agentForToken(req.headers.authorization);
+  if (!agent) return send(res, 401, { error: "unknown agent token" }, "null");
+  const own = wallets.get(agent);
+
+  if (req.method === "GET" && url.pathname === "/api/agent/requests") {
+    return send(res, 200, requests.filter((r) => r.wallet === agent).reverse().slice(0, 50), "null");
+  }
+  if (req.method === "POST" && url.pathname === "/api/agent/requests") {
+    const body = await readBody(req);
+    const requestedBy = `agent:${own.name}`;
+    const request = body.kind === "draw"
+      ? createRequest({ wallet: agent, kind: "call", contract: "crew_treasury", contractAddress: crewTreasury(),
+          circuit: "draw", args: [{ userAddress: own.address }], requestedBy, note: body.note ?? "treasury draw" })
+      : body.kind === "transfer"
+        ? createRequest({ wallet: agent, kind: "transfer", to: body.to, amount: body.amount, requestedBy, note: body.note })
+        : null;
+    if (!request) return send(res, 400, { error: "kind must be transfer or draw" }, "null");
+    const crewAddresses = new Set([...wallets.values()].map((w) => w.address).filter(Boolean));
+    const verdict = evaluate(agent, request, requests, crewAddresses);
+    request.policy = verdict.reason;
+    if (verdict.auto) {
+      request.autoApproved = true;
+      await decide(request.id, true);
+    }
+    saveRequests();
+    console.log(`request ${request.id.slice(0, 8)} from ${own.name}: ${verdict.auto ? "auto-approved" : "waiting for approval"} (${verdict.reason})`);
+    return send(res, 201, request, "null");
+  }
+  return send(res, 404, { error: "not found" }, "null");
+}
+
+console.log(`agent tokens: ${ensureAgentTokens()}`);
 server.listen(PORT, "127.0.0.1", () => console.log(`wallet daemon on http://127.0.0.1:${PORT}`));
 
 // Sync one wallet at a time: in parallel they compete for CPU and the indexer and all crawl

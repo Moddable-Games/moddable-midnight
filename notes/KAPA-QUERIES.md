@@ -153,6 +153,116 @@ sourced statements in `docs/INTEGRATION.md`. One claim on the front end
 that issued commitments are visible was checked directly against the chain and
 corrected: a hash of each commitment is visible, not the commitment.
 
+### 7. Token metadata and NFT images (23 September)
+
+**Asked:** "Is there an NFT token standard on Midnight with metadata and images? Can a
+wallet display token images or metadata for tokens minted by a contract?"
+
+**Came back from:** the architecture repository's Token Metadata specification, ADR 0015
+(off-chain token metadata, status Proposed), ADR 0012 (manual token names), the metadata
+server API spec, and the tokens overview.
+
+**What it established:** token metadata (name, ticker, image, supply) is specified as a
+signed off-chain document, CIP-26 style, served by an indexer metadata server; token
+standards are due through the MIP process.
+
+**What it changed:** set the design to IPFS-addressed metadata with an on-chain digest.
+Introspecting the preview indexer then showed nothing serves that metadata yet (finding 39).
+
+### 8. The minting API and its language version
+
+**Asked:** "Compact mintUnshieldedToken example contract, sendUnshielded, token domain
+separator, minimum language version required for token minting."
+
+**Came back from:** the token transfers example contract, the unshielded token tutorial,
+the standard library reference, the ledger ADT reference, and the midnight-js e2e tests.
+
+**What it established:** exact signatures for `mintUnshieldedToken`, `mintShieldedToken`
+and `sendUnshielded`, and a tutorial using `pragma language_version 0.23`.
+
+**What it changed:** ruled out the feared version wall before any code was written. The
+spike then compiled on the pinned 0.31.1 first time.
+
+### 9. Wallet balances without a wallet
+
+**Asked:** "How to query an unshielded address balance or UTXOs from a public API without
+running a wallet?"
+
+**Came back from:** the indexer API v4 reference, the midnight-js indexer data provider,
+and its release notes.
+
+**What it established:** `queryUnshieldedBalances` is for contract addresses only, but the
+indexer has a subscription, `unshieldedTransactions(address)`, streaming every unshielded
+event for a wallet address.
+
+**What it changed:** **corrected our own claim**, made an hour earlier after introspecting
+only the query type, that live balances needed a hosted relay. The wallet page now reads
+balances straight from the public indexer.
+
+### 10. Why a deploy hangs on a synced wallet
+
+**Asked:** "contract deploy wallet sync timed out preview network, shielded sync never
+completes, requireStrictSync, what does the wallet need synced before deploying a contract."
+
+**Came back from:** the unshielded token tutorial's `syncWallet`, the bboard tutorial, the
+example hello-world wallet, the testkit, and the community wallet troubleshooting table.
+
+**What it established:** the tutorial deliberately does not gate on DUST, warning it "may
+never report strictly complete" on public networks; the troubleshooting table lists
+"Deploy fails before it starts: wallet not fully synced".
+
+**What it changed:** pointed at the right mechanism (a sync predicate that never becomes
+true), but the channel was wrong. Measuring each channel showed DUST settled in under a
+second and shielded was the slow one, and the CLI never saved shielded progress
+(finding 40, corrected). Useful, not decisive: the answer still had to be measured.
+
+### 11. Shielded NFTs minted to someone else
+
+**Asked:** "When a Compact contract calls mintShieldedToken with recipient
+left(ZswapCoinPublicKey) of a user, does the user's wallet detect and receive that shielded
+coin automatically, or does it need the encryption public key?"
+
+**Came back from:** the midnight-node toolkit README, the standard library reference for
+`sendShielded`, the shielded token tutorial, midnight-js 4.0.4 release notes, and
+midnight-js `zswap-utils`.
+
+**What it established:** a shielded coin sent to a user other than the transaction's caller
+carries no ciphertext unless the caller supplies that user's encryption key: "the
+transaction will succeed, but no coins will be visible in the destination wallet". midnight-js
+accepts the mapping as `additionalCoinEncPublicKeyMappings`.
+
+**What it changed:** **caught a silent failure before it shipped.** The v2 contract's
+`issueMandate` mints each agent's NFT from the organiser's transaction. As first planned
+it would have succeeded on chain and delivered NFTs no agent could see. The daemon holds
+every wallet, so it passes the mapping.
+
+### 12. How an NFT should reference its metadata and image
+
+**Asked:** "How should an NFT on Midnight reference its metadata or image, for example
+with a token URI or an IPFS CID?"
+
+**Returned:** the token metadata spec (`midnight-architecture`,
+`apis-and-common-types/metadata/Token Metadata.md`), ADR 0015 and the metadata
+specification:
+
+- **Where metadata lives:** off-chain, CIP-26 style, as a document per token type
+- **Fields:** `subject`, `contract_address`, `domain_separator`, `shielded`, `ticker`,
+  `name`, `version`, `signatures`, and optionally `description`, `image`, `decimals` and
+  `supply`
+- **Images:** the spec's own example uses `"image": "ipfs://aaa/image.png"`
+- **Integrity:** clients may check a document against "an anchor (being hash of metadata
+  canonical form published in a different place, like on-chain)"
+- **Canonical form:** RFC 8785, with `signatures` removed before hashing
+
+**What it changed:** **gave the design.** The crew treasury stores the SHA-256 of each
+canonical document, the documents reference images by IPFS CID, and the daemon verifies
+both before the wallet page shows a name or image. Each document's subject is re-derived
+from the contract address and domain separator with `ledger-v8`'s `rawTokenType`. It
+matched every token type seen on chain, which confirms the contract's domain derivation
+too. The one required field we skip is `signatures` (Schnorr over secp256k1): nothing on
+preview verifies or serves the documents yet (finding 39), so the on-chain anchor does
+that job.
+
 ## Assessment so far
 
 **Strong:**

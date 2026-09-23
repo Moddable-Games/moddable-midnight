@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>Agent Smart Contract</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a3680"/>
+      <stop offset="1" stop-color="#0a0d2a"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="36" fill="url(#bg)"/>
+  <rect x="96" y="60" width="320" height="392" rx="14" fill="#f5f4ef"/>
+  <text x="256" y="112" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="4" fill="#0c4f8d">AGENT SMART</text>
+  <text x="256" y="140" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700" letter-spacing="4" fill="#0c4f8d">CONTRACT</text>
+  <g stroke="#14161c" stroke-opacity="0.25" stroke-width="6" stroke-linecap="round">
+    <line x1="136" y1="186" x2="376" y2="186"/><line x1="136" y1="214" x2="376" y2="214"/>
+    <line x1="136" y1="242" x2="336" y2="242"/><line x1="136" y1="270" x2="360" y2="270"/>
+  </g>
+  <line x1="136" y1="392" x2="250" y2="392" stroke="#14161c" stroke-width="2"/>
+  <path d="M140 380c14-22 26 10 40-8s22-16 30 0 18 8 32-4" fill="none" stroke="#0c4f8d" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="336" cy="368" r="48" fill="#0a0d2a"/>
+  <circle cx="336" cy="368" r="40" fill="none" stroke="#6fb5ff" stroke-width="2" stroke-dasharray="3 5"/>
+  <path d="M346 342a32 32 0 1 0 0 52a26 26 0 1 1 0-52z" fill="#6fb5ff"/>
+  <text x="256" y="486" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="16" letter-spacing="3" fill="#6fb5ff">MIDNIGHT CITY · SHIELDED</text>
+</svg>

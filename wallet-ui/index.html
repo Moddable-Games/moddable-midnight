@@ -14,11 +14,15 @@
   </header>
 
   <main>
-    <section class="panel" id="approvals-panel">
-      <h2>Approvals</h2>
+    <details class="panel" id="approvals-panel">
+      <summary>
+        <h2>Approvals</h2>
+        <span class="badge" id="pending-count" hidden></span>
+        <span class="summary-hint" id="approvals-hint">nothing waiting</span>
+      </summary>
       <p class="hint">Nothing leaves a wallet until you approve it. Requests from agents land here too.</p>
       <ol class="requests" id="requests"></ol>
-    </section>
+    </details>
 
     <section class="wallets" id="wallets"></section>
 

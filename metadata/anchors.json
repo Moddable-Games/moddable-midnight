@@ -1,0 +1,18 @@
+{
+  "contract": "e412fa7fa89433c2d37bbf350eba95e61db6075d5189f0dc5f45c07583cac4b4",
+  "images": {
+    "agent-smart-contract.svg": "ipfs://bafkreiclrxm4rh4ymgm2ptgklrlssyg3pebslkajysjv22hf26rdxg2y3u",
+    "mcc.svg": "ipfs://bafkreiarsxbavsnsaozcnlsfe234kzt4azigga34ofrff5logx6fwpfnpa"
+  },
+  "documents": {
+    "eed99c9a56f4f3d719ff295eab2fcd59713233c71d34437284347c992b54a366": "ipfs://bafkreibcycmpng2ss4zqmn7i7yldqegfxmzisillgocueuhrw7nwwac57i",
+    "66deba03d895468b3388866f511e7622e2c7af4d722e46aedf6958aa267ba92b": "ipfs://bafkreie5hmxksichsgtpq2x6xc5qy6lti67iiplmaqovm3hbj4j362ztom",
+    "7ced7bf39622030ed6e55290f346e2277371eff6d44fdba47069786a4b3f2293": "ipfs://bafkreia372xzudmwzm46bstydff3it6m5glktakjs4c2ga45ckhhyv5scm",
+    "9d454f805cbc15148268dcc49d4e2d386484010653f7f09910d331ff524c3b3d": "ipfs://bafkreib5nkx4qpaay3s4sivr7mzpu5sd6j3eryg7qkefk3ixwmkz23znh4"
+  },
+  "collection": "ipfs://bafkreic3aqsrife243y2lpfgalca5t4u3wcry6igok7zwkcmm53rkkkpyu",
+  "setMetadata": {
+    "treasuryDigest": "22c098f69b5297330637e8fe163810c5bb3289216b33854250f1b7db6b005dfa",
+    "mandateDigest": "5b042514149ae6f1a5bca602c40ecf94dd851c790672bf9b284c677715294fc5"
+  }
+}

@@ -933,3 +933,29 @@ on preview. With one copy in the tree, the same deploy went on to prove and subm
 docs which `ledger-v8` versions each release works with, since two copies fail at runtime
 rather than at install.
 
+
+### 43. The simulator does not model a contract's balance, so an overdraw is found only on-chain, for a fee
+
+The crew treasury pays draws with `sendUnshielded` from the contract's own MCC. In the
+compact-runtime simulator a contract has no balance to run out of: the verification agent
+minted 1,000 and made two draws of 600, and both succeeded. The contract has no in-circuit
+balance check, so whether it could overdraw depended on the ledger.
+
+On preview (23 September) the draw amount was set to 2,000,000 against a balance of
+999,900, and an agent drew:
+
+- midnight-js threw from `submitCallTx` with a JSON dump of the whole result as the error
+  message (including a `"tx": {"__wbg_ptr": …}` handle), in which the useful part is
+  `"status": "FailFallible"`
+- the indexer reports the same transaction, block 992,518, as `PARTIAL_SUCCESS`
+- the fee was paid, no MCC moved, and the draw's nullifier was not recorded: after the
+  amount was restored, the same agent drew in the same period (block 992,552)
+
+So the ledger is safe, and the contract's state changes roll back with the failed payout.
+Learning that, though, took a paid transaction, and the two layers name the outcome
+differently.
+
+**Suggested fix:** model contract token balances in the simulator's circuit context, so
+`sendUnshielded` beyond the balance fails locally as it will on-chain; use one name for a
+fallible-segment failure across midnight-js and the indexer; and throw an error whose
+message states the status rather than serialising the result.

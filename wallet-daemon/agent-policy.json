@@ -1,0 +1,8 @@
+{
+  "crewTreasury": "e412fa7fa89433c2d37bbf350eba95e61db6075d5189f0dc5f45c07583cac4b4",
+  "agents": {
+    "agent-floyd": { "autoApproveNight": "2", "dailyAutoNight": "10", "autoDraw": true },
+    "agent-tzilo": { "autoApproveNight": "1", "dailyAutoNight": "5", "autoDraw": true },
+    "agent-foofoo": { "autoApproveNight": "1", "dailyAutoNight": "5", "autoDraw": true }
+  }
+}

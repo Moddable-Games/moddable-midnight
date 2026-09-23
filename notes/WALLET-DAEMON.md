@@ -18,7 +18,15 @@ So this repo runs its own wallet process.
   one process, on `127.0.0.1:9900`. It answers only the wallet UI's origin. Every payment,
   deployment and contract call is queued as a request and waits for a human to approve it.
 - `wallet-daemon/deploy.mjs` deploys and calls contracts with the standard midnight-js
-  providers, using the daemon's already-synced wallet as the wallet provider.
+  providers, using the daemon's already-synced wallet as the wallet provider. Each wallet
+  keeps its own private state per contract (secrets in `state/crew-secrets.json`). A call
+  that sends shielded coins to another wallet passes that wallet's encryption key.
+- `wallet-daemon/agents.mjs` and `agent-policy.json` are the agents' own route, with
+  limits (below).
+- `wallet-daemon/metadata.mjs` serves token names and images only after checking them
+  against digests stored in the contract.
+- `wallet-daemon/request.mjs` (operator) and `agent-request.mjs` (agents) are
+  command-line clients.
 - `wallet-ui/` is the page (`http://localhost:5173`). Balances come live from the public
   indexer's `unshieldedTransactions(address)` subscription, so they show even with the
   daemon stopped; the daemon adds DUST, sending and approvals.
@@ -44,8 +52,68 @@ indexer rather than from the daemon's own report.
 | `mintTreasury(1000000)`, fungible | contract holds 1,000,000 of token type `f3f4d88611d5af314fb32ef0e380fed5807aaac806362c05fc7f79bcf1b8b91d` | 990,970 |
 | `mintMandate(Floyd)`, supply-1 NFT | Floyd's wallet holds 1 of token type `7dab3653f25ff22bc04439dcd9aeea313432886baba621fcfa1bd8e33512deb0` | 990,983 |
 
-The spike was deployed from Tzilo's wallet because it was the one fully synced at the time;
-the v2 contracts will be deployed by the organiser's wallet.
+The spike was deployed from Tzilo's wallet because it was the one fully synced at the time.
+
+### v2: the crew treasury
+
+`contracts/crew_treasury.compact`, audited before deploy (`notes/AUDIT-crew-treasury.md`),
+deployed and run by the organiser's wallet. The fungible token is Midnight City Credits
+(MCC); each agent's shielded NFT is its Agent Smart Contract.
+
+| What | Result | Block |
+|---|---|---|
+| Deploy | contract `e412fa7fa89433c2d37bbf350eba95e61db6075d5189f0dc5f45c07583cac4b4` | 992,293 |
+| `mintTreasury(1000000)` | contract holds 1,000,000 MCC, token type `eed99c9a…a366` | 992,298 |
+| `issueMandate` for Floyd, Tzilo, FooFoo | each agent's own wallet shows 1 of its NFT (`7ced7bf3…`, `9d454f80…`, `66deba03…`) | 992,303 / 318 / 322 |
+| `openPeriod("2026-09-23")` | | 992,327 |
+| Floyd draws | 50 MCC to Floyd's address, per the indexer | 992,331 |
+| Floyd draws again | refused before submission: "Already drawn this period" | none |
+| `setMetadata` | digests of the MCC document and the Agent Smart Contract collection | 992,402 |
+| Tzilo draws, through the agent route, approved automatically | 50 MCC | 992,483 |
+| Overdraw test: amount 2,000,000 against 999,900 | partial success, fee paid, no MCC moved, nullifier not spent | 992,518 |
+| FooFoo draws after the failed overdraw | succeeds in the same period | 992,552 |
+
+The NFTs are minted in the organiser's transaction but sent to the agents. Without the
+agents' encryption keys the coins would exist and never be visible to them (Kapa query
+11). The daemon passes those keys, and each agent's wallet reports its NFT.
+
+## Agents' route and limits
+
+`POST /api/agent/requests`, with a per-agent bearer token (made on first start, kept in
+`state/agent-tokens.json`). The token binds the agent to its own wallet. Any request from
+a browser origin is refused. `agent-policy.json` decides:
+
+- **transfer** to another crew wallet, within `autoApproveNight` each and `dailyAutoNight`
+  a day: runs at once
+- **transfer** that is larger, or to an address outside the crew: waits in the page's
+  Approvals panel, with the reason shown
+- **draw** from the treasury: runs at once, since the contract allows one per period
+
+Tested on preview with Tzilo:
+
+- 0.5, 0.2 and 0.3 NIGHT to FooFoo ran automatically.
+- 3 NIGHT waited, over the 1 NIGHT limit.
+- 0.1 NIGHT to an outside address waited.
+- A draw ran automatically, and a second draw was refused by the contract.
+
+Transactions from one wallet run one at a time. Two approved back to back first failed
+with "Insufficient funds": the first had spent the wallet's coins and its change was not
+back yet. Each wallet now has a queue, and the next transaction starts once the last one
+is confirmed.
+
+## Token metadata
+
+`metadata/` holds the artwork, one document per token following Midnight's token metadata
+spec, and a collection manifest for the Agent Smart Contracts. `scripts/build-metadata.mjs`
+rebuilds them from chain state. It re-derives each token type from the contract address
+and domain separator, which must match what the chain and the agents' wallets report.
+Images and documents are addressed by IPFS CID (`metadata/anchors.json`). The contract
+stores the SHA-256 of the MCC document and of the manifest, and the manifest lists each
+NFT document's CID. So one on-chain read verifies everything the page shows. A tampered
+document shows as a mismatch; this was tested.
+
+The files are not yet pinned to IPFS; that needs a pinning account. The page reads them
+from the daemon and verifies them the same way either way.
 
 One earlier deploy attempt failed after submission (the private-state store rejected a
 hex-only password). Whether that attempt reached the chain is unknown: its transaction id
@@ -53,9 +121,10 @@ was not recorded, which the daemon now does at submission.
 
 ## What is still missing
 
-- No token names or images in any wallet: preview serves no token metadata (finding 39).
-  The page labels our two tokens itself.
-- Agents cannot yet ask the daemon for anything: requests come from the page. An
-  authenticated agent route, with per-agent limits that approve small requests
-  automatically, is the next piece.
-- The spike's mint circuits have no access control. v2 gates them on the organiser.
+- No other wallet shows our token names or images: preview serves no token metadata
+  (finding 39). Our page shows them, verified against the contract.
+- The metadata files need pinning to IPFS before anyone else can fetch them by CID.
+- The crew Worker runs in Cloudflare and cannot reach this machine. For the city agents to
+  request spends themselves, the daemon should pull their requests from the Worker (with a
+  shared secret) and pass them through the same policy.
+- Revoking a single mandate (audit M-1); only a pause of all draws exists.

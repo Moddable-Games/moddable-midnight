@@ -9,25 +9,37 @@ const EXPLORER_TX = "https://preview.midnightexplorer.com/transactions/";
 // Known wallets, so the page can show live balances before the daemon answers.
 const ROSTER = [
   { wallet: "moddable-preview", name: "Organiser", kind: "human", role: "Treasury. Deploys the contracts and funds the crew.",
-    address: "mn_addr_preview1zh5vgfsj5v0d85xps8lxjv8wata8cfwafc54tkgy8umsgms35c3s4gsema" },
+    address: "mn_addr_preview1zh5vgfsj5v0d85xps8lxjv8wata8cfwafc54tkgy8umsgms35c3s4gsema",
+    shieldedAddress: "mn_shield-addr_preview1522fn0556q4xvq8x7z5p6hvhxwt42m2lywuxgyl5ewnqcvpeh72tnrq302s64v9gj5tw3a6fzxc7zh2qnsxpc0qc3enklz7l94tvwfqmrceev" },
   { wallet: "agent-floyd", name: "Floyd", kind: "agent", role: "Hacker, crew boss in Midnight City.", agentId: "user-agent-u4gfp92xeor3g2a",
-    address: "mn_addr_preview1wg2ef7spxl8wfahg890z5q4kuhtc234ks7rx65djg3dc9f5ltx4sr69gyw" },
+    address: "mn_addr_preview1wg2ef7spxl8wfahg890z5q4kuhtc234ks7rx65djg3dc9f5ltx4sr69gyw",
+    shieldedAddress: "mn_shield-addr_preview1rzvaswpzchksp7rnnllwdv337vu2v0gym0u6wpx3ygk8n5wsepsmk2ww6gqeunqxjwpyulpgnf2wh5r5ckqltxrjh4xv8jtuph56hhg0re52k" },
   { wallet: "agent-tzilo", name: "Tzilo", kind: "agent", role: "Miner in Midnight City.", agentId: "user-agent-5wzs7d9q4cdz5gi",
-    address: "mn_addr_preview12t3k3nkssja6ksfjqkkx5sfdzue9j33fpztgsheyszrpu63yq77s0epzru" },
+    address: "mn_addr_preview12t3k3nkssja6ksfjqkkx5sfdzue9j33fpztgsheyszrpu63yq77s0epzru",
+    shieldedAddress: "mn_shield-addr_preview1z7lak7tmldfmwgtxtwwhsgev5rk4r267csq4xmqjj8rkvyqhn6wu5sz25zwt3r3yluulptmhf55v4q9xf9c6newf2pndquvchjpr4yszxtflg" },
   { wallet: "agent-foofoo", name: "FooFoo", kind: "agent", role: "Lumberjack in Midnight City.", agentId: "user-agent-oyhuxtu984deja8",
-    address: "mn_addr_preview1qkehtq54t8damevjy953sdua2qtad6adyer4cersc3ql9sw8envsg7kw3g" },
+    address: "mn_addr_preview1qkehtq54t8damevjy953sdua2qtad6adyer4cersc3ql9sw8envsg7kw3g",
+    shieldedAddress: "mn_shield-addr_preview1avnp3e548s4wsg3ylqzjfnsruklwclrr77mrth806aj6hfukuzpq9yj6g4nfzc6aael3k88lzt2dk8cxur3zl6fv9clfangfsua5n0cv7wyw7" },
 ];
 
 // Tokens minted by our own contracts. Midnight has no token metadata service yet (friction
 // log finding 39), so names and descriptions for our tokens live here.
 const KNOWN_TOKENS = {
-  "f3f4d88611d5af314fb32ef0e380fed5807aaac806362c05fc7f79bcf1b8b91d": { name: "Crew treasury token", kind: "fungible" },
-  "7dab3653f25ff22bc04439dcd9aeea313432886baba621fcfa1bd8e33512deb0": { name: "Crew mandate", kind: "NFT" },
+  // Crew treasury, contract e412fa7f…c4b4 (contracts/crew_treasury.compact)
+  "eed99c9a56f4f3d719ff295eab2fcd59713233c71d34437284347c992b54a366": { name: "Midnight City Credits (MCC)", kind: "fungible" },
+  "7ced7bf39622030ed6e55290f346e2277371eff6d44fdba47069786a4b3f2293": { name: "Agent Smart Contract: Floyd", kind: "NFT" },
+  "9d454f805cbc15148268dcc49d4e2d386484010653f7f09910d331ff524c3b3d": { name: "Agent Smart Contract: Tzilo", kind: "NFT" },
+  "66deba03d895468b3388866f511e7622e2c7af4d722e46aedf6958aa267ba92b": { name: "Agent Smart Contract: FooFoo", kind: "NFT" },
+  // Mint spike, contract 9535b022…be36 (spikes/mint_spike.compact), before v2
+  "f3f4d88611d5af314fb32ef0e380fed5807aaac806362c05fc7f79bcf1b8b91d": { name: "Spike treasury token", kind: "fungible" },
+  "7dab3653f25ff22bc04439dcd9aeea313432886baba621fcfa1bd8e33512deb0": { name: "Spike mandate", kind: "NFT" },
 };
 
 const chain = new Map();   // wallet -> { night, transactions, caughtUp } from the indexer
 let daemon = null;         // latest /api/wallets, or null if the daemon is not running
 let requests = [];
+let metadata = {};         // token type -> metadata the daemon checked against the contract
+let metadataContract = "";
 const drafts = new Map();  // wallet -> { to, amount } so polling does not wipe what you typed
 const seen = new Map();    // request id -> last status, to log changes once
 
@@ -81,16 +93,34 @@ function statusText(d) {
   return d.status;
 }
 
+const EXPLORER = "https://preview.midnightexplorer.com";
+
 function tokenList(tokens) {
   if (!tokens?.length) return "";
   const rows = tokens.map((t) => {
     const known = KNOWN_TOKENS[t.type];
-    return `<li><span class="tok-name">${known ? known.name : "Unknown token"}</span>
-      <span class="tok-kind">${known?.kind ?? ""}</span>
-      <span class="tok-amount">${t.amount}</span>
-      <code title="${t.type}">${t.type.slice(0, 10)}…</code></li>`;
+    const meta = metadata[t.type];
+    const image = meta?.imageData
+      ? `<img class="tok-image" src="${meta.imageData}" alt="" title="${meta.image}">`
+      : `<span class="tok-image"></span>`;
+    const proof = meta
+      ? `<a class="tok-proof ${meta.verified ? "ok" : "bad"}" href="${EXPLORER}/contracts/${metadataContract}" target="_blank" rel="noopener"
+          title="Document ${meta.document}. ${meta.verified ? "Its hash matches the digest stored in the contract." : "Does NOT match the contract's digest."}">${meta.verified ? "metadata verified" : "metadata mismatch"}</a>`
+      : "";
+    return `<li>${image}
+      <span class="tok-label">
+        <span class="tok-name">${meta?.name ?? known?.name ?? "Unknown token"}${meta?.ticker ? ` <span class="tok-ticker">${meta.ticker}</span>` : ""}</span>
+        <span class="tok-meta"><span class="tok-kind">${known?.kind ?? ""}${t.shielded ? " · shielded" : ""}</span>
+          <code title="${t.type}">${t.type.slice(0, 8)}…</code>${proof}</span>
+      </span>
+      <span class="tok-amount">${t.amount}</span></li>`;
   }).join("");
   return `<ul class="tokens">${rows}</ul>`;
+}
+
+/** Shielded holdings are private to the wallet, so only the daemon can list them. */
+function shieldedTokens(d) {
+  return Object.entries(d?.shielded ?? {}).map(([type, amount]) => ({ type, amount, shielded: true }));
 }
 
 function card(entry) {
@@ -112,27 +142,41 @@ function card(entry) {
       <div class="balance"><div class="value">${dust(d?.dust)}</div><div class="label">DUST</div></div>
       <div class="balance"><div class="value">${c?.transactions ?? "—"}</div><div class="label">transactions</div></div>
     </div>
-    ${tokenList(c?.tokens)}
+    ${tokenList([...(c?.tokens ?? []), ...shieldedTokens(d)])}
     <p class="note">${entry.role}${entry.agentId ? ` <a href="https://www.midnight.city/agents/${entry.agentId}" target="_blank" rel="noopener">see in the city</a>` : ""}</p>
-    <dl class="addr"><dt>Unshielded</dt><dd>${entry.address}</dd></dl>
+    <dl class="addr">
+      <dt>Unshielded <span class="why">NIGHT and public tokens</span></dt><dd>${entry.address}</dd>
+      <dt>Shielded <span class="why">private tokens, such as Agent Smart Contracts</span></dt><dd>${entry.shieldedAddress}</dd>
+    </dl>
   `;
 
   const draft = drafts.get(entry.wallet) ?? { to: "", amount: "" };
   const form = document.createElement("form");
   form.className = "send";
+  const external = draft.to === "external";
   form.innerHTML = `
     <select name="to" aria-label="Send to">
       <option value="">Send NIGHT to…</option>
       ${ROSTER.filter((r) => r.wallet !== entry.wallet)
         .map((r) => `<option value="${r.address}" ${draft.to === r.address ? "selected" : ""}>${r.name}</option>`).join("")}
+      <option value="external" ${external ? "selected" : ""}>Another address…</option>
     </select>
     <input name="amount" type="text" inputmode="decimal" placeholder="amount" value="${draft.amount}" aria-label="Amount in NIGHT">
     <button type="submit" ${d?.status === "ready" ? "" : "disabled"}>Request</button>
+    <input name="address" class="external ${external ? "" : "hidden"}" type="text" spellcheck="false"
+      placeholder="mn_addr_preview1…" value="${draft.address ?? ""}" aria-label="Recipient address">
   `;
-  form.addEventListener("input", () => drafts.set(entry.wallet, { to: form.elements.to.value, amount: form.elements.amount.value }));
+  form.addEventListener("input", () => {
+    drafts.set(entry.wallet, { to: form.elements.to.value, amount: form.elements.amount.value, address: form.elements.address.value });
+    form.elements.address.classList.toggle("hidden", form.elements.to.value !== "external");
+  });
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const to = form.elements.to.value;
+    const choice = form.elements.to.value;
+    const to = choice === "external" ? form.elements.address.value.trim() : choice;
+    if (choice === "external" && !/^mn_addr_preview1[0-9a-z]+$/.test(to)) {
+      return log("That is not a preview unshielded address (it should start mn_addr_preview1)", "bad");
+    }
     const amount = form.elements.amount.value.trim();
     if (!to || !amount) return log("Pick a recipient and an amount first", "bad");
     try {
@@ -142,7 +186,7 @@ function card(entry) {
       });
       drafts.delete(entry.wallet);
       document.activeElement?.blur?.();
-      log(`${entry.name}: sending ${amount} NIGHT to ${byAddress(to)?.name} is waiting for your approval above`, "ok");
+      log(`${entry.name}: sending ${amount} NIGHT to ${byAddress(to)?.name ?? to.slice(0, 24) + "…"} is waiting for your approval above`, "ok");
       await refresh();
     } catch (error) {
       log(`${entry.name}: ${error.message}`, "bad");
@@ -168,7 +212,11 @@ function describe(r, toName) {
     return `${who} deploys contract <b>${r.contract}</b>${r.contractAddress ? ` at <code>${r.contractAddress.slice(0, 16)}…</code>` : ""}`;
   }
   if (r.kind === "call") {
-    const args = (r.args ?? []).map((a) => a?.uint ?? (a?.userAddress ? (byAddress(a.userAddress)?.name ?? "an address") : JSON.stringify(a))).join(", ");
+    const args = (r.args ?? []).map((a) => a?.uint
+      ?? (a?.userAddress ? (byAddress(a.userAddress)?.name ?? "an address") : null)
+      ?? (a?.mandateOf ? `mandate of ${nameOf(a.mandateOf)}` : null)
+      ?? (a?.coinPublicKeyOf ? `${nameOf(a.coinPublicKeyOf)}'s shielded key` : null)
+      ?? (a?.bytes ? `0x${a.bytes.slice(0, 8)}…` : JSON.stringify(a))).join(", ");
     return `${who} calls <b>${r.contract}.${r.circuit}(${args})</b>`;
   }
   return `${who} sends <b>${night(r.amount)} NIGHT</b> to <b>${toName}</b>`;
@@ -183,7 +231,8 @@ function requestItem(r) {
     : r.txId ? " · waiting for the chain" : "";
   li.innerHTML = `
     <div class="what">${describe(r, toName)}</div>
-    <div class="meta">requested by ${r.requestedBy} · ${new Date(r.createdAt).toLocaleTimeString()} · <span class="state">${r.status}</span>${r.error ? ` — ${r.error}` : ""}${tx}</div>
+    <div class="meta">requested by ${r.requestedBy} · ${new Date(r.createdAt).toLocaleTimeString()} · <span class="state">${r.status}</span>${r.error ? `: ${r.error}` : ""}${tx}</div>
+    ${r.policy ? `<div class="meta policy">${r.autoApproved ? "Approved automatically" : "Held for you"}: ${r.policy}</div>` : ""}
   `;
   if (r.status === "pending") {
     const actions = document.createElement("div");
@@ -222,6 +271,24 @@ function render() {
   }
   el("requests").replaceChildren(...items);
   el("approvals-panel").classList.toggle("attention", open.length > 0);
+  showPending(open.length);
+}
+
+// The panel stays collapsed; a badge, a hint and the tab title say when something waits.
+let lastPending = 0;
+function showPending(count) {
+  const badge = el("pending-count");
+  badge.hidden = count === 0;
+  badge.textContent = String(count);
+  el("approvals-hint").textContent = count === 0 ? "nothing waiting"
+    : count === 1 ? "1 request waiting for you" : `${count} requests waiting for you`;
+  document.title = count ? `(${count}) Moddable Midnight Wallet` : "Moddable Midnight Wallet";
+  if (count > lastPending) {
+    el("approvals-panel").classList.remove("flash");
+    void el("approvals-panel").offsetWidth; // restart the animation
+    el("approvals-panel").classList.add("flash");
+  }
+  lastPending = count;
 }
 
 // ------------------------------------------------------------------------------------------
@@ -263,5 +330,23 @@ for (const entry of ROSTER) {
     (error) => log(`${entry.name}: indexer ${error.message}`, "bad"));
 }
 log("Balances are live from the public indexer. The wallet daemon adds sending and approvals.");
+try {
+  if (localStorage.getItem("approvals-open") === "1") el("approvals-panel").open = true;
+  el("approvals-panel").addEventListener("toggle", () => {
+    try { localStorage.setItem("approvals-open", el("approvals-panel").open ? "1" : "0"); } catch { /* no storage */ }
+  });
+} catch { /* no storage: stays collapsed */ }
+/** Token names and images, each checked by the daemon against digests stored on-chain. */
+async function loadMetadata() {
+  try {
+    const out = await api("/api/metadata");
+    metadata = out.tokens ?? {};
+    metadataContract = out.contract ?? "";
+    render();
+  } catch { /* daemon down: names fall back to KNOWN_TOKENS */ }
+}
+
 refresh();
 setInterval(refresh, 3000);
+loadMetadata();
+setInterval(loadMetadata, 60_000);
