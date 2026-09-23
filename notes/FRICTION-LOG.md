@@ -852,3 +852,31 @@ wallet reported `SYNC_TIMEOUT` ("Timed out waiting for dust tokens. Try running:
 dust register", which is the command that just failed) while the registration had in fact
 succeeded: `dust status` immediately after showed `registered: true, dustAvailable: true`.
 
+### 41. The connector server needs a terminal to approve writes, and re-syncs on every start
+
+`midnight serve` is the only route to a browser wallet on Firefox, so this repo's wallet UI
+depends on it. Two things make it awkward to run.
+
+**Approvals need a TTY.** A write prompts with `Approve? [A/r]` through
+`readline.createInterface({ input: process.stdin, output: process.stderr })`. Started as a
+background service (`nohup … > serve.log 2>&1 &`), there is no terminal to ask and no way to
+answer: the request simply never resolves, and the DApp sees a hang rather than a rejection.
+The only unattended option is `--approve-all`, which auto-approves reads *and* writes, so the
+choice is a human at a keyboard or no gate at all. There is no middle setting (approve reads,
+queue writes for a decision elsewhere), which is what an agent-operated wallet actually needs.
+
+**Every start pays the sync again.** Each `serve` start reports `Resuming dust from event
+N…` and takes minutes before `Server ready`, even minutes after the same wallet synced in the
+same session. Running one server per wallet (the model the command implies, since it serves a
+single wallet) multiplies that: four wallets meant four catch-ups competing for the same
+indexer.
+
+Practical effect on a wallet UI: balances cannot come from the wallet server, because a user
+will not wait minutes per wallet to see a number. This project reads balances from the public
+indexer's `unshieldedTransactions(address, transactionId)` subscription instead, which is
+live and needs no local process, and uses the wallet server only for signing.
+
+**Suggested fix:** an approval mode that is neither "TTY prompt" nor "approve everything" (a
+webhook, a file, or a second socket a supervisor can answer); and persist enough state
+between runs that a restart is seconds, not minutes.
+

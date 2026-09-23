@@ -110,11 +110,27 @@ API, which returned the `ContractDeploy` action and block above.
   because it handles private data. That is one Docker container, not the full
   local devnet.
 
-## Resumed 23 September 2026, 09:1x (clock restarts at +106m)
+## Resumed 23 September 2026, 08:55 (clock restarts at +106m)
 
 Second-round interview confirmed, so the work continues. Direction set with Mark
 on 23 Sep: a browser wallet for Firefox (none exists, findings 35 and 36), a v2
 contract with shielded NFT mandates and a real unshielded token treasury, and the
 tie-in to Midnight City: the city's ShieldedToken Broker spends NIGHT an agent can
 never earn in-game (city finding 7), so the treasury is what funds it.
+
+| # | Step | When | Elapsed |
+|---|---|---|---|
+| 38 | Clock resumed; direction set (Firefox wallet, v2 tokens, Midnight City tie-in) | 23 Sep 08:55 | +106m |
+| 39 | Spike: `midnight serve` connector proven from a plain WebSocket client (reads, addresses, balances, DUST) | 23 Sep 09:05 | +116m |
+| 40 | Spike: minting, a supply-1 NFT and a payout compile on the pinned 0.31.1 | 23 Sep 09:10 | +121m |
+| 41 | Spike: preview indexer serves no token metadata (finding 39) | 23 Sep 09:15 | +126m |
+| 42 | Six failed `contract deploy` attempts, diagnosed to sync 100% then timeout (finding 40) | 23 Sep 09:20 to 09:50 | +131m |
+| 43 | Dead proof server found and restarted; transfers work again | 23 Sep 09:25 | +136m |
+| 44 | Three agent wallets created, funded (5,000 tNIGHT each) and DUST-registered | 23 Sep 09:30 to 09:50 | +141m |
+| 45 | `src/connector.ts` written: one JSON-RPC client for the browser wallet and the tooling | 23 Sep 09:45 | +156m |
+| — | **Running total at 09:54** | | **+165m** |
+
+Phase 0 is the cost of re-entry after six days away: a dead container, a broken
+deploy path, and an ecosystem gap (no agent wallets in the city, blocked upstream
+on Passport #113). None of it was contract work, and all of it is logged.
 
