@@ -16,6 +16,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import * as ledger from "@midnight-ntwrk/ledger-v8";
 import { MidnightBech32m, UnshieldedAddress } from "@midnight-ntwrk/wallet-sdk-address-format";
 import { openWallet, isUsable, saveState, PREVIEW } from "./wallet.mjs";
+import { deploy, call } from "./deploy.mjs";
 
 const PORT = 9900;
 const ALLOWED_ORIGINS = new Set(["http://localhost:5173", "http://127.0.0.1:5173"]);
@@ -34,7 +35,7 @@ const ROSTER = [
 // Wallets
 // ---------------------------------------------------------------------------------------
 
-const wallets = new Map(); // wallet name -> { ...roster, handle, state, ready, error }
+const wallets = new Map(ROSTER.map((entry) => [entry.wallet, { ...entry, status: "queued" }]));
 
 async function startWallet(entry) {
   const record = { ...entry, status: "opening" };
@@ -105,14 +106,21 @@ function parseNight(text) {
   return star;
 }
 
-function createRequest({ wallet, kind, to, amount, requestedBy, note }) {
+function createRequest({ wallet, kind, to, amount, contract, contractAddress, circuit, args, requestedBy, note }) {
   if (!wallets.has(wallet)) throw new Error(`unknown wallet ${wallet}`);
-  if (kind !== "transfer") throw new Error(`unsupported request kind ${kind}`);
-  MidnightBech32m.parse(to).decode(UnshieldedAddress, PREVIEW.networkId); // validate now, not at approval
+  if (!["transfer", "deploy", "call"].includes(kind)) throw new Error(`unsupported request kind ${kind}`);
+  if (kind === "transfer") MidnightBech32m.parse(to).decode(UnshieldedAddress, PREVIEW.networkId); // validate now
+  if (kind !== "transfer" && !/^[a-z0-9_]+$/.test(contract ?? "")) throw new Error("contract must be a compiled contract name");
+  if (kind === "call" && (!contractAddress || !circuit)) throw new Error("a call needs contractAddress and circuit");
   const request = {
     id: randomUUID(),
-    wallet, kind, to,
-    amount: parseNight(amount).toString(),
+    wallet, kind,
+    to: to ?? null,
+    amount: kind === "transfer" ? parseNight(amount).toString() : null,
+    contract: contract ?? null,
+    contractAddress: contractAddress ?? null,
+    circuit: circuit ?? null,
+    args: args ?? [],
     requestedBy: requestedBy ?? "browser",
     note: note ?? "",
     status: "pending",
@@ -120,12 +128,51 @@ function createRequest({ wallet, kind, to, amount, requestedBy, note }) {
   };
   requests.push(request);
   saveRequests();
-  console.log(`request ${request.id.slice(0, 8)}: ${wallet} -> ${to.slice(0, 22)}… ${Number(request.amount) / 1e6} NIGHT (pending approval)`);
+  console.log(`request ${request.id.slice(0, 8)}: ${describe(request)} (pending approval)`);
   return request;
+}
+
+function describe(r) {
+  if (r.kind === "transfer") return `${r.wallet} -> ${r.to.slice(0, 22)}… ${Number(r.amount) / 1e6} NIGHT`;
+  if (r.kind === "deploy") return `${r.wallet} deploys ${r.contract}`;
+  return `${r.wallet} calls ${r.contract}.${r.circuit}`;
+}
+
+/** JSON cannot carry bigints or addresses; arguments arrive tagged and are converted here. */
+function coerce(arg) {
+  if (arg && typeof arg === "object") {
+    if ("uint" in arg) return BigInt(arg.uint);
+    if ("userAddress" in arg) {
+      const address = MidnightBech32m.parse(arg.userAddress).decode(UnshieldedAddress, PREVIEW.networkId);
+      return { bytes: new Uint8Array(address.data) };
+    }
+    if ("bytes" in arg) return Uint8Array.from(Buffer.from(arg.bytes, "hex"));
+  }
+  return arg;
 }
 
 async function execute(request) {
   const record = wallets.get(request.wallet);
+  if (request.kind !== "transfer") {
+    // Contract work balances shielded as well as unshielded, so it needs the full sync.
+    if (!record?.ready?.all) throw new Error(`${record?.name ?? request.wallet} has not finished its full sync yet`);
+    const onPhase = (phase, txId) => {
+      request.status = phase;
+      if (txId) { request.txId = txId; saveRequests(); }
+    };
+    const out = request.kind === "deploy"
+      ? await deploy(record.handle, request.contract, { args: request.args.map(coerce), onPhase })
+      : await call(record.handle, request.contract, request.contractAddress, request.circuit, request.args.map(coerce), { onPhase });
+    Object.assign(request, {
+      contractAddress: out.contractAddress ?? request.contractAddress,
+      txId: out.txId, txHash: out.txHash, block: out.block, chainStatus: out.status,
+      result: out.result === undefined ? null : typeof out.result === "bigint" ? out.result.toString()
+        : out.result instanceof Uint8Array ? Buffer.from(out.result).toString("hex") : out.result,
+      status: "confirmed",
+      completedAt: new Date().toISOString(),
+    });
+    return;
+  }
   if (record?.status !== "ready") throw new Error(`${record?.name ?? request.wallet} is still syncing`);
   const { facade, zswapKeys, dustKey, keystore } = record.handle;
   const receiverAddress = MidnightBech32m.parse(request.to).decode(UnshieldedAddress, PREVIEW.networkId);
@@ -183,7 +230,7 @@ async function decide(id, approve) {
   // Proving takes a while; answer now and let the browser watch the status change.
   execute(request)
     .catch((error) => { request.status = "failed"; request.error = error.message; })
-    .finally(() => { saveRequests(); console.log(`request ${id.slice(0, 8)}: ${request.status}${request.txId ? " " + request.txId : ""}${request.error ? " (" + request.error + ")" : ""}`); });
+    .finally(() => { saveRequests(); console.log(`request ${id.slice(0, 8)}: ${request.status}${request.contractAddress ? " contract " + request.contractAddress : ""}${request.txHash ? " tx " + request.txHash : ""}${request.block ? " block " + request.block : ""}${request.error ? " (" + request.error + ")" : ""}`); });
   return request;
 }
 
@@ -220,6 +267,12 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" && url.pathname === "/api/wallets") {
       return send(res, 200, [...wallets.values()].map(summary), origin);
     }
+    if (req.method === "GET" && url.pathname === "/api/history") {
+      const record = wallets.get(url.searchParams.get("wallet") ?? "");
+      if (!record?.handle) return send(res, 404, { error: "unknown or unopened wallet" }, origin || "null");
+      const entries = await record.handle.facade.getAllFromTxHistory();
+      return send(res, 200, JSON.parse(JSON.stringify(entries.slice(-20), (k, v) => typeof v === "bigint" ? v.toString() : v)), origin || "null");
+    }
     if (req.method === "GET" && url.pathname === "/api/requests") {
       return send(res, 200, [...requests].reverse(), origin);
     }
@@ -239,5 +292,30 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, "127.0.0.1", () => console.log(`wallet daemon on http://127.0.0.1:${PORT}`));
 
-// Open wallets one after another: in parallel they compete for the same indexer.
-for (const entry of ROSTER) await startWallet(entry);
+// Sync one wallet at a time: in parallel they compete for CPU and the indexer and all crawl
+// (three at once managed ~4k shielded events in minutes; one alone does ~1,400 a second).
+// Already-synced wallets resume instantly, so they are not held up by this.
+async function untilSynced(entry, limitMs = 20 * 60_000) {
+  const started = Date.now();
+  while (Date.now() - started < limitMs) {
+    const record = wallets.get(entry.wallet);
+    if (record?.ready?.all || record?.status === "error") return;
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+}
+// Wallets that finished a full sync before resume in seconds, so start those first; then
+// sync the rest one by one, organiser before agents.
+const SYNCED_FILE = new URL("./state/synced.json", import.meta.url).pathname;
+const synced = new Set((() => { try { return JSON.parse(readFileSync(SYNCED_FILE, "utf8")); } catch { return []; } })());
+const order = [...ROSTER].sort((a, b) => Number(synced.has(b.wallet)) - Number(synced.has(a.wallet)));
+for (const entry of order) {
+  await startWallet(entry);
+  await untilSynced(entry);
+  const record = wallets.get(entry.wallet);
+  console.log(`${entry.name}: ${record?.ready?.all ? "fully synced" : "moving on while it finishes"}`);
+  if (record?.ready?.all) {
+    synced.add(entry.wallet);
+    writeFileSync(SYNCED_FILE, JSON.stringify([...synced]));
+  }
+  if (record?.handle) await saveState(record.handle).catch(() => {});
+}

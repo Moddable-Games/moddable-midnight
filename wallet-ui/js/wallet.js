@@ -142,15 +142,27 @@ function card(entry) {
   return article;
 }
 
+function describe(r, toName) {
+  const who = `<b>${nameOf(r.wallet)}</b>`;
+  if (r.kind === "deploy") {
+    return `${who} deploys contract <b>${r.contract}</b>${r.contractAddress ? ` at <code>${r.contractAddress.slice(0, 16)}…</code>` : ""}`;
+  }
+  if (r.kind === "call") {
+    const args = (r.args ?? []).map((a) => a?.uint ?? (a?.userAddress ? (byAddress(a.userAddress)?.name ?? "an address") : JSON.stringify(a))).join(", ");
+    return `${who} calls <b>${r.contract}.${r.circuit}(${args})</b>`;
+  }
+  return `${who} sends <b>${night(r.amount)} NIGHT</b> to <b>${toName}</b>`;
+}
+
 function requestItem(r) {
   const li = document.createElement("li");
   li.className = `request ${r.status}`;
-  const toName = byAddress(r.to)?.name ?? r.to.slice(0, 20) + "…";
+  const toName = r.to ? (byAddress(r.to)?.name ?? r.to.slice(0, 20) + "…") : "";
   const tx = r.txHash
     ? ` · block ${r.block} · <a href="${EXPLORER_TX}0x${r.txHash}" target="_blank" rel="noopener">view on explorer</a>`
     : r.txId ? " · waiting for the chain" : "";
   li.innerHTML = `
-    <div class="what"><b>${nameOf(r.wallet)}</b> sends <b>${night(r.amount)} NIGHT</b> to <b>${toName}</b></div>
+    <div class="what">${describe(r, toName)}</div>
     <div class="meta">requested by ${r.requestedBy} · ${new Date(r.createdAt).toLocaleTimeString()} · <span class="state">${r.status}</span>${r.error ? ` — ${r.error}` : ""}${tx}</div>
   `;
   if (r.status === "pending") {

@@ -33,6 +33,6 @@ CLAUDE.md
 spikes/managed/*/keys/
 spikes/managed/*/zkir/
 
-# the daemon borrows the wallet CLI's known-good SDK install
-wallet-daemon/node_modules
 wallet-daemon/state/
+wallet-daemon/contracts/*/keys/
+wallet-daemon/contracts/*/zkir/

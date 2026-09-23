@@ -1,5 +1,8 @@
-// One Midnight wallet, built in our own process from the same SDK packages the wallet CLI
-// uses (its transfers work on preview). Owning the process is the point: no terminal
+// One Midnight wallet, built in our own process from the wallet SDK packages the wallet CLI
+// uses, pinned in this repo at the exact versions the CLI proved on preview. They resolve
+// through the repo's npm overrides, so there is one copy of ledger-v8 in the process (the
+// CLI's own install nests a second, 8.1.0, inside midnight-js-protocol, and a deploy built on
+// it fails with "expected instance of LedgerParameters"). Owning the process is the point: no terminal
 // prompts, one sync per wallet for the life of the daemon, and state saved to disk so a
 // restart resumes in seconds instead of minutes.
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from "node:fs";

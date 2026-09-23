@@ -899,3 +899,37 @@ live and needs no local process, and uses the wallet server only for signing.
 webhook, a file, or a second socket a supervisor can answer); and persist enough state
 between runs that a restart is seconds, not minutes.
 
+### 42. `midnight-js-protocol` pins `ledger-v8` exactly, so the official packages load it twice
+
+Building a wallet in our own process from the packages the wallet CLI uses, the first
+contract deploy failed at balancing with:
+
+```
+expected instance of LedgerParameters
+```
+
+A class-identity check between two copies of the same package. The CLI's own install
+has two:
+
+```
+8.1.2  node_modules/@midnight-ntwrk/ledger-v8
+8.1.0  node_modules/@midnight-ntwrk/midnight-js-protocol/node_modules/@midnight-ntwrk/ledger-v8
+```
+
+because `@midnight-ntwrk/midnight-js-protocol@4.1.1` (a dependency of
+`midnight-js-contracts@4.1.1`) declares `"@midnight-ntwrk/ledger-v8": "8.1.0"`, an exact
+pin, while the wallet SDK packages resolve the newer 8.1.2. npm nests the pinned copy, the
+deploy path builds ledger objects from one copy, and the wallet validates them against the
+other.
+
+This is finding 25 again from a different direction, and it will reach anyone combining
+midnight-js with the wallet SDK, which is the normal way to write a deploy script. Our fix
+is the one the repo already had: npm `overrides` forcing one `ledger-v8` (and one
+`onchain-runtime-v3`), with the wallet SDK packages pinned at the versions the CLI proved
+on preview. With one copy in the tree, the same deploy went on to prove and submit.
+
+**Suggested fix:** use a range, not an exact pin, for `ledger-v8` in
+`midnight-js-protocol`, or declare it as a peer dependency; and state in the midnight-js
+docs which `ledger-v8` versions each release works with, since two copies fail at runtime
+rather than at install.
+
