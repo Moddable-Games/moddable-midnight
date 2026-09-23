@@ -145,7 +145,7 @@ progress.hp::-moz-progress-bar{background:linear-gradient(90deg,var(--green),var
 /* the agent's real Midnight wallet */
 .wallet{border-top:1px solid var(--line);padding:12px 18px 14px}
 .wallet .t{font-family:var(--pixel);font-size:9px;color:var(--dim);letter-spacing:.5px;margin-bottom:10px}
-.wallet .bal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.wallet .bal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding-bottom:12px;margin-bottom:12px;border-bottom:1px solid var(--line)}
 .wallet .bal > div{background:var(--inset);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
 .wallet .bal .v{font-family:var(--mono);font-weight:500;font-size:16px;font-variant-numeric:tabular-nums}
 .wallet .bal .k{font-size:12px;color:var(--dim)}
