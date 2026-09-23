@@ -46,3 +46,15 @@ first seen 17 September, reproduced on these fresh wallets on 23 September). Che
 
 This matters for the treasury design: an agent funded at the moment it needs to
 spend is an agent that cannot spend. Funding has to run ahead of demand.
+
+State confirmed on 23 September, after registration (`midnight dust status`):
+
+| Agent | NIGHT | Registered UTXOs | DUST | Spendable |
+|---|---|---|---|---|
+| Floyd | 5,001 | 2 | 32.87 | yes |
+| Tzilo | 5,000 | 1 | 37.49 | yes |
+| FooFoo | 5,000 | 1 | 35.42 | yes |
+
+The registrations for Tzilo and FooFoo both exited `SYNC_TIMEOUT` while having
+succeeded, as Floyd's had earlier: three reproductions of finding 23 in one hour,
+on wallets created that morning.
