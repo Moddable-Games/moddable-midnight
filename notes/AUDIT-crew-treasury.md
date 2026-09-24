@@ -162,3 +162,23 @@ be issued twice.
   follow-through.
 - **Where only the chain could answer:** the overdraw. The simulator does not model
   contract balances, so the last word came from spending test tokens on preview.
+
+## Verifying that the deployed contract is this source
+
+A Midnight contract keeps one verifier key per circuit on-chain, and accepts only proofs made
+against those keys. Compiling the published source produces the keys, so matching them proves
+the deployed contract is the published source. midnight-js makes the same comparison
+(`verifyContractState`) before it will call a deployed contract.
+
+- **Reproduced (24 September):** a fresh compile of `contracts/crew_treasury.compact` with the
+  pinned compiler 0.31.1 gave verifier keys byte-identical to all eight on-chain, and the chain
+  holds no circuit the source lacks. A different contract's keys (the minting spike) were
+  reported as ten differences, as they should be.
+- **Anyone can repeat it:**
+  ```
+  compact compile +0.31.1 contracts/crew_treasury.compact /tmp/crew-check
+  node scripts/verify-deployment.mjs /tmp/crew-check
+  ```
+- **Subscan:** the contract page's Contract Verification tab takes a Compact standard-input
+  JSON. `contracts/crew_treasury.standard-input.json` is that file, generated from the same
+  source; use compiler type "Compact standard-input" and version 0.31.1.
