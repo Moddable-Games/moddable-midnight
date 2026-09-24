@@ -182,3 +182,7 @@ the deployed contract is the published source. midnight-js makes the same compar
 - **Subscan:** the contract page's Contract Verification tab takes a Compact standard-input
   JSON. `contracts/crew_treasury.standard-input.json` is that file, generated from the same
   source; use compiler type "Compact standard-input" and version 0.31.1.
+  Submitted on 24 September; Subscan's verifier failed on its own server ("error creating
+  output directory ... permission denied"), so the contract still shows as unverified there
+  (friction finding 45). Its page does list all eight circuits' verification keys, the same
+  ones the reproduced build matches.

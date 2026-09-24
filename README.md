@@ -48,7 +48,7 @@ More from Moddable: [moddable.games](https://moddable.games/) ·
 | **Front end** | [Live read-only page](https://moddable-games.github.io/moddable-midnight/tournament.html) decoding contract state from the public indexer ([`web/`](web/)) |
 | **Toolchain** | Compact compiler 0.31.1, runtime 0.16.0, Midnight.js 4.1.1, proof server 8.1.0 ([versions](docs/INTEGRATION.md#versions-that-work-together)) |
 | **Clock** | +77 minutes to deploy, +84 to a private claim on-chain, by an agent wallet ([timeline](notes/TIMELINE.md)) |
-| **Findings** | 44 logged for the contracts and wallet, plus a Midnight City set ([friction log](notes/FRICTION-LOG.md), [city findings](notes/midnight-city/FINDINGS.md)) |
+| **Findings** | 45 logged for the contracts and wallet, plus a Midnight City set ([friction log](notes/FRICTION-LOG.md), [city findings](notes/midnight-city/FINDINGS.md)) |
 | **Midnight City** | A three-agent fleet run inside IO Global's agentic sim ([notes](notes/midnight-city/README.md), [live page](https://moddable-games.github.io/moddable-midnight/city.html)) |
 
 ![The read-only front end: prize pool, passes and claims, public versus private data, and every contract transaction, decoded live from the preview indexer](docs/img/read-only-front-end.png)

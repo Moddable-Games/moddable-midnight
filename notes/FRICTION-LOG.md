@@ -997,3 +997,31 @@ organiser's shielded address (block 993,656) and back (993,666).
 fits shielded addresses) in `MidnightBech32m.parse`, and pin `@scure/base` exactly until
 then. A test that round-trips a shielded address through encode and parse would have
 caught it on the day 2.4.0 shipped.
+
+### 45. Subscan can verify Compact source, but its verifier fails writing its own output
+
+Midnight's Subscan explorer has a Compact verification flow on each contract's page (the
+Contract Verification tab, not the Solidity form at `/verify_contract`): compiler type
+"Compact standard-input", a Compact version, and a JSON upload of the form
+`{"contracts": {"<file>": "<source>"}, "entry-file": "<file>"}`. The same tab lists every
+circuit of the contract with its on-chain verification key. Both are exactly what an
+explorer should offer for Midnight, where a contract is identified by its circuits'
+verifier keys.
+
+Submitting the crew treasury (`contracts/crew_treasury.standard-input.json`, compiler 0.31.1)
+on 24 September returned:
+
+```
+Last Compiled Error: Exception: error creating output directory: cannot create
+"static/verified/0xe412fa7fa89433c2d37bbf350eba95e61db6075d5189f0dc5f45c07583cac4b4":
+permission denied
+```
+
+A server-side filesystem permission, not the submission: a fresh compile of that source with
+0.31.1 reproduces all eight on-chain verifier keys (`scripts/verify-deployment.mjs`, and the
+audit note). Two smaller points: the contract page needs the address with a `0x` prefix, which
+Midnight's own tools and explorers do not use, and the Solidity-only `/verify_contract` form is
+the one search engines and the Tools menu lead to.
+
+**Suggested fix:** grant the verifier write access to its output directory; link the Compact
+flow from the Tools menu; accept contract addresses with or without `0x`.
