@@ -164,6 +164,9 @@ reviewed as reference points and are the route to real token behaviour:
 
 ## Changelog
 
+#### 2026-09-24
+- Token artwork and metadata pinned on the public IPFS network under the exact CIDs the treasury contract vouches for, verified byte-for-byte through an independent gateway; the IPFS links on the site are live
+
 #### 2026-09-23
 - Wallet page: the agent wallet built for Firefox, why it had to exist, what building it uncovered, and every transaction it has signed; in the main navigation, now in story order (Crew, Wallet, Treasury, History)
 - One connected site: a new home page, a History page telling the four chapters, and the same navigation, story strip and footer on every page, all from one data file; the crew is now the Moddable Atomic Crew (MAC)

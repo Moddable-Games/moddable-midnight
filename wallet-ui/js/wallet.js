@@ -413,7 +413,7 @@ async function loadContract() {
       </ul>
       <dl class="addr">
         <dt>Contract</dt><dd><a href="${EXPLORER}/contracts/${c.address}" target="_blank" rel="noopener">${c.address}</a></dd>
-        <dt>MCC token type</dt><dd>${c.mcc.tokenType}${mcc ? ` · <a href="https://ipfs.io/ipfs/${mcc.document.replace("ipfs://", "")}" target="_blank" rel="noopener" title="Resolves once pinned">${mcc.document}</a>` : ""}</dd>
+        <dt>MCC token type</dt><dd>${c.mcc.tokenType}${mcc ? ` · <a href="https://ipfs.io/ipfs/${mcc.document.replace("ipfs://", "")}" target="_blank" rel="noopener" title="Pinned on public IPFS">${mcc.document}</a>` : ""}</dd>
         <dt>On-chain metadata digests</dt><dd>MCC ${c.digests.treasury}<br>Agent Smart Contracts ${c.digests.mandates}</dd>
       </dl>
       <p class="hint">Anyone can check all of this without trusting this machine:

@@ -253,8 +253,8 @@ function TokenCard({ doc, tokenType }: { doc: TokenDocument; tokenType: string }
           <p className="text-xs break-all text-muted-foreground">Token type {tokenType}</p>
           <p className="flex flex-wrap gap-x-3 text-xs">
             <Out href={doc.sourceUrl}>document on GitHub</Out>
-            <Out href={IPFS_GATEWAY(doc.cid)}>document on IPFS (once pinned)</Out>
-            <Out href={IPFS_GATEWAY(doc.imageCid)}>image on IPFS (once pinned)</Out>
+            <Out href={IPFS_GATEWAY(doc.cid)}>document on IPFS</Out>
+            <Out href={IPFS_GATEWAY(doc.imageCid)}>image on IPFS</Out>
           </p>
         </div>
       </CardContent>
@@ -338,9 +338,10 @@ function OnChainOffChain() {
         Midnight has no on-chain token metadata, and its metadata service is specified but not
         yet running on preview. So the documents follow Midnight's token metadata specification
         and live off-chain, while the contract stores their SHA-256 so nobody, including
-        Moddable, can change them unnoticed. This page fetches them from GitHub. The IPFS links
-        will resolve once the files are pinned; the CIDs are fixed by the file contents, so
-        pinning changes nothing on this page.
+        Moddable, can change them unnoticed. Every file is also pinned on the public IPFS network
+        under a CID fixed by its contents, so any IPFS gateway or node can serve it and anyone can
+        re-hash what arrives. This page fetches from GitHub; the check is the same wherever the
+        bytes come from.
       </p>
     </section>
   );

@@ -188,3 +188,4 @@ Paused at 14:5x for the usage limit; resumed 16:11 UTC. The break is excluded.
 |---|---|---|
 | 66 | Public verification page (`treasury.html`): all six checks pass against the live chain in a clean browser | 16:14 |
 | 67 | MCC sent between agents (block 993,649); an Agent Smart Contract sent to a shielded address and back (993,656, 993,666) | 16:17 |
+| 68 | Artwork and metadata pinned to public IPFS through Pinata under the anchored CIDs (CAR upload refused on the free plan; the default raw-leaf profile keeps the same CIDs); all seven verified through trustless-gateway.link | 24 Sep |

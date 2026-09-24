@@ -158,8 +158,15 @@ stores the SHA-256 of the MCC document and of the manifest, and the manifest lis
 NFT document's CID. So one on-chain read verifies everything the page shows. A tampered
 document shows as a mismatch; this was tested.
 
-The files are not yet pinned to IPFS; that needs a pinning account. The page reads them
-from the daemon and verifies them the same way either way.
+All seven files (two images, four token documents, the collection manifest) are pinned on
+the public IPFS network through Pinata (`scripts/pin-metadata.mjs`, record in
+`metadata/pins.json`), under exactly the CIDs above. Each was uploaded with Pinata's `v1`
+import profile (raw leaves, 256 KiB chunks), which stores a file smaller than one chunk as
+the single raw block our CID names; the script refuses any other CID. Pinata's gateway and
+an independent public gateway (trustless-gateway.link) served the bytes back, and they
+re-hash to the CIDs. Anyone can fetch them from any gateway, for example
+`https://ipfs.io/ipfs/<cid>`, and check them the same way. (Pinata allows uploading a
+ready-made CAR file, which would pin a chosen CID directly, only on paid plans.)
 
 One earlier deploy attempt failed after submission (the private-state store rejected a
 hex-only password). Whether that attempt reached the chain is unknown: its transaction id
@@ -169,9 +176,6 @@ was not recorded, which the daemon now does at submission.
 
 - No other wallet shows our token names or images: preview serves no token metadata
   (finding 39). Our page shows them, verified against the contract.
-- The metadata files need pinning to IPFS before anyone else can fetch them by CID. Pin
-  them as raw blocks (CIDv1, raw leaves) or the CIDs will differ from the ones anchored.
-  The seven CIDs were checked against the reference `multiformats` library.
 - The crew Worker runs in Cloudflare and cannot reach this machine. For the city agents to
   request spends themselves, the daemon should pull their requests from the Worker (with a
   shared secret) and pass them through the same policy.

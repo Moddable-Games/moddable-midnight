@@ -1,0 +1,37 @@
+{
+  "bafkreiclrxm4rh4ymgm2ptgklrlssyg3pebslkajysjv22hf26rdxg2y3u": {
+    "path": "images/agent-smart-contract.svg",
+    "pinataId": "01a0d24e-30ae-7eca-a04c-1644a20370e6",
+    "pinnedAt": "2026-09-24T07:25:35.694Z"
+  },
+  "bafkreiarsxbavsnsaozcnlsfe234kzt4azigga34ofrff5logx6fwpfnpa": {
+    "path": "images/mcc.svg",
+    "pinataId": "01a0d24e-598f-77c1-a24e-9c11185f3658",
+    "pinnedAt": "2026-09-24T07:25:46.045Z"
+  },
+  "bafkreie5hmxksichsgtpq2x6xc5qy6lti67iiplmaqovm3hbj4j362ztom": {
+    "path": "tokens/66deba03d895468b3388866f511e7622e2c7af4d722e46aedf6958aa267ba92b.json",
+    "pinataId": "01a0d24e-79c9-7fc0-b504-bad68a3912da",
+    "pinnedAt": "2026-09-24T07:25:54.586Z"
+  },
+  "bafkreia372xzudmwzm46bstydff3it6m5glktakjs4c2ga45ckhhyv5scm": {
+    "path": "tokens/7ced7bf39622030ed6e55290f346e2277371eff6d44fdba47069786a4b3f2293.json",
+    "pinataId": "01a0d24f-257f-7ae1-aa1a-d9328d97fa06",
+    "pinnedAt": "2026-09-24T07:26:38.287Z"
+  },
+  "bafkreib5nkx4qpaay3s4sivr7mzpu5sd6j3eryg7qkefk3ixwmkz23znh4": {
+    "path": "tokens/9d454f805cbc15148268dcc49d4e2d386484010653f7f09910d331ff524c3b3d.json",
+    "pinataId": "01a0d24f-46ef-7ae3-9382-d654585f5e96",
+    "pinnedAt": "2026-09-24T07:26:47.491Z"
+  },
+  "bafkreibcycmpng2ss4zqmn7i7yldqegfxmzisillgocueuhrw7nwwac57i": {
+    "path": "tokens/eed99c9a56f4f3d719ff295eab2fcd59713233c71d34437284347c992b54a366.json",
+    "pinataId": "01a0d24f-5f2d-730e-8772-3d056fedea3d",
+    "pinnedAt": "2026-09-24T07:26:53.242Z"
+  },
+  "bafkreic3aqsrife243y2lpfgalca5t4u3wcry6igok7zwkcmm53rkkkpyu": {
+    "path": "agent-smart-contracts.json",
+    "pinataId": "01a0d24f-7f5a-7679-8332-60025fac5c69",
+    "pinnedAt": "2026-09-24T07:27:01.258Z"
+  }
+}
