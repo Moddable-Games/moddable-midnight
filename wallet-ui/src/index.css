@@ -108,3 +108,18 @@
 .sheet-enter { animation: sheet-in-up 180ms ease-out; }
 @media (min-width: 768px) { .sheet-enter { animation: sheet-in-right 180ms ease-out; } }
 @media (prefers-reduced-motion: reduce) { .sheet-enter { animation: none; } }
+
+/* NFTs without an image: artwork from the token type, with the Moddable hex grid. */
+.nft-art::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("./assets/hex-grid-blue.svg");
+  background-size: 42px 48px;
+  opacity: 0.35;
+}
+.nft-art > * { position: relative; }
+.nft-art-0 { background: linear-gradient(145deg, #10132b 0%, #2a2d36 100%); }
+.nft-art-1 { background: linear-gradient(145deg, #0a0d2a 0%, #1a3680 70%, #3a7be8 100%); }
+.nft-art-2 { background: linear-gradient(145deg, #14161c 0%, #0c4f8d 100%); }
+.nft-art-3 { background: linear-gradient(145deg, #0a0d2a 0%, #1a3680 55%, #6fb5ff 120%); }

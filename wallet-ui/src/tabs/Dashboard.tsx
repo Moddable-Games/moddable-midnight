@@ -8,7 +8,7 @@ import { useStore } from "@/lib/store";
 import { groupByAsset, totalUsd } from "@/lib/totals";
 
 function VaultCard() {
-  const { holdingsList, priceOf, prices, wallets, pending } = useStore();
+  const { holdingsList, priceOf, prices, active: wallets, pending } = useStore();
   const { open, go } = useNav();
   const groups = groupByAsset(holdingsList, priceOf);
   const total = totalUsd(groups);
@@ -44,7 +44,7 @@ function VaultCard() {
 }
 
 function Accounts() {
-  const { wallets, holdingsList, priceOf } = useStore();
+  const { active: wallets, holdingsList, priceOf } = useStore();
   const { go } = useNav();
   return (
     <div className="scroll-x -mx-4 flex gap-3 px-4 md:-mx-0 md:px-0">

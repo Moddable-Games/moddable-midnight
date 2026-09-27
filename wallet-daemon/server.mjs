@@ -23,10 +23,12 @@ import {
   ensureAgentTokens, identify, evaluate, crewTreasury, crewTreasuryV3, chargeSession, policy, setAgentPolicy,
   setBlockedAddresses, sessions, createSession, revokeSession, publicSession, setTreasuryV3, DEFAULT_AGENT_POLICY,
 } from "./agents.mjs";
-import { roster, createAgent } from "./roster.mjs";
+import { roster, createAgent, createWallet, ensureOperator, operatorWallet, archiveWallet } from "./roster.mjs";
+import { chatState, addMessage, heartbeat } from "./chat.mjs";
+import { pinImage, localImage } from "./nft-media.mjs";
 import { buildTokenAction, STANDARDS } from "./token-actions.mjs";
 import { describeAll } from "./token-reader.mjs";
-import { deployments, recordDeployment, recordToken, notesOf, updateNotes, setMandateTerms, allMandateTerms } from "./books.mjs";
+import { deployments, recordDeployment, recordToken, notesOf, updateNotes, setMandateTerms, allMandateTerms, removeMandateTerms } from "./books.mjs";
 import { afterSpend, createdNote, pickNote, pad32, ownerKeyOf } from "../src/note-book.ts";
 import { rawTokenType } from "@midnight-ntwrk/compact-runtime";
 import { readSettings, writeSettings, prices } from "./settings.mjs";
@@ -37,8 +39,11 @@ const NIGHT = "0".repeat(64);
 const STAR_PER_NIGHT = 1_000_000n;
 const REQUESTS_FILE = new URL("./state/requests.json", import.meta.url).pathname;
 
+// The app always has an operator: made on first start if the roster has none.
+const madeOperator = ensureOperator();
+if (madeOperator) console.log(`created the operator account ${madeOperator}`);
 const ROSTER = roster();
-const ORGANISER = "moddable-preview";
+const operator = () => operatorWallet();
 
 // ---------------------------------------------------------------------------------------
 // Wallets
@@ -83,6 +88,8 @@ function summary(record) {
     kind: record.kind,
     role: record.role,
     agentId: record.agentId ?? null,
+    operator: Boolean(record.operator),
+    archived: Boolean(record.archived),
     address: record.address ?? null,
     status: record.status,
     error: record.error ?? null,
@@ -310,6 +317,20 @@ async function runAfter(request) {
     setMandateTerms(request.contractAddress, a.agent, { capPerDraw: a.capPerDraw, drawsPerPeriod: a.drawsPerPeriod, salt: a.salt, epoch: a.epoch });
   }
   if (a.type === "treasuryV3") setTreasuryV3(request.contractAddress);
+  if (a.type === "revoked") removeMandateTerms(request.contractAddress, a.agent);
+  if (a.type === "archive") { archiveWallet(a.wallet); const r = wallets.get(a.wallet); if (r) r.archived = true; }
+  // An NFT minted with an image: publish its name and image (MIP-0018) as follow-ups the
+  // operator already approved with the mint.
+  if (a.type === "minted" && a.nft && a.imageUri && d) {
+    const domainHex = Buffer.from((await loadContract(d.standard)).module.pureCircuits.nftDomain(pad32(a.serial))).toString("hex");
+    const kind = STANDARDS[d.standard].kind;
+    for (const [key, valType, value] of [["name", "string", a.serial], ["image", "uri", a.imageUri]]) {
+      const { request: follow } = buildTokenAction({ action: "metadata", contractAddress: d.address, domainHex, kind, key, valType, value }, { addressOf });
+      const queued = createRequest({ ...follow, requestedBy: `follow-up of ${request.id.slice(0, 8)}` });
+      queued.autoApproved = true;
+      await decide(queued.id, true);
+    }
+  }
 }
 
 async function execute(request) {
@@ -469,9 +490,9 @@ function send(res, status, body, origin) {
   res.end(JSON.stringify(body));
 }
 
-async function readBody(req) {
+async function readBody(req, limit = 64_000) {
   let raw = "";
-  for await (const chunk of req) { raw += chunk; if (raw.length > 64_000) throw new Error("request too large"); }
+  for await (const chunk of req) { raw += chunk; if (raw.length > limit) throw new Error("request too large"); }
   return raw ? JSON.parse(raw) : {};
 }
 
@@ -521,19 +542,47 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "GET" && url.pathname === "/api/prices") {
       return send(res, 200, await prices(), origin);
     }
+    if (req.method === "GET" && url.pathname === "/api/chat") {
+      return send(res, 200, chatState(), origin || "null");
+    }
+    const media = url.pathname.match(/^\/api\/media\/(b[a-z2-7]+)$/);
+    if (req.method === "GET" && media) {
+      const image = localImage(media[1]);
+      if (!image) return send(res, 404, { error: "no such image here" }, origin || "null");
+      res.writeHead(200, { "Content-Type": image.type, "Cache-Control": "public, max-age=31536000, immutable", "Access-Control-Allow-Origin": origin || "*" });
+      return res.end(image.bytes);
+    }
     if (url.pathname.startsWith("/api/agent/")) return await agentRoute(req, res, url, origin);
     if (!fromUI) return send(res, 403, { error: "writes are only accepted from the wallet UI" }, "null");
     if (req.method === "POST" && url.pathname === "/api/requests") {
       return send(res, 201, createRequest(await readBody(req)), origin);
     }
     if (req.method === "POST" && url.pathname === "/api/token-actions") {
-      const { request, after } = buildTokenAction(await readBody(req), { addressOf, nameOf: (w) => wallets.get(w)?.name ?? w });
+      const body = await readBody(req, 512_000);
+      // An NFT's image is pinned first, so the mint is only queued once the image is on IPFS.
+      if (body.action === "mint" && body.nft && body.image) body.imageUri = (await pinImage(body.image, body.serial)).uri;
+      delete body.image;
+      const { request, after } = buildTokenAction(body, { addressOf, nameOf: (w) => wallets.get(w)?.name ?? w });
       return send(res, 201, createRequest({ ...request, after }), origin);
+    }
+    if (req.method === "POST" && url.pathname === "/api/chat") {
+      return send(res, 201, addMessage({ from: "operator", text: (await readBody(req)).text }), origin);
+    }
+    if (req.method === "POST" && url.pathname === "/api/chat/reply") {
+      const body = await readBody(req);
+      return send(res, 201, addMessage({ from: "assistant", text: body.text, requests: body.requests ?? [], status: body.status ?? null }), origin);
+    }
+    if (req.method === "POST" && url.pathname === "/api/chat/heartbeat") {
+      heartbeat();
+      return send(res, 200, { ok: true }, origin);
+    }
+    if (req.method === "POST" && url.pathname === "/api/accounts") {
+      return send(res, 201, await addAccount(await readBody(req)), origin);
     }
     if (req.method === "POST" && url.pathname === "/api/agents") {
       return send(res, 201, await addAgent(await readBody(req)), origin);
     }
-    const agentMatch = url.pathname.match(/^\/api\/agents\/([a-z0-9-]+)\/(fund|dust|appoint|policy|sessions)$/);
+    const agentMatch = url.pathname.match(/^\/api\/agents\/([a-z0-9-]+)\/(fund|dust|appoint|policy|sessions|pause|revoke|remove)$/);
     if (req.method === "POST" && agentMatch) {
       return send(res, 201, await agentSetup(agentMatch[1], agentMatch[2], await readBody(req)), origin);
     }
@@ -651,7 +700,7 @@ async function addAgent(body) {
 async function agentSetup(wallet, step, body) {
   if (!wallets.has(wallet)) throw new Error(`unknown wallet ${wallet}`);
   if (step === "fund") {
-    return createRequest({ wallet: ORGANISER, kind: "transfer", to: addressOf(wallet), amount: String(body.amount ?? "100"), requestedBy: "operator", note: `Fund ${wallets.get(wallet).name}` });
+    return createRequest({ wallet: operator(), kind: "transfer", to: addressOf(wallet), amount: String(body.amount ?? "100"), requestedBy: "operator", note: `Fund ${wallets.get(wallet).name}` });
   }
   if (step === "dust") {
     return createRequest({ wallet, kind: "dust-register", requestedBy: "operator", note: `Register ${wallets.get(wallet).name}'s NIGHT for DUST` });
@@ -659,13 +708,16 @@ async function agentSetup(wallet, step, body) {
   if (step === "appoint") return appointV3(wallet, body);
   if (step === "policy") return setAgentPolicy(wallet, body);
   if (step === "sessions") return createSession(wallet, body);
+  if (step === "pause") return setAgentPolicy(wallet, { paused: Boolean(body.paused) });
+  if (step === "revoke") return revokeOne(wallet);
+  if (step === "remove") return removeAgent(wallet, body);
   throw new Error("unknown step");
 }
 
 const V3_CREW_ID = () => Buffer.from(pad32("moddable:midnight-city:crew:v3")).toString("hex");
 
 /** Appoint an agent in the v3 treasury under private terms, sending its NFT to its wallet. */
-function appointV3(wallet, body) {
+function appointV3(wallet, body, epoch = 0) {
   const address = crewTreasuryV3();
   if (!address) throw new Error("the v3 treasury is not deployed yet");
   const capPerDraw = String(body.capPerDraw ?? "50");
@@ -675,10 +727,10 @@ function appointV3(wallet, body) {
   }
   const salt = randomBytes(32).toString("hex");
   return createRequest({
-    wallet: ORGANISER, kind: "call", contract: "crew_treasury_v3", contractAddress: address, circuit: "issueMandate",
+    wallet: operator(), kind: "call", contract: "crew_treasury_v3", contractAddress: address, circuit: "issueMandate",
     args: [{ agentKeyOf: wallet }, { terms: { capPerDraw, drawsPerPeriod, salt } }, { coinPublicKeyOf: wallet }],
     requestedBy: "operator", note: `Appoint ${wallets.get(wallet).name}: up to ${capPerDraw} MCC a draw, ${drawsPerPeriod} a period`,
-    after: { type: "appointed", agent: wallet, capPerDraw, drawsPerPeriod, salt, epoch: 0 },
+    after: { type: "appointed", agent: wallet, capPerDraw, drawsPerPeriod, salt, epoch },
   });
 }
 
@@ -687,12 +739,12 @@ function treasuryV3Action(body) {
   const address = crewTreasuryV3();
   const organiserCall = (circuit, args, note, after = null) => {
     if (!address) throw new Error("the v3 treasury is not deployed yet");
-    return createRequest({ wallet: ORGANISER, kind: "call", contract: "crew_treasury_v3", contractAddress: address, circuit, args, requestedBy: "operator", note, after });
+    return createRequest({ wallet: operator(), kind: "call", contract: "crew_treasury_v3", contractAddress: address, circuit, args, requestedBy: "operator", note, after });
   };
   switch (body.action) {
     case "deploy":
       if (address) throw new Error("the v3 treasury is already deployed");
-      return createRequest({ wallet: ORGANISER, kind: "deploy", contract: "crew_treasury_v3", args: [{ bytes: V3_CREW_ID() }],
+      return createRequest({ wallet: operator(), kind: "deploy", contract: "crew_treasury_v3", args: [{ bytes: V3_CREW_ID() }],
         requestedBy: "operator", note: "Deploy crew treasury v3", after: { type: "treasuryV3" } });
     case "mint": return organiserCall("mintTreasury", [{ uint: String(body.amount) }], `Mint ${body.amount} MCC into the v3 treasury`);
     case "openPeriod": return organiserCall("openPeriod", [{ domain: String(body.period) }], `Open period ${body.period}`);
@@ -723,6 +775,73 @@ async function treasuryV3Summary() {
     // Private terms, known only here: the chain holds a salted hash of them.
     terms: Object.fromEntries(Object.entries(terms).map(([w, t]) => [w, { capPerDraw: t.capPerDraw, drawsPerPeriod: t.drawsPerPeriod, epoch: t.epoch }])),
   };
+}
+
+/** A person's account for a purpose (payroll, grants, a team): a wallet with no agent policy. */
+async function addAccount(body) {
+  const entry = createWallet({ name: body.name, role: body.purpose, kind: "human" });
+  wallets.set(entry.wallet, { ...entry, status: "queued" });
+  startWallet(entry).catch(() => {});
+  return entry;
+}
+
+/**
+ * Take one agent out of the treasury. Mandates are anonymous, so the contract cannot revoke one
+ * alone (that would link it to its draws): revoke all by moving to a new epoch, then appoint
+ * every other agent again on its current terms, with fresh salts. Each step is a request.
+ */
+function revokeOne(wallet) {
+  const address = crewTreasuryV3();
+  if (!address) throw new Error("the v3 treasury is not deployed");
+  const terms = allMandateTerms(address);
+  if (!terms[wallet]) throw new Error(`${wallets.get(wallet)?.name ?? wallet} is not appointed`);
+  const nextEpoch = Math.max(...Object.values(terms).map((t) => t.epoch ?? 0)) + 1;
+  const queued = [createRequest({ wallet: operator(), kind: "call", contract: "crew_treasury_v3", contractAddress: address, circuit: "revokeAll", args: [],
+    requestedBy: "operator", note: `Revoke all mandates, to remove ${wallets.get(wallet)?.name ?? wallet}`, after: { type: "revoked", agent: wallet } })];
+  for (const [other, t] of Object.entries(terms)) {
+    if (other === wallet || !wallets.has(other) || wallets.get(other).archived) continue;
+    queued.push(appointV3(other, { capPerDraw: t.capPerDraw, drawsPerPeriod: t.drawsPerPeriod }, nextEpoch));
+  }
+  setAgentPolicy(wallet, { autoDraw: false });
+  return { requests: queued };
+}
+
+/**
+ * Remove an agent: stop it, sweep everything it holds to the operator (tokens first, NIGHT last,
+ * so fees can still be paid), then archive it. Its keys are kept; nothing is deleted.
+ */
+async function removeAgent(wallet, body) {
+  const record = wallets.get(wallet);
+  if (!record || record.kind !== "agent") throw new Error("only agents can be removed here");
+  const op = wallets.get(operator());
+  const s = summary(record);
+  const queued = [];
+  setAgentPolicy(wallet, { paused: true, autoDraw: false });
+  for (const session of sessions().filter((x) => x.wallet === wallet && !x.revokedAt)) revokeSession(session.id);
+  const sweep = (to, amount, token, note) => queued.push(createRequest({ wallet, kind: "transfer", to, amount, token, requestedBy: "operator", note }));
+  for (const [type, amount] of Object.entries(s.unshielded ?? {})) {
+    if (type !== NIGHT && BigInt(amount) > 0n) sweep(op.address, amount, type, `Return ${record.name}'s ${type.slice(0, 8)}… to the operator`);
+  }
+  for (const [type, amount] of Object.entries(s.shielded ?? {})) {
+    if (BigInt(amount) > 0n) sweep(op.shieldedAddress, amount, type, `Return ${record.name}'s private ${type.slice(0, 8)}… to the operator`);
+  }
+  // Contract-held balances move inside their contracts.
+  const held = (await holdings())[wallet]?.contract ?? {};
+  for (const [key, amount] of Object.entries(held)) {
+    const [contractAddress, domainHex] = key.split(":");
+    const { request, after } = buildTokenAction({ action: "transfer", contractAddress, domainHex, to: operator(), amount, wallet }, { addressOf, nameOf: (w) => wallets.get(w)?.name ?? w });
+    queued.push(createRequest({ ...request, after, requestedBy: "operator" }));
+  }
+  if (crewTreasuryV3() && allMandateTerms(crewTreasuryV3())[wallet] && body.revoke !== false) queued.push(...revokeOne(wallet).requests);
+  // NIGHT last: after it moves, the agent generates no more DUST.
+  if (BigInt(s.night ?? 0) > 0n) {
+    queued.push(createRequest({ wallet, kind: "transfer", to: op.address, amount: (Number(s.night) / 1e6).toFixed(6), requestedBy: "operator",
+      note: `Return ${record.name}'s NIGHT to the operator`, after: { type: "archive", wallet } }));
+  } else {
+    archiveWallet(wallet);
+    record.archived = true;
+  }
+  return { requests: queued };
 }
 
 /**

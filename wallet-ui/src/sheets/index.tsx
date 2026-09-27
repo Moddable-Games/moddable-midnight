@@ -1,15 +1,22 @@
-import { Check, Copy, EyeOff, Lock } from "lucide-react";
+import { Check, Copy, ExternalLink, EyeOff, ImagePlus, Lock, ShieldCheck } from "lucide-react";
 import { useState, type ReactNode } from "react";
-import { KIND_LABEL, KIND_MIP, TokenGlyph } from "@/components/glyphs";
+import { KIND_LABEL, KIND_MIP, TokenGlyph, WalletAvatar } from "@/components/glyphs";
+import { NftImage } from "@/components/nft-image";
+import { CopyAddress } from "@/components/wallet-parts";
+import { toPinnable } from "@/lib/image";
 import { Button, Field, FormError, Input, Segmented, Select, Sheet } from "@/components/ui/primitives";
-import { api, NIGHT, type Deployment, type Standard } from "@/lib/api";
-import { cn, pad32Hex, units } from "@/lib/format";
+import { api, mediaUrl, NIGHT, type Deployment, type Standard } from "@/lib/api";
+import { cn, explorer, pad32Hex, short, units } from "@/lib/format";
 import { useStore } from "@/lib/store";
 
 export type SheetRequest =
   | { kind: "send"; from?: string }
   | { kind: "deploy" }
   | { kind: "new-agent" }
+  | { kind: "new-account" }
+  | { kind: "receive"; wallet: string }
+  | { kind: "nft"; assetKey: string }
+  | { kind: "mint-nft"; deployment?: Deployment }
   | { kind: "appoint"; wallet: string }
   | { kind: "session"; wallet: string }
   | { kind: "token"; action: "mint" | "nft" | "transfer" | "convert" | "burn" | "metadata"; deployment: Deployment };
@@ -33,8 +40,8 @@ const Queued = () => <p className="mb-3 text-[13px] text-ink-soft">This goes to 
 // ---------------------------------------------------------------------------
 
 function SendSheet({ from, onClose }: { from?: string; onClose: () => void }) {
-  const { wallets, holdingsList } = useStore();
-  const [wallet, setWallet] = useState(from ?? "moddable-preview");
+  const { active: wallets, holdingsList, operator } = useStore();
+  const [wallet, setWallet] = useState(from ?? operator?.wallet ?? "");
   const [to, setTo] = useState("");
   const [amount, setAmount] = useState("");
   const options = holdingsList.filter((h) => h.wallet === wallet && h.asset.kind <= 1);
@@ -203,10 +210,126 @@ function SessionSheet({ wallet, onClose }: { wallet: string; onClose: () => void
 
 // ---------------------------------------------------------------------------
 
+function ReceiveSheet({ wallet, onClose }: { wallet: string; onClose: () => void }) {
+  const { wallets } = useStore();
+  const w = wallets.find((x) => x.wallet === wallet);
+  return (
+    <Sheet open onClose={onClose} title={`Receive to ${w?.name ?? wallet}`}>
+      <div className="space-y-3">
+        <CopyAddress label="Public address, for NIGHT and public tokens" value={w?.address ?? null} />
+        <CopyAddress label="Private address, for private tokens" value={w?.shieldedAddress ?? null} />
+        <p className="text-[13px] text-ink-soft">Private and public tokens are different token types: send each to its own kind of address.</p>
+      </div>
+    </Sheet>
+  );
+}
+
+function NewAccountSheet({ onClose }: { onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [purpose, setPurpose] = useState("");
+  const { busy, error, submit } = useSubmit(onClose);
+  return (
+    <Sheet open onClose={onClose} title="New account" footer={
+      <Button className="w-full" size="lg" disabled={busy || name.trim().length < 2} onClick={() => submit(() => api.createAccount({ name, purpose }))}>Create account</Button>}>
+      <FormError message={error} />
+      <Field label="Name"><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Payroll" maxLength={24} /></Field>
+      <Field label="What it is for"><Input value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="Monthly pay for the design team" maxLength={120} /></Field>
+      <p className="text-[13px] text-ink-soft">A wallet for a person or a purpose, made on this machine. Its payments wait for your approval like any other.</p>
+    </Sheet>
+  );
+}
+
+function NftSheet({ assetKey, onClose }: { assetKey: string; onClose: () => void }) {
+  const { assets, holdingsList, active, deployments } = useStore();
+  const asset = assets.get(assetKey);
+  if (!asset) return null;
+  const holders = holdingsList.filter((h) => h.asset.key === assetKey).map((h) => active.find((w) => w.wallet === h.wallet)).filter(Boolean);
+  const d = deployments.find((x) => x.address === asset.contract);
+  const extra = d?.metadata.filter((m) => m.domain === asset.domain && !["name", "image"].includes(m.key)) ?? [];
+  const ipfs = (uri: string) => {
+    const { cid } = mediaUrl(uri);
+    return [["ipfs.io", `https://ipfs.io/ipfs/${cid}`], ["dweb.link", `https://dweb.link/ipfs/${cid}`], ["Trustless gateway", `https://trustless-gateway.link/ipfs/${cid}`]];
+  };
+  return (
+    <Sheet open onClose={onClose} title={asset.name}>
+      <NftImage asset={asset} className="aspect-square w-full rounded-[1.25rem]" />
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <span className="flex items-center gap-2 text-sm font-semibold"><TokenGlyph asset={asset} size={32} />{KIND_LABEL[asset.kind]}</span>
+        {asset.verified ? <span className="inline-flex items-center gap-1 text-[13px] text-ok"><ShieldCheck size={14} />Metadata checked against the contract</span> : null}
+      </div>
+      {asset.description ? <p className="mt-3 text-sm text-ink-soft">{asset.description}</p> : null}
+      <dl className="mt-4 grid grid-cols-[6.5rem_1fr] gap-x-3 gap-y-2 text-sm">
+        <dt className="text-ink-faint">Held by</dt>
+        <dd className="flex flex-wrap gap-2">{holders.length ? holders.map((w) => <span key={w!.wallet} className="flex items-center gap-1.5"><WalletAvatar wallet={w!} size={32} />{w!.name}</span>) : "Nobody here"}</dd>
+        {d ? (<><dt className="text-ink-faint">Contract</dt><dd><a href={explorer.contract(d.address)} target="_blank" rel="noopener" className="inline-flex items-center gap-1 text-cosmic">{d.name}, {short(d.address, 8, 6)}<ExternalLink size={12} /></a></dd></>) : null}
+        {asset.color ? (<><dt className="text-ink-faint">Token type</dt><dd className="break-all font-mono text-[12px]">{asset.color}</dd></>) : null}
+        {extra.map((m) => (<div key={m.key} className="contents"><dt className="text-ink-faint">{m.key}</dt><dd className="break-words">{m.value}</dd></div>))}
+      </dl>
+      {asset.imageUri ? (
+        <div className="mt-4">
+          <p className="mb-1.5 text-[13px] font-semibold text-ink-soft">Image on IPFS</p>
+          <p className="mb-2 break-all font-mono text-[11px] text-ink-faint">{asset.imageUri}</p>
+          <div className="flex flex-wrap gap-2">{ipfs(asset.imageUri).map(([label, href]) => (
+            <a key={href} href={href} target="_blank" rel="noopener" className="inline-flex items-center gap-1 rounded-full bg-sunken px-3 py-1 text-[13px] font-semibold text-ink-soft hover:text-cosmic">{label}<ExternalLink size={12} /></a>
+          ))}</div>
+        </div>
+      ) : <p className="mt-4 text-[13px] text-ink-soft">No image yet. Its artwork above is drawn from its token type.</p>}
+      {asset.documentUri ? (
+        <a href={`https://ipfs.io/ipfs/${mediaUrl(asset.documentUri).cid}`} target="_blank" rel="noopener" className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-cosmic">Metadata document on IPFS<ExternalLink size={13} /></a>
+      ) : null}
+    </Sheet>
+  );
+}
+
+function NftMintSheet({ preset, onClose }: { preset?: Deployment; onClose: () => void }) {
+  const { deployments, active, operator } = useStore();
+  const usable = deployments.filter((d) => !d.error);
+  const [address, setAddress] = useState(preset?.address ?? usable[0]?.address ?? "");
+  const [serial, setSerial] = useState("");
+  const [to, setTo] = useState(operator?.wallet ?? "");
+  const [image, setImage] = useState<string | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const { busy, error, submit } = useSubmit(onClose);
+  const d = usable.find((x) => x.address === address);
+  const pick = async (file?: File) => {
+    setImageError(null);
+    if (!file) return;
+    try { setImage(await toPinnable(file)); } catch (e) { setImageError((e as Error).message); }
+  };
+  return (
+    <Sheet open onClose={onClose} title="Mint an NFT" footer={
+      <Button className="w-full" size="lg" disabled={busy || !d || !serial.trim()}
+        onClick={() => submit(() => api.tokenAction({ action: "mint", nft: true, contractAddress: address, serial: serial.trim(), to, image }))}>
+        {busy && image ? "Pinning to IPFS…" : "Queue mint"}
+      </Button>}>
+      <FormError message={error ?? imageError} />
+      <label className="mb-4 block cursor-pointer">
+        <input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" className="sr-only" onChange={(e) => pick(e.target.files?.[0])} />
+        {image ? (
+          <img src={image} alt="The image to pin" className="aspect-square w-full rounded-[1.25rem] object-cover" />
+        ) : (
+          <span className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-2 rounded-[1.25rem] border-2 border-dashed border-line bg-sunken text-ink-soft hover:border-cosmic hover:text-cosmic">
+            <ImagePlus size={28} />
+            <span className="text-sm font-semibold">Add an image</span>
+            <span className="text-[12px]">Pinned to IPFS with the mint. Optional.</span>
+          </span>
+        )}
+      </label>
+      {image ? <button type="button" onClick={() => setImage(null)} className="-mt-2 mb-3 text-[13px] font-semibold text-ink-soft hover:text-ink">Remove image</button> : null}
+      <Field label="Contract"><Select value={address} onChange={(e) => setAddress(e.target.value)}>
+        {usable.map((x) => <option key={x.address} value={x.address}>{x.name} ({KIND_LABEL[x.kind].toLowerCase()})</option>)}
+      </Select></Field>
+      <Field label="Name" hint="Unique within the contract; it becomes the NFT's own token type"><Input value={serial} onChange={(e) => setSerial(e.target.value)} placeholder="Founder badge 2" maxLength={32} /></Field>
+      <Field label="To"><Select value={to} onChange={(e) => setTo(e.target.value)}>{active.map((w) => <option key={w.wallet} value={w.wallet}>{w.name}</option>)}</Select></Field>
+      <Queued />
+    </Sheet>
+  );
+}
+
 const TITLES = { mint: "Mint", nft: "Mint an NFT", transfer: "Transfer", convert: "Convert", burn: "Burn", metadata: "Publish metadata" } as const;
 
 function TokenSheet({ action, deployment: d, onClose }: { action: keyof typeof TITLES; deployment: Deployment; onClose: () => void }) {
-  const { wallets, holdings } = useStore();
+  const { active: wallets, holdings } = useStore();
   const { busy, error, submit } = useSubmit(onClose);
   const [to, setTo] = useState("agent-floyd");
   const [amount, setAmount] = useState("");
@@ -300,8 +423,14 @@ export function Sheets({ sheet, onClose }: { sheet: SheetRequest | null; onClose
     case "send": return <SendSheet from={sheet.from} onClose={onClose} />;
     case "deploy": return <DeploySheet onClose={onClose} />;
     case "new-agent": return <NewAgentSheet onClose={onClose} />;
+    case "new-account": return <NewAccountSheet onClose={onClose} />;
+    case "receive": return <ReceiveSheet wallet={sheet.wallet} onClose={onClose} />;
+    case "nft": return <NftSheet assetKey={sheet.assetKey} onClose={onClose} />;
+    case "mint-nft": return <NftMintSheet preset={sheet.deployment} onClose={onClose} />;
     case "appoint": return <AppointSheet wallet={sheet.wallet} onClose={onClose} />;
     case "session": return <SessionSheet wallet={sheet.wallet} onClose={onClose} />;
-    case "token": return <TokenSheet action={sheet.action} deployment={sheet.deployment} onClose={onClose} />;
+    case "token": return sheet.action === "nft"
+      ? <NftMintSheet preset={sheet.deployment} onClose={onClose} />
+      : <TokenSheet action={sheet.action} deployment={sheet.deployment} onClose={onClose} />;
   }
 }

@@ -1,6 +1,30 @@
 [
-  { "wallet": "moddable-preview", "name": "Organiser", "kind": "human", "role": "Operator. Holds the master key, deploys the contracts and funds the crew." },
-  { "wallet": "agent-floyd", "name": "Floyd", "kind": "agent", "role": "Hacker, crew boss in Midnight City.", "agentId": "user-agent-u4gfp92xeor3g2a" },
-  { "wallet": "agent-tzilo", "name": "Tzilo", "kind": "agent", "role": "Miner in Midnight City.", "agentId": "user-agent-5wzs7d9q4cdz5gi" },
-  { "wallet": "agent-foofoo", "name": "FooFoo", "kind": "agent", "role": "Lumberjack in Midnight City.", "agentId": "user-agent-oyhuxtu984deja8" }
+  {
+    "wallet": "moddable-preview",
+    "name": "Operator",
+    "kind": "human",
+    "role": "Operator. Holds the master key, deploys the contracts and funds the crew.",
+    "operator": true
+  },
+  {
+    "wallet": "agent-floyd",
+    "name": "Floyd",
+    "kind": "agent",
+    "role": "Hacker, crew boss in Midnight City.",
+    "agentId": "user-agent-u4gfp92xeor3g2a"
+  },
+  {
+    "wallet": "agent-tzilo",
+    "name": "Tzilo",
+    "kind": "agent",
+    "role": "Miner in Midnight City.",
+    "agentId": "user-agent-5wzs7d9q4cdz5gi"
+  },
+  {
+    "wallet": "agent-foofoo",
+    "name": "FooFoo",
+    "kind": "agent",
+    "role": "Lumberjack in Midnight City.",
+    "agentId": "user-agent-oyhuxtu984deja8"
+  }
 ]

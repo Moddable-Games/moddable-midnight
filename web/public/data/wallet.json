@@ -64,11 +64,11 @@
     {
       "id": "operator",
       "title": "One key in charge",
-      "body": "The operator holds the master key. Launching an agent takes four steps: fund it, register it for fees, appoint it to the treasury, give it a session.",
+      "body": "The operator holds the master key. Send and receive from it, see everything it holds, and open accounts for people and purposes: payroll, grants, a team budget.",
       "points": [
-        "New agent wallets made on your machine",
-        "A checklist per agent, not a manual",
-        "Treasury pause and revoke-all in one place"
+        "An operator made for you on first start",
+        "Accounts for people, each its own wallet",
+        "Treasury terms for every appointed agent"
       ],
       "image": "img/wallet-app-operator.png",
       "alt": "The operator view: the master key card with NIGHT, DUST and addresses, and a setup checklist for each agent"
@@ -76,14 +76,26 @@
     {
       "id": "agents",
       "title": "Limits an agent cannot talk its way past",
-      "body": "Spending caps, the contracts an agent may call and the addresses it may never pay are checked before anything is signed. Treasury limits go further: the contract itself enforces them.",
+      "body": "Spending caps, the contracts an agent may call and the addresses it may never pay are checked before anything is signed. Pause an agent, take it out of the treasury, or remove it and have everything it holds come home.",
       "points": [
-        "Per-payment and daily caps",
-        "Whitelisted contracts, blocked addresses",
+        "Per-payment and daily caps, sessions that expire",
+        "Pause, revoke or remove any one agent",
         "Private treasury terms, checked in zero knowledge"
       ],
       "image": "img/wallet-app-agents.png",
       "alt": "An agent's page: its balances, spending limits, the contracts it may call, its private treasury terms and its sessions"
+    },
+    {
+      "id": "assistant",
+      "title": "Ask, and watch it happen",
+      "body": "Tell the wallet what you want in plain words. The assistant answers beside your approvals, queues the work, and shows each step's progress as it lands on chain.",
+      "points": [
+        "Questions about balances and agents",
+        "Requests that still wait for your approval",
+        "Progress shown against each request"
+      ],
+      "image": "img/wallet-app-dashboard.png",
+      "alt": "The dashboard with the assistant panel on the right, under the approval queue"
     },
     {
       "id": "activity",
@@ -108,6 +120,30 @@
       ],
       "image": "img/wallet-app-tokens.png",
       "alt": "The tokens view: contract cards for each token type with mint, NFT, burn and metadata actions and their token lists"
+    },
+    {
+      "id": "gallery",
+      "title": "NFTs, shown properly",
+      "body": "Every NFT the organisation holds, whatever kind of token it is. Mint new ones with their own artwork, pinned to IPFS and published with the token.",
+      "points": [
+        "Full view, holder and token details",
+        "Images on IPFS, checked against their CID",
+        "One place for every token type's NFTs"
+      ],
+      "image": "img/wallet-app-gallery.png",
+      "alt": "The gallery: a grid of NFT cards with their artwork, token type and holder"
+    },
+    {
+      "id": "discover",
+      "title": "Midnight, one tap away",
+      "body": "The services other teams are building on Midnight, from a live DEX to private voting and fee sponsorship, with what each could do inside the wallet.",
+      "points": [
+        "A live DEX on preprod",
+        "Thirteen more, filed for mainnet",
+        "Every listing linked to its source"
+      ],
+      "image": "img/wallet-app-discover.png",
+      "alt": "Discover: cards for Lunarswap and other Midnight services, each with an idea for the wallet"
     }
   ],
   "transactions": [
@@ -173,6 +209,10 @@
     {
       "image": "img/wallet-app-phone.png",
       "alt": "The dashboard on a phone, with the tab bar at the bottom"
+    },
+    {
+      "image": "img/wallet-app-phone-gallery.png",
+      "alt": "The gallery on a phone"
     },
     {
       "image": "img/wallet-app-phone-deploy.png",

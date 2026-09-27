@@ -151,7 +151,7 @@
     "txHash": null,
     "block": null,
     "chainStatus": null,
-    "error": "Unexpected error submitting scoped transaction '<unnamed>': (FiberFailure) Wallet.Other: Could not create a valid guaranteed offer\n    at file:///Applications/MAMP/htdocs/personal/moddable-midnight/node_modules/@midnight-ntwrk/wallet-sdk-shielded/dist/v1/Transacting.js:195:24\n    at file:///Applications/MAMP/htdocs/personal/moddable-midnight/node_modules/effect/dist/esm/internal/either.js:84:93\n    at file:///Applications/MAMP/htdocs/personal/moddable-midnight/node_modules/effect/dist/esm/Function.js:101:18\n    at pipe (file:///Applications/MAMP/htdocs/personal/moddable-midnight/node_modules/effect/dist/esm/Function.js:380:14)\n    at TransactingCapabilityImplementation.<anonymous> (file:///Applications/MAMP/htdocs/personal/moddable-midnight/node_modules/@midnight-ntwrk/wallet-sdk-shielded/dist/v1/Transacting.js:194:27) ← Could not create a valid guaranteed offer",
+    "error": "Unexpected error submitting scoped transaction '<unnamed>': (FiberFailure) Wallet.Other: Could not create a valid guaranteed offer\n    at file:///Applications/MAMP/htdocs/personal/moddable-midnight/node_modules/@midnight-ntwrk/wallet-sdk-shielded/dist/v1/Transacting.js:195:24\n    at file:///Applications/MAMP/htdocs/personal/moddable-midnight/node_modules/effect/dist/esm/internal/either.js:84:93\n    at file:///Applications/MAMP/htdocs/personal/moddable-midnight/node_modules/effect/dist/esm/Function.js:101:18\n    at pipe (file:///Applications/MAMP/htdocs/personal/moddable-midnight/node_modules/effect/dist/esm/Function.js:380:14)\n    at TransactingCapabilityImplementation.<anonymous> (file:///Applications/MAMP/htdocs/personal/moddable-midnight/node_modules/@midnight-ntwrk/wallet-sdk-shielded/dist/v1/Transacting.js:194:27) \u2190 Could not create a valid guaranteed offer",
     "seconds": 180,
     "at": "2026-09-27T08:53:31.072Z"
   },
@@ -401,5 +401,70 @@
     "error": null,
     "seconds": 32,
     "at": "2026-09-27T09:11:53.452Z"
+  },
+  {
+    "step": 31,
+    "label": "MIP-0014 NFT with its own image, pinned to IPFS",
+    "status": "confirmed",
+    "circuit": "mintNft",
+    "contract": "55d45f27b0d9d0cb86ece0827fd90fc387edf91f3a37a34a9f9226d7ac6d3295",
+    "txHash": "0eec96c0abb2e5ea840f9d0b54619599f335f9380c2dfd424c6c3ea74f202d12",
+    "block": 1049510,
+    "chainStatus": "SucceedEntirely",
+    "error": null,
+    "seconds": null,
+    "at": "2026-09-27T13:23:56.096Z"
+  },
+  {
+    "step": 32,
+    "label": "MIP-0018 name for that NFT",
+    "status": "confirmed",
+    "circuit": "publishMetadata",
+    "contract": "55d45f27b0d9d0cb86ece0827fd90fc387edf91f3a37a34a9f9226d7ac6d3295",
+    "txHash": "10592673c36cb1e820199437ed5ae1dbddbfccb00d10970b7c054559c5af25b0",
+    "block": 1049514,
+    "chainStatus": "SucceedEntirely",
+    "error": null,
+    "seconds": null,
+    "at": "2026-09-27T13:24:20.880Z"
+  },
+  {
+    "step": 33,
+    "label": "MIP-0018 image (ipfs://) for that NFT",
+    "status": "confirmed",
+    "circuit": "publishMetadata",
+    "contract": "55d45f27b0d9d0cb86ece0827fd90fc387edf91f3a37a34a9f9226d7ac6d3295",
+    "txHash": "a822745397ba1fd5edc3fba21d50507c36374a0f8441947cf64ec1c52508eb78",
+    "block": 1049518,
+    "chainStatus": "SucceedEntirely",
+    "error": null,
+    "seconds": null,
+    "at": "2026-09-27T13:24:45.018Z"
+  },
+  {
+    "step": 34,
+    "label": "v3: Floyd draws 60 MCC through the agent route, within his cap",
+    "status": "confirmed",
+    "circuit": "draw",
+    "contract": "1a72c3f456cb15c76bf148265bae9b28642e7d3120d3bc71f2574206466a8fe3",
+    "txHash": "195f9779eef9baa11df20d83ed12d92f1b552466995eb2fc7a69cc8e9d2b5539",
+    "block": 1048770,
+    "chainStatus": "SucceedEntirely",
+    "error": null,
+    "seconds": null,
+    "at": "2026-09-27T12:09:56.576Z"
+  },
+  {
+    "step": 35,
+    "label": "v3: Floyd asks for 150 MCC against his 100 cap; refused in the circuit",
+    "status": "refused",
+    "circuit": "draw",
+    "contract": "1a72c3f456cb15c76bf148265bae9b28642e7d3120d3bc71f2574206466a8fe3",
+    "txHash": null,
+    "block": null,
+    "chainStatus": null,
+    "error": "Over this mandate's cap per draw",
+    "seconds": null,
+    "at": "2026-09-27T12:09:56.898Z"
   }
 ]

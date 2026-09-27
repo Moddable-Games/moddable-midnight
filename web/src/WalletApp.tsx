@@ -148,10 +148,10 @@ export function WalletApp() {
           <div>
             <h2 className="font-display text-4xl leading-tight font-bold text-balance">Approve from your pocket</h2>
             <p className="mt-3 max-w-md text-white/70 text-pretty">
-              The same app on a phone: a tab bar for the five views, and every action in a sheet you can finish with a thumb.
+              The same app on a phone: a tab bar for the views you use most, and every action in a sheet you can finish with a thumb.
             </p>
           </div>
-          <div className="grid grid-cols-2 gap-5">
+          <div className="grid grid-cols-3 gap-3 sm:gap-5">
             {wallet.phone.map((p) => <div key={p.image} className="wl-phone"><img src={pageHref(p.image)} alt={p.alt} loading="lazy" /></div>)}
           </div>
         </section>

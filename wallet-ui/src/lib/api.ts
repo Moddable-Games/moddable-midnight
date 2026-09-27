@@ -10,6 +10,8 @@ export type Wallet = {
   kind: "human" | "agent";
   role: string;
   agentId: string | null;
+  operator: boolean;
+  archived: boolean;
   address: string | null;
   shieldedAddress: string | null;
   status: "queued" | "opening" | "syncing" | "ready" | "error";
@@ -98,6 +100,7 @@ export type AgentPolicy = {
   whitelistedContracts: string[];
   blockedAddresses: string[];
   autoDraw: boolean;
+  paused: boolean;
 };
 
 export type Session = {
@@ -134,11 +137,16 @@ export type TreasuryV3 = {
   terms?: Record<string, { capPerDraw: string; drawsPerPeriod: string; epoch: number }>;
 };
 
+export type ChatMessage = { id: string; from: "operator" | "assistant"; text: string; requests: string[]; status: "working" | "done" | null; at: string };
+export type Chat = { messages: ChatMessage[]; assistant: { online: boolean; lastSeen: string | null } };
+
 export type Prices = { night: { usd: number; change24h: number | null; source: string; at: string | null }; tokens: Record<string, string>; simulated: true };
 
 export type Settings = { currency: string; livePrices: boolean; tokenPrices: Record<string, string>; nightFallbackUsd: string; approvalSound: boolean };
 
-export type LegacyMetadata = { contract: string; tokens: Record<string, { name: string; ticker: string; shielded: boolean; imageData: string | null; verified: boolean }> };
+export type LegacyMetadata = { contract: string; tokens: Record<string, {
+  name: string; ticker: string; description: string; shielded: boolean; document: string; image: string; imageData: string | null; verified: boolean;
+}> };
 
 // ---------------------------------------------------------------------------
 
@@ -169,6 +177,9 @@ export const api = {
   prices: () => get<Prices>("/api/prices"),
   settings: () => get<Settings>("/api/settings"),
   legacyMetadata: () => get<LegacyMetadata>("/api/metadata"),
+  chat: () => get<Chat>("/api/chat"),
+  say: (text: string) => post("/api/chat", { text }),
+  createAccount: (body: { name: string; purpose: string }) => post<Wallet>("/api/accounts", body),
 
   approve: (id: string) => post<WalletRequest>(`/api/requests/${id}/approve`),
   reject: (id: string) => post<WalletRequest>(`/api/requests/${id}/reject`),
@@ -177,9 +188,16 @@ export const api = {
   tokenAction: (body: Record<string, unknown>) => post<WalletRequest>("/api/token-actions", body),
   treasuryAction: (body: Record<string, unknown>) => post<WalletRequest>("/api/treasury-v3", body),
   createAgent: (body: { name: string; role: string }) => post<Wallet>("/api/agents", body),
-  agentStep: <T = WalletRequest>(wallet: string, step: "fund" | "dust" | "appoint" | "policy" | "sessions", body: Record<string, unknown>) =>
+  agentStep: <T = WalletRequest>(wallet: string, step: "fund" | "dust" | "appoint" | "policy" | "sessions" | "pause" | "revoke" | "remove", body: Record<string, unknown>) =>
     post<T>(`/api/agents/${wallet}/${step}`, body),
   revokeSession: (id: string) => post<Session>(`/api/sessions/${id}/revoke`),
   setBlocked: (blocked: { address: string; note: string }[]) => post("/api/policy/blocked", { blocked }),
   saveSettings: (body: Partial<Settings>) => post<Settings>("/api/settings", body),
 };
+
+/** An NFT image: the daemon's local copy of an IPFS file, with a public gateway as fallback. */
+export const mediaUrl = (uri: string) => {
+  const cid = uri.replace(/^ipfs:\/\//, "");
+  return { local: `${DAEMON}/api/media/${cid}`, gateway: `https://ipfs.io/ipfs/${cid}`, cid };
+};
+

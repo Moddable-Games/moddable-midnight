@@ -1,0 +1,111 @@
+{
+  "source": "Listings come from OpenZeppelin's midnight-apps README and from applications filed in the deployments folder of midnightntwrk/midnight-improvement-proposals, read on 27 September 2026. Summaries are condensed from those texts. Repositories that were not public were left out.",
+  "categories": [
+    { "id": "trade", "label": "Trade" },
+    { "id": "fees", "label": "Fees and infrastructure" },
+    { "id": "identity", "label": "Identity and governance" },
+    { "id": "provenance", "label": "Provenance and records" },
+    { "id": "markets", "label": "Auctions" }
+  ],
+  "services": [
+    {
+      "name": "Lunarswap", "by": "OpenZeppelin", "category": "trade", "status": "Live app", "network": "Preprod",
+      "summary": "A proof-of-concept DEX for trading tokens on Midnight, from OpenZeppelin's sample apps.",
+      "idea": "Swap treasury tokens without leaving the wallet, with the same approval rules as any payment.",
+      "app": "https://midnight.openzeppelin.com/lunarswap",
+      "repo": "https://github.com/OpenZeppelin/midnight-apps",
+      "sourceUrl": "https://github.com/OpenZeppelin/midnight-apps/blob/main/README.md"
+    },
+    {
+      "name": "Ascend DEX", "by": "Ascend", "category": "trade", "status": "Mainnet application",
+      "summary": "A private spot order book: orders are committed on chain, matched off chain, and settled with checks on price, deposits and fees.",
+      "idea": "Let an agent place limit orders within its spending cap.",
+      "repo": "https://github.com/Ascend-Perps/ascend-dex",
+      "sourceUrl": "https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/deployments/ascend-dex.md"
+    },
+    {
+      "name": "Ascend Perps", "by": "Ascend", "category": "trade", "status": "Mainnet application",
+      "summary": "Perpetual futures with escrowed margin, signed orders and open-interest limits, settled against external chains.",
+      "idea": "Hedging for a treasury, behind a quorum of people.",
+      "repo": "https://github.com/Ascend-Perps/ascend-perps",
+      "sourceUrl": "https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/deployments/ascend-perps.md"
+    },
+    {
+      "name": "Test Tokens for Midnight Intents", "by": "SundaeSwap", "category": "trade", "status": "Mainnet application",
+      "summary": "A minimal contract that mints shielded test tokens, for testing and demoing swaps with Shielded's Midnight Intents.",
+      "idea": "Practice private swaps with play money before real value moves.",
+      "repo": "https://github.com/SundaeSwap-finance/midnight-swaps-smart-contracts",
+      "sourceUrl": "https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/deployments/test-tokens.md"
+    },
+    {
+      "name": "Capacity Exchange", "by": "SundaeSwap", "category": "fees", "status": "Mainnet application",
+      "summary": "An on-chain registry of servers that sponsor transaction fees: operators register and post NIGHT as collateral, and clients find them by reading the ledger.",
+      "idea": "Pay agents' DUST fees through a sponsor, so new agents can act before their own DUST builds up.",
+      "repo": "https://github.com/SundaeSwap-finance/capacity-exchange",
+      "sourceUrl": "https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/deployments/ces-registry.md"
+    },
+    {
+      "name": "Sponsored transaction demos", "by": "SundaeSwap", "category": "fees", "status": "Mainnet application",
+      "summary": "A counter and a shielded token vault whose calls have their fees paid by the Capacity Exchange.",
+      "idea": "The simplest way to see a fee-sponsored call from a fresh wallet.",
+      "repo": "https://github.com/SundaeSwap-finance/sundae-midnight-examples",
+      "sourceUrl": "https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/deployments/counter-example.md"
+    },
+    {
+      "name": "MidnightZK Anchor", "by": "Hsuan-Jie Technology", "category": "fees", "status": "Mainnet application",
+      "summary": "A multi-tenant platform that anchors data hashes onto Midnight on behalf of enterprise tenants.",
+      "idea": "Anchor the wallet's own audit log, so records of approvals can be proven later.",
+      "repo": "https://github.com/midnightzk/anchor",
+      "sourceUrl": "https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/deployments/midnightzk-anchor.md"
+    },
+    {
+      "name": "Shadow Labz VoteChain", "by": "Shadow Labz", "category": "identity", "status": "Mainnet application",
+      "summary": "Private governance tools: Sybil-resistant polls where eligible members vote once each, proven against a Merkle root.",
+      "idea": "The quorum behind shared control: people and agents voting on a large payment.",
+      "repo": "https://github.com/paranormal39/Votechain",
+      "sourceUrl": "https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/deployments/shadow-labz.md"
+    },
+    {
+      "name": "nightforce.cc Directory", "by": "Midnight ambassadors", "category": "identity", "status": "Mainnet application",
+      "summary": "Public profiles with selective disclosure: each person chooses which fields are visible, with a contact mode kept on chain.",
+      "idea": "A directory of trusted payees to check before an agent pays someone new.",
+      "repo": "https://github.com/greenpython9/nightforce-directory",
+      "sourceUrl": "https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/deployments/nightforce-directory.md"
+    },
+    {
+      "name": "Provven", "by": "Provven", "category": "identity", "status": "Mainnet application",
+      "summary": "Proofs of driver qualifications for hiring in trucking: the disclosed fact is public, the underlying report stays off chain.",
+      "idea": "Credentials an agent must hold before it is appointed.",
+      "repo": "https://github.com/blueOctorok/resume-wallet",
+      "sourceUrl": "https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/deployments/provven.md"
+    },
+    {
+      "name": "GYOTAK traceability", "by": "ECOSUS", "category": "provenance", "status": "Mainnet application",
+      "summary": "Provable origin for flash-frozen seafood: catch records, cold-chain temperature logs and anonymous purchase commitments.",
+      "idea": "Pay a supplier only when its shipment's record is on chain.",
+      "repo": "https://github.com/ecosus-co/gyotak-catch",
+      "sourceUrl": "https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/deployments/gyotak-catch.md"
+    },
+    {
+      "name": "VeilCore", "by": "VeilCore", "category": "provenance", "status": "Mainnet application",
+      "summary": "Proof of prior possession for plant genetics: who held a cultivar and when, with licensing and transfers, and no genetics disclosed.",
+      "idea": "Licences as tokens a treasury can hold and pass on.",
+      "repo": "https://github.com/hunterincoming/veilcore-midnight-testnet",
+      "sourceUrl": "https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/deployments/veilcore.md"
+    },
+    {
+      "name": "veriphil", "by": "AEMIOU", "category": "provenance", "status": "Mainnet application",
+      "summary": "Proofs of existence and integrity for digital files, anchored on chain.",
+      "idea": "Prove an NFT's artwork existed before it was minted.",
+      "repo": "https://github.com/VincentvdE/veriphil",
+      "sourceUrl": "https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/deployments/veriphil-coe.md"
+    },
+    {
+      "name": "Midnight Private Auction", "by": "pplmaverick", "category": "markets", "status": "Mainnet application",
+      "summary": "Sealed-bid auctions: bids stay confidential until the deadline, then the winner is revealed on the public ledger.",
+      "idea": "Auction the Gallery's NFTs with bids nobody can see in advance.",
+      "repo": "https://github.com/pplmaverick/midnight-private-auction",
+      "sourceUrl": "https://github.com/midnightntwrk/midnight-improvement-proposals/blob/main/deployments/midnight-private-auction.md"
+    }
+  ]
+}

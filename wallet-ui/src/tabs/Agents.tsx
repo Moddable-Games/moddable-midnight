@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNav } from "@/App";
 import { KIND_LABEL, TokenGlyph, WalletAvatar } from "@/components/glyphs";
 import { RequestRow } from "@/components/request-row";
+import { AgentControls, CopyAddress, MoneyActions } from "@/components/wallet-parts";
 import { Button, Chip, Empty, Field, FormError, Input, Panel, Toggle } from "@/components/ui/primitives";
 import { api, type AgentPolicy, type Wallet } from "@/lib/api";
 import { ago, cn, dust, night, short, units, usd } from "@/lib/format";
@@ -14,12 +15,15 @@ function Balances({ w }: { w: Wallet }) {
   const groups = groupByAsset(holdingsList, priceOf, w.wallet);
   return (
     <section className="vault p-5">
-      <div className="flex items-center gap-3">
-        <WalletAvatar wallet={w} size={48} />
-        <div className="min-w-0">
-          <h1 className="truncate text-2xl">{w.name}</h1>
-          <p className="truncate text-sm text-white/70">{w.role}</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <WalletAvatar wallet={w} size={48} />
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl">{w.name}</h1>
+            <p className="truncate text-sm text-white/70">{w.role}</p>
+          </div>
         </div>
+        <MoneyActions w={w} />
       </div>
       <p className="figure mt-4 text-4xl">{usd(totalUsd(groups))}</p>
       <p className="text-sm text-white/70">{night(w.night, 0)} NIGHT, {dust(w.dust)} DUST</p>
@@ -31,6 +35,10 @@ function Balances({ w }: { w: Wallet }) {
           </li>
         ))}
       </ul>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2 [&>*]:min-w-0">
+        <CopyAddress dark label="Public address" value={w.address} />
+        <CopyAddress dark label="Private address" value={w.shieldedAddress} />
+      </div>
     </section>
   );
 }
@@ -152,9 +160,10 @@ function Sessions({ w }: { w: Wallet }) {
 }
 
 export function AgentsTab() {
-  const { wallets, requests } = useStore();
+  const { active, wallets, requests } = useStore();
   const { focus, go, open } = useNav();
-  const agents = wallets.filter((w) => w.kind === "agent");
+  const agents = active.filter((w) => w.kind === "agent");
+  const removed = wallets.filter((w) => w.kind === "agent" && w.archived);
   const selected = agents.find((a) => a.wallet === focus) ?? null;
 
   if (!agents.length) {
@@ -179,11 +188,13 @@ export function AgentsTab() {
             </li>
           ))}
         </ul>
+        {removed.length ? <p className="px-1 text-[13px] text-ink-faint">Removed: {removed.map((r) => r.name).join(", ")}. Their keys are kept.</p> : null}
       </div>
       {selected ? (
         <div className="min-w-0 space-y-5">
           <button type="button" onClick={() => go("agents")} className="text-sm font-semibold text-cosmic lg:hidden">All agents</button>
           <Balances w={selected} />
+          <Panel><AgentControls w={selected} /></Panel>
           <div className="grid gap-5 2xl:grid-cols-2">
             <Limits w={selected} />
             <div className="space-y-5">

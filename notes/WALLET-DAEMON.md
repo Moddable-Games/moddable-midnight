@@ -215,3 +215,26 @@ Two things the daemon needed: `wallet-sdk-shielded` 3.0.2, since 3.0.1 cannot fu
 shielded coin paid into a contract (finding 48), and the whole error chain in its log, since
 the node's reason for a refused deploy sat three causes down (finding 47).
 
+## Accounts, agent lifecycle, chat and NFT images, 27 September 2026
+
+- **Operator and accounts.** `roster.json` marks one wallet `operator`; if none is marked on
+  start, the daemon makes one, so the app always has a master key. `POST /api/accounts` adds a
+  person's account for a purpose (payroll, grants): a wallet with no agent policy.
+- **One agent at a time.** Pause (`/api/agents/<w>/pause`) refuses every request from that agent.
+  Revoke (`/revoke`) cannot be single on chain, since mandates are anonymous: it queues
+  `revokeAll` and re-appoints every other agent on its current terms with fresh salts. Remove
+  (`/remove`) pauses the agent, revokes its sessions and mandate, sweeps every token it holds to
+  the operator (contract balances move inside their contracts; NIGHT last, so fees can be paid)
+  and archives it. Keys are never deleted.
+- **Chat.** The app's Assistant panel posts to `/api/chat`. An assistant session on this machine
+  runs `node wallet-daemon/chat.mjs watch` (prints each new message, keeps a heartbeat), does the
+  work, and answers with `node wallet-daemon/chat.mjs reply "…" --requests <id,id>`, so the panel
+  shows each queued request's progress. With no heartbeat for three minutes the panel says the
+  assistant is away; messages wait. Stored in `state/chat.json`.
+- **NFT images.** Minting an NFT with an image pins it first (`nft-media.mjs`): the image is at
+  most 256 KB (the page downscales it), its CID is computed here and must equal the one Pinata
+  returns, and a copy is kept in `metadata/nft/` and served at `/api/media/<cid>`. Once the mint
+  confirms, the daemon publishes the NFT's MIP-0018 `name` and `image` (`ipfs://<cid>`) as
+  follow-ups. First run: "Founder badge 2", minted to Tzilo at block 1,049,510, metadata at
+  1,049,514 and 1,049,518; the image came back byte for byte from a public gateway.
+

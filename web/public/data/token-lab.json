@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-27T12:04:24.588Z",
+  "generatedAt": "2026-09-27T13:36:06.650Z",
   "deployments": [
     {
       "address": "55d45f27b0d9d0cb86ece0827fd90fc387edf91f3a37a34a9f9226d7ac6d3295",
@@ -219,6 +219,30 @@
       "label": "v3: appoint FooFoo (cap 50, 2 draws)",
       "txHash": "8d1d42b35b61145586e4110bf733fb4a3b4c6a90920a7d996145e67e66eefebf",
       "block": 1046989
+    },
+    {
+      "step": 31,
+      "label": "MIP-0014 NFT with its own image, pinned to IPFS",
+      "txHash": "0eec96c0abb2e5ea840f9d0b54619599f335f9380c2dfd424c6c3ea74f202d12",
+      "block": 1049510
+    },
+    {
+      "step": 32,
+      "label": "MIP-0018 name for that NFT",
+      "txHash": "10592673c36cb1e820199437ed5ae1dbddbfccb00d10970b7c054559c5af25b0",
+      "block": 1049514
+    },
+    {
+      "step": 33,
+      "label": "MIP-0018 image (ipfs://) for that NFT",
+      "txHash": "a822745397ba1fd5edc3fba21d50507c36374a0f8441947cf64ec1c52508eb78",
+      "block": 1049518
+    },
+    {
+      "step": 34,
+      "label": "v3: Floyd draws 60 MCC through the agent route, within his cap",
+      "txHash": "195f9779eef9baa11df20d83ed12d92f1b552466995eb2fc7a69cc8e9d2b5539",
+      "block": 1048770
     }
   ]
 }

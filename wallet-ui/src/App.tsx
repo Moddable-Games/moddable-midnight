@@ -1,25 +1,30 @@
-import { Activity, Bot, Coins, KeyRound, LayoutGrid, Settings as Cog, WifiOff } from "lucide-react";
+import { Activity, Bot, Coins, Compass, Ellipsis, Images, KeyRound, LayoutGrid, MessageSquare, Settings as Cog, WifiOff } from "lucide-react";
+import { ChatPanel } from "@/components/chat";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { RequestRow } from "@/components/request-row";
-import { Chip, Empty, IconButton } from "@/components/ui/primitives";
+import { Chip, Empty, IconButton, Sheet } from "@/components/ui/primitives";
 import { cn } from "@/lib/format";
 import { useStore } from "@/lib/store";
 import { ActivityTab } from "@/tabs/Activity";
 import { AgentsTab } from "@/tabs/Agents";
 import { DashboardTab } from "@/tabs/Dashboard";
+import { DiscoverTab } from "@/tabs/Discover";
+import { GalleryTab } from "@/tabs/Gallery";
 import { OperatorTab } from "@/tabs/Operator";
 import { SettingsTab } from "@/tabs/Settings";
 import { TokensTab } from "@/tabs/Tokens";
 import { Sheets, type SheetRequest } from "@/sheets";
 
-export type Tab = "dashboard" | "operator" | "agents" | "activity" | "tokens" | "settings";
+export type Tab = "dashboard" | "operator" | "agents" | "activity" | "tokens" | "gallery" | "discover" | "settings";
 
 const TABS: { id: Tab; label: string; icon: typeof LayoutGrid; mobile: boolean }[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutGrid, mobile: true },
+  { id: "dashboard", label: "Home", icon: LayoutGrid, mobile: true },
   { id: "operator", label: "Operator", icon: KeyRound, mobile: true },
   { id: "agents", label: "Agents", icon: Bot, mobile: true },
   { id: "activity", label: "Activity", icon: Activity, mobile: true },
-  { id: "tokens", label: "Tokens", icon: Coins, mobile: true },
+  { id: "tokens", label: "Tokens", icon: Coins, mobile: false },
+  { id: "gallery", label: "Gallery", icon: Images, mobile: true },
+  { id: "discover", label: "Discover", icon: Compass, mobile: false },
   { id: "settings", label: "Settings", icon: Cog, mobile: false },
 ];
 
@@ -88,6 +93,12 @@ export default function App() {
   const store = useStore();
   const [[tab, focus], setRoute] = useState(readHash);
   const [sheet, setSheet] = useState<SheetRequest | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [seenId, setSeenId] = useState<string | null>(null);
+  const lastMessage = store.chat?.messages.at(-1);
+  const unanswered = lastMessage?.from === "assistant" && lastMessage.id !== seenId && !chatOpen;
+  const openChat = () => { setChatOpen(true); setSeenId(lastMessage?.id ?? null); };
 
   useEffect(() => {
     const onHash = () => setRoute(readHash());
@@ -112,7 +123,7 @@ export default function App() {
   } else {
     body = {
       dashboard: <DashboardTab />, operator: <OperatorTab />, agents: <AgentsTab />,
-      activity: <ActivityTab />, tokens: <TokensTab />, settings: <SettingsTab />,
+      activity: <ActivityTab />, tokens: <TokensTab />, gallery: <GalleryTab />, discover: <DiscoverTab />, settings: <SettingsTab />,
     }[tab];
   }
 
@@ -151,10 +162,10 @@ export default function App() {
           <div className="mx-auto flex max-w-[1320px] gap-5 px-4 pb-28 pt-2 md:px-6 md:pb-10 md:pt-6">
             <main className="min-w-0 flex-1">{body}</main>
 
-            {/* The approval queue stays in view on wide screens */}
-            {tab !== "activity" && store.online ? (
-              <aside className="sticky top-6 hidden h-fit w-[340px] shrink-0 xl:block">
-                <section className="rounded-panel bg-surface">
+            {/* The approval queue and the assistant stay in view on wide screens */}
+            {store.online ? (
+              <aside className="sticky top-6 hidden h-fit w-[340px] shrink-0 space-y-4 xl:block">
+                {tab !== "activity" ? <section className="rounded-panel bg-surface">
                   <header className="flex items-center justify-between px-5 pt-5">
                     <h2 className="text-lg">Waiting for you</h2>
                     {waiting ? <Chip tone="wait">{waiting}</Chip> : null}
@@ -164,7 +175,8 @@ export default function App() {
                   ) : (
                     <p className="px-5 pb-5 pt-2 text-sm text-ink-soft">Nothing to approve. Agent requests over their limits land here.</p>
                   )}
-                </section>
+                </section> : null}
+                <ChatPanel />
               </aside>
             ) : null}
           </div>
@@ -173,8 +185,33 @@ export default function App() {
         {/* Phone tab bar */}
         <nav className="safe-bottom fixed inset-x-0 bottom-0 z-40 flex border-t border-line bg-surface/95 px-2 pt-1 backdrop-blur md:hidden">
           {TABS.filter((t) => t.mobile).map((t) => <NavButton key={t.id} t={t} variant="bar" active={tab === t.id} onClick={() => go(t.id)} badge={badgeFor(t.id)} />)}
+          <NavButton t={{ id: "settings", label: "More", icon: Ellipsis, mobile: true }} variant="bar"
+            active={!TABS.find((t) => t.id === tab)?.mobile} onClick={() => setMoreOpen(true)} />
         </nav>
       </div>
+      {/* Below the wide layout, the assistant opens from a button */}
+      {store.online ? (
+        <button type="button" onClick={openChat} aria-label="Open the assistant"
+          className="fixed bottom-24 right-4 z-40 grid size-14 place-items-center rounded-full bg-cosmic text-white shadow-lg md:bottom-6 xl:hidden">
+          <MessageSquare size={22} />
+          {unanswered ? <span className="absolute right-1 top-1 size-3 rounded-full bg-glow ring-2 ring-cosmic" /> : null}
+        </button>
+      ) : null}
+      <Sheet open={chatOpen} onClose={() => { setChatOpen(false); setSeenId(store.chat?.messages.at(-1)?.id ?? null); }} title="Assistant">
+        <ChatPanel className="-mx-5 rounded-none" />
+      </Sheet>
+      <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="More">
+        <ul className="grid grid-cols-3 gap-3 pb-2">
+          {TABS.filter((t) => !t.mobile).map((t) => (
+            <li key={t.id}>
+              <button type="button" onClick={() => { setMoreOpen(false); go(t.id); }}
+                className={cn("flex w-full flex-col items-center gap-2 rounded-panel p-4 font-semibold", tab === t.id ? "bg-ink text-white" : "bg-sunken text-ink")}>
+                <t.icon size={22} />{t.label}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Sheet>
       <Sheets sheet={sheet} onClose={() => setSheet(null)} />
     </NavCtx.Provider>
   );

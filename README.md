@@ -173,6 +173,10 @@ reviewed as reference points and are the route to real token behaviour:
 - The wallet daemon gained agent policy (spending caps, whitelisted contracts, blocked addresses), expiring sessions with their own budgets, agent launch and DUST registration, token actions and live NIGHT pricing
 - The wallet became an app: Dashboard, Operator, Agents, Activity, Tokens and Settings, responsive from phone to desktop
 - New Tokens page reading every token contract live in the browser; the Wallet page rewritten as a product homepage with shared control for people and agents as the next step
+- Wallet app: an assistant chat beside the approval queue, with each request's progress shown in the conversation; an operator made on first start, and accounts for people and purposes
+- Per-agent pause, revoke (all mandates, then everyone else re-appointed) and remove (every asset swept back to the operator, then archived); send, receive and copyable addresses for every wallet
+- Gallery of every NFT with full view and IPFS links; NFTs minted with their own image, pinned to IPFS under a locally checked CID and published as MIP-0018 metadata
+- Discover: services other teams are building on Midnight, from OpenZeppelin's Lunarswap to the applications filed for mainnet, each with what it could do inside the wallet
 - Four friction findings: `emit` only on ledger 9, a 14-circuit deploy refused for block limits, a wallet SDK patch needed to pay a private coin into a contract, and MIP-0004 accounts inheriting `ownPublicKey()`
 
 #### 2026-09-24

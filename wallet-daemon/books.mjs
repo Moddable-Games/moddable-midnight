@@ -63,6 +63,12 @@ export function setMandateTerms(contractAddress, wallet, terms) {
   writePrivate(TERMS_FILE, all);
 }
 
+export function removeMandateTerms(contractAddress, wallet) {
+  const all = read(TERMS_FILE, {});
+  if (all[contractAddress]) delete all[contractAddress][wallet];
+  writePrivate(TERMS_FILE, all);
+}
+
 // ---------------------------------------------------------------------------
 // Deployments
 // ---------------------------------------------------------------------------

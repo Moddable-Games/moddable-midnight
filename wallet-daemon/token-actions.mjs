@@ -15,6 +15,7 @@
 //   { metadata: {...} }        a MIP-0018 payload
 import { randomBytes } from "node:crypto";
 import { deployments } from "./books.mjs";
+import { operatorWallet } from "./roster.mjs";
 
 export const STANDARDS = {
   native_unshielded: { kind: 0, mip: "MIP-0014", label: "Native unshielded", privacy: "unshielded", storage: "native" },
@@ -23,7 +24,8 @@ export const STANDARDS = {
   private_ledger: { kind: 3, mip: "MIP-0018 kind 3", label: "Contract shielded", privacy: "shielded", storage: "contract" },
 };
 
-const ORGANISER = "moddable-preview";
+// Read on every action, so a renamed or newly created operator is picked up at once.
+const op = () => operatorWallet();
 
 const deployment = (address) => {
   const d = deployments().find((x) => x.address === address);
@@ -63,14 +65,14 @@ export function buildTokenAction(body, { addressOf, nameOf = (w) => w }) {
       private_ledger: [name, symbol, { uint: decimals }, domain],
     }[body.standard];
     return {
-      request: { wallet: ORGANISER, kind: "deploy", contract: body.standard, args, note: `Deploy ${name} (${symbol}), ${standard.mip}` },
+      request: { wallet: op(), kind: "deploy", contract: body.standard, args, note: `Deploy ${name} (${symbol}), ${standard.mip}` },
       after: { type: "recordDeployment", standard: body.standard, name, symbol, decimals, domain: domain.domain },
     };
   }
 
   const d = deployment(body.contractAddress);
   const base = { kind: "call", contract: d.standard, contractAddress: d.address };
-  const holder = body.wallet ?? ORGANISER;
+  const holder = body.wallet ?? op();
 
   if (action === "mint") {
     const to = body.to;
@@ -89,9 +91,9 @@ export function buildTokenAction(body, { addressOf, nameOf = (w) => w }) {
       : fixedDomain ? [recipient, { uint: amount }] : [serialOrDomain, recipient, { uint: amount }];
     const nonce = d.standard === "private_ledger" ? randomBytes(32).toString("hex") : null;
     return {
-      request: { ...base, wallet: ORGANISER, circuit: nft ? "mintNft" : "mint", args, extra: nonce ? { nextNonce: nonce } : undefined,
+      request: { ...base, wallet: op(), circuit: nft ? "mintNft" : "mint", args, extra: nonce ? { nextNonce: nonce } : undefined,
         note: `Mint ${nft ? `NFT “${body.serial}”` : `${amount} ${d.symbol}`} to ${nameOf(to)}` },
-      after: { type: "minted", nft, serial: body.serial, domain: nft ? null : (body.domain ?? d.domain), amount, to, nonce },
+      after: { type: "minted", nft, serial: body.serial, domain: nft ? null : (body.domain ?? d.domain), amount, to, nonce, imageUri: body.imageUri ?? null },
     };
   }
 
@@ -139,8 +141,8 @@ export function buildTokenAction(body, { addressOf, nameOf = (w) => w }) {
     if (d.standard !== "native_shielded") throw new Error("burn through the contract applies to MIP-0011 tokens; unshielded tokens burn by sending to the zero address");
     const amount = whole(body.amount);
     return {
-      request: { ...base, wallet: ORGANISER, circuit: "burn",
-        args: [{ bytes: body.domainHex }, { coin: { domainHex: body.domainHex, amount } }, { uint: amount }, { coinPublicKeyOf: ORGANISER }],
+      request: { ...base, wallet: op(), circuit: "burn",
+        args: [{ bytes: body.domainHex }, { coin: { domainHex: body.domainHex, amount } }, { uint: amount }, { coinPublicKeyOf: op() }],
         note: `Burn ${amount} ${d.symbol}` },
       after: null,
     };
@@ -148,7 +150,7 @@ export function buildTokenAction(body, { addressOf, nameOf = (w) => w }) {
 
   if (action === "metadata") {
     return {
-      request: { ...base, wallet: ORGANISER, circuit: "publishMetadata",
+      request: { ...base, wallet: op(), circuit: "publishMetadata",
         args: [{ metadata: { domainHex: body.domainHex, kind: body.kind, key: body.key, valType: body.valType, value: body.value } }],
         note: `Publish ${body.key} for ${d.symbol} (MIP-0018 kind ${body.kind})` },
       after: null,

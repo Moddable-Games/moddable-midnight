@@ -41,6 +41,7 @@ export const DEFAULT_AGENT_POLICY = {
   whitelistedContracts: [],
   blockedAddresses: [],
   autoDraw: true,
+  paused: false,
 };
 
 export function policy() {
@@ -79,6 +80,7 @@ export function setAgentPolicy(wallet, input) {
     }),
     blockedAddresses: (input.blockedAddresses ?? current.blockedAddresses).map(String),
     autoDraw: Boolean(input.autoDraw ?? current.autoDraw),
+    paused: Boolean(input.paused ?? current.paused),
   };
   p.agents[wallet] = next;
   savePolicy(p);
@@ -198,6 +200,7 @@ export function evaluate(wallet, request, history, crewAddresses, session = null
   const p = policy();
   const agent = p.agents[wallet];
   if (!agent) return { verdict: "refuse", reason: "no policy for this agent" };
+  if (agent.paused) return { verdict: "refuse", reason: "this agent is paused" };
 
   if (session) {
     if (session.revokedAt) return { verdict: "refuse", reason: "session revoked" };

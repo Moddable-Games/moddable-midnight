@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  api, NIGHT, type Deployment, type Holdings, type LegacyMetadata, type Policy, type Prices, type Settings,
+  api, mediaUrl, NIGHT, type Chat, type Deployment, type Holdings, type LegacyMetadata, type Policy, type Prices, type Settings,
   type TreasuryV3, type Wallet, type WalletRequest,
 } from "./api";
 
@@ -17,12 +17,22 @@ export type Asset = {
   contract: string | null;
   domain: string | null;
   image?: string | null;
+  /** The NFT's MIP-0018 image URI (ipfs://…), when it has one. */
+  imageUri?: string | null;
+  description?: string | null;
+  /** IPFS URI of the NFT's metadata document, when it has one (the Agent Smart Contracts do). */
+  documentUri?: string | null;
+  verified?: boolean;
 };
 
 export type Holding = { asset: Asset; wallet: string; amount: string };
 
 type Store = {
   online: boolean;
+  chat: Chat | null;
+  /** Wallets in use; removed agents are kept (their keys are never deleted) but hidden. */
+  active: Wallet[];
+  operator: Wallet | null;
   lastError: string | null;
   wallets: Wallet[];
   requests: WalletRequest[];
@@ -49,6 +59,12 @@ export const useStore = () => {
 
 const NIGHT_ASSET: Asset = { key: `u:${NIGHT}`, name: "Night", symbol: "NIGHT", kind: 0, nft: false, decimals: 6, color: NIGHT, contract: null, domain: null };
 
+// The phase-0 mint spike (spikes/mint_spike.compact), which predates the metadata work.
+const SPIKE: Record<string, [string, string, boolean]> = {
+  "f3f4d88611d5af314fb32ef0e380fed5807aaac806362c05fc7f79bcf1b8b91d": ["Spike treasury", "SPK", false],
+  "7dab3653f25ff22bc04439dcd9aeea313432886baba621fcfa1bd8e33512deb0": ["Spike mandate", "SPK", true],
+};
+
 /** Names every token type the app can see, from the token contracts and the treasuries. */
 function catalogue(deployments: Deployment[], legacy: LegacyMetadata | null, treasury: TreasuryV3 | null): Map<string, Asset> {
   const map = new Map<string, Asset>([[NIGHT_ASSET.key, NIGHT_ASSET]]);
@@ -56,9 +72,11 @@ function catalogue(deployments: Deployment[], legacy: LegacyMetadata | null, tre
     if (d.error) continue;
     for (const t of d.tokens) {
       const named = d.metadata.find((m) => m.domain === t.domain && m.key === "name")?.value;
+      const imageUri = d.metadata.find((m) => m.domain === t.domain && m.key === "image")?.value ?? null;
       const base = {
         name: t.nft ? t.label : (named ?? d.name), symbol: t.nft ? d.symbol : d.symbol,
         nft: t.nft, decimals: t.nft ? 0 : d.decimals, color: t.color, contract: d.address, domain: t.domain,
+        imageUri, image: imageUri ? mediaUrl(imageUri).local : null,
       };
       if (d.storage === "contract") {
         map.set(`c:${d.address}:${t.domain}`, { ...base, key: `c:${d.address}:${t.domain}`, kind: d.kind });
@@ -70,7 +88,14 @@ function catalogue(deployments: Deployment[], legacy: LegacyMetadata | null, tre
   }
   for (const [type, t] of Object.entries(legacy?.tokens ?? {})) {
     const key = `${t.shielded ? "s" : "u"}:${type}`;
-    map.set(key, { key, name: t.name, symbol: t.ticker, kind: t.shielded ? 1 : 0, nft: t.shielded, decimals: 0, color: type, contract: legacy!.contract, domain: null, image: t.imageData });
+    map.set(key, {
+      key, name: t.name, symbol: t.ticker, kind: t.shielded ? 1 : 0, nft: t.shielded, decimals: 0, color: type, contract: legacy!.contract, domain: null,
+      image: t.imageData, imageUri: t.image, description: t.description, documentUri: t.document, verified: t.verified,
+    });
+  }
+  for (const [color, [name, symbol, nft]] of Object.entries(SPIKE)) {
+    const key = `u:${color}`;
+    if (!map.has(key)) map.set(key, { key, name, symbol, kind: 0, nft, decimals: 0, color, contract: null, domain: null });
   }
   // All zeros until the treasury's first mint, which would collide with NIGHT's type.
   if (treasury?.treasuryColor && treasury.treasuryColor !== NIGHT) {
@@ -79,12 +104,6 @@ function catalogue(deployments: Deployment[], legacy: LegacyMetadata | null, tre
   }
   return map;
 }
-
-// The phase-0 mint spike (spikes/mint_spike.compact), which predates the metadata work.
-const SPIKE: Record<string, [string, string, boolean]> = {
-  "f3f4d88611d5af314fb32ef0e380fed5807aaac806362c05fc7f79bcf1b8b91d": ["Spike treasury", "SPK", false],
-  "7dab3653f25ff22bc04439dcd9aeea313432886baba621fcfa1bd8e33512deb0": ["Spike mandate", "SPK", true],
-};
 
 const unknownAsset = (key: string, kind: 0 | 1): Asset => SPIKE[key.slice(2)] ? {
   key, name: SPIKE[key.slice(2)][0], symbol: SPIKE[key.slice(2)][1], kind, nft: SPIKE[key.slice(2)][2], decimals: 0, color: key.slice(2), contract: null, domain: null,
@@ -104,13 +123,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [prices, setPrices] = useState<Prices | null>(null);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [legacy, setLegacy] = useState<LegacyMetadata | null>(null);
+  const [chat, setChat] = useState<Chat | null>(null);
   const slowAt = useRef(0);
 
   const refresh = useCallback(async (what: "fast" | "all" = "fast") => {
     try {
-      const [w, r] = await Promise.all([api.wallets(), api.requests()]);
+      const [w, r, c] = await Promise.all([api.wallets(), api.requests(), api.chat()]);
       setWallets(w);
       setRequests(r);
+      setChat(c);
       setOnline(true);
       setLastError(null);
     } catch (e) {
@@ -171,8 +192,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const pending = useMemo(() => requests.filter((r) => r.status === "pending"), [requests]);
 
+  const active = useMemo(() => wallets.filter((w) => !w.archived), [wallets]);
+  const operator = useMemo(() => wallets.find((w) => w.operator) ?? null, [wallets]);
+
   const value: Store = {
-    online, lastError, wallets, requests, deployments, holdings, policy, treasury, prices, settings,
+    online, chat, active, operator, lastError, wallets, requests, deployments, holdings, policy, treasury, prices, settings,
     assets, holdingsList, pending, priceOf, refresh,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
