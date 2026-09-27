@@ -1,0 +1,233 @@
+{
+  "brand": "Midnight Armada",
+  "hero": {
+    "title": "Command the fleet, stay in the dark",
+    "body": "Your AI agents are already a fleet: trading, buying, negotiating, paying. Midnight Armada is the private command deck that funds them, governs them and shields them, so thousands of autonomous agents can work in unison without exposing a single line of your enterprise data.",
+    "primary": "Request a commission",
+    "secondary": "Tour the deck"
+  },
+  "manifesto": {
+    "quote": "In the physical world, an armada is a fleet of warships working in perfect, disciplined unison. In the digital economy, your AI agents are your fleet.",
+    "follow": "They execute tasks, trade assets and conduct business at a speed no treasury team can watch. Armada gives every one of them orders, a budget and a line it cannot cross, and keeps the whole formation out of sight."
+  },
+  "fleet": [
+    {
+      "id": "flagship",
+      "flag": "flagship",
+      "name": "The Flagship",
+      "role": "Master wallet",
+      "body": "Your corporate treasury, held under multi-signature command. Policies are written here, compliance keys live here, and no order reaches the fleet without the Flagship's seal.",
+      "points": [
+        "Multi-signature treasury for people and agents",
+        "Fleet-wide policies set in one place",
+        "Top-level compliance keys, never shared downstream"
+      ]
+    },
+    {
+      "id": "flotilla",
+      "flag": "flotilla",
+      "name": "The Flotilla",
+      "role": "Agent sub-wallets",
+      "body": "Restricted wallets for clusters of agents: the marketing flotilla, the arbitrage flotilla, the procurement flotilla. Each sails under its own budget, its own whitelist and its own rules of engagement.",
+      "points": [
+        "Budgets per flotilla, caps per agent",
+        "Whitelisted counterparties and contracts",
+        "Sessions that expire when the mission does"
+      ]
+    },
+    {
+      "id": "harbor",
+      "flag": "harbor",
+      "name": "Safe Harbor",
+      "role": "Liquidity and staking vaults",
+      "body": "Where idle assets rest between missions. Park treasury reserves to earn yield or stake on the Midnight network, and recall them to the fleet the moment an opportunity appears.",
+      "points": [
+        "Idle reserves put to work",
+        "Staking on the Midnight network",
+        "Instant recall to any flotilla"
+      ]
+    },
+    {
+      "id": "cloak",
+      "flag": "cloak",
+      "name": "Cloaking Device",
+      "role": "Zero-knowledge shielding",
+      "body": "Selective disclosure for every transaction. Your agents prove to auditors and regulators that they followed the rules, without revealing how much moved, where it went or who they are.",
+      "points": [
+        "Proof of compliance without the payload",
+        "Amounts and addresses kept dark",
+        "Disclosure keys you issue, and revoke"
+      ]
+    }
+  ],
+  "watch": [
+    {
+      "bell": "First watch",
+      "title": "Orders",
+      "body": "The Flagship sets the mission: its budget, its counterparties, its limits and its deadline."
+    },
+    {
+      "bell": "Middle watch",
+      "title": "Underway",
+      "body": "Flotillas execute in parallel. Every spend is checked against its orders before it is signed, and the chain checks it again."
+    },
+    {
+      "bell": "Morning watch",
+      "title": "Report",
+      "body": "Results return to the Flagship as proofs, not logs. Auditors see that the rules held; competitors see nothing."
+    }
+  ],
+  "cloak": {
+    "title": "Proven compliant, never exposed",
+    "body": "Most ledgers force a choice between transparency and privacy. Midnight's selective disclosure removes it: each transaction carries a proof that it met your policy, and the details stay sealed until you choose to open them.",
+    "transaction": [
+      {
+        "label": "Flotilla",
+        "value": "Arbitrage 04"
+      },
+      {
+        "label": "Counterparty",
+        "value": "mn_addr_1q8…f3k2"
+      },
+      {
+        "label": "Amount",
+        "value": "184,250.00 USDC"
+      },
+      {
+        "label": "Route",
+        "value": "Desk 7 → Venue B"
+      },
+      {
+        "label": "Policy",
+        "value": "Within mandate"
+      }
+    ]
+  },
+  "rules": [
+    {
+      "title": "Quorums",
+      "body": "Large orders need several keys: two officers, or an officer and an agent that checks the work."
+    },
+    {
+      "title": "Caps and horizons",
+      "body": "Every agent carries a ceiling per trade, per day and per mission, enforced where no software can argue."
+    },
+    {
+      "title": "Blockades",
+      "body": "Counterparties the fleet may never pay, applied to every flotilla at once."
+    },
+    {
+      "title": "Recall",
+      "body": "One order halts a flotilla or the whole fleet. Assets sail home to the Flagship."
+    }
+  ],
+  "commanders": [
+    {
+      "title": "Trading desks",
+      "body": "Run arbitrage agents across venues without broadcasting your positions to the market."
+    },
+    {
+      "title": "Enterprises",
+      "body": "Let procurement and finance agents pay suppliers inside approved budgets, with an audit trail regulators accept."
+    },
+    {
+      "title": "Studios and platforms",
+      "body": "Fund the agents that live in your worlds and marketplaces, and keep their economies fair."
+    },
+    {
+      "title": "Funds and DAOs",
+      "body": "Delegate treasury work to agents under quorum control, without publishing who holds which mandate."
+    }
+  ],
+  "scale": [
+    {
+      "figure": "10,000+",
+      "label": "agents under one Flagship"
+    },
+    {
+      "figure": "0",
+      "label": "bytes of enterprise data on the public chain"
+    },
+    {
+      "figure": "1",
+      "label": "order to recall the fleet"
+    }
+  ],
+  "commission": {
+    "title": "Commission your fleet",
+    "body": "Midnight Armada is being prepared for service. Tell us about your fleet and we will be in touch as the first commissions open.",
+    "note": "This is a preview. The form does not send anything yet."
+  },
+  "deck": {
+    "title": "The command deck",
+    "body": "One board for the whole fleet: what every flotilla holds, what it has spent against its orders, and every settlement it made, cloaked and proven.",
+    "flagship": "Meridian Holdings",
+    "treasury": "$48.2M",
+    "flotillas": [
+      {
+        "name": "Arbitrage",
+        "agents": "312",
+        "used": "w-2/3",
+        "label": "66% of mission budget"
+      },
+      {
+        "name": "Procurement",
+        "agents": "1,208",
+        "used": "w-2/5",
+        "label": "41% of mission budget"
+      },
+      {
+        "name": "Market making",
+        "agents": "96",
+        "used": "w-5/6",
+        "label": "83% of mission budget"
+      },
+      {
+        "name": "Research",
+        "agents": "40",
+        "used": "w-1/4",
+        "label": "24% of mission budget"
+      }
+    ],
+    "signals": [
+      {
+        "from": "Arbitrage 04",
+        "what": "Settlement proven",
+        "when": "now"
+      },
+      {
+        "from": "Procurement 11",
+        "what": "Supplier paid within mandate",
+        "when": "12s"
+      },
+      {
+        "from": "Market making 02",
+        "what": "Quote refreshed",
+        "when": "40s"
+      },
+      {
+        "from": "Research 01",
+        "what": "Session ended on schedule",
+        "when": "2m"
+      }
+    ]
+  },
+  "course": [
+    {
+      "phase": "Sea trials",
+      "body": "The fleet sails on Midnight's test networks: flagship, flotillas and cloak under real load."
+    },
+    {
+      "phase": "First commission",
+      "body": "A handful of enterprises take command, with shared control for people and agents from day one."
+    },
+    {
+      "phase": "Open waters",
+      "body": "Safe Harbor opens to staking and yield, and flotillas reach the services built across the Midnight network."
+    },
+    {
+      "phase": "Grand fleet",
+      "body": "Fleets of tens of thousands, cooperating across organisations, each still dark to the others."
+    }
+  ]
+}

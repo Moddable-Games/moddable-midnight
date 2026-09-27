@@ -46,6 +46,8 @@ export default defineConfig({
         history: path.resolve(__dirname, "history.html"),
         tournament: path.resolve(__dirname, "tournament.html"),
         tokens: path.resolve(__dirname, "tokens.html"),
+        // A standalone concept page, linked from nowhere (noindex).
+        armada: path.resolve(__dirname, "armada.html"),
       },
     },
     target: "esnext",

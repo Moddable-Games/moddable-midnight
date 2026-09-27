@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+/* Midnight Armada: night signals. A standalone theme, sharing nothing with the site around it. */
+@theme {
+  --font-display: "Bodoni Moda Variable", "Bodoni Moda", Didot, serif;
+  --font-sans: "Instrument Sans Variable", "Instrument Sans", system-ui, sans-serif;
+  --font-mono: "Martian Mono", ui-monospace, monospace;
+
+  --color-abyss: #060b16;
+  --color-hull: #0e1726;
+  --color-deck: #152033;
+  --color-chart: #2a3b52;
+  --color-mist: #8b9ab3;
+  --color-flag: #efe9dc;
+  --color-signal-red: #e23b2e;
+  --color-signal-yellow: #f2b705;
+  --color-signal-blue: #2456d6;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--color-abyss);
+    color: var(--color-flag);
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, p, li { text-wrap: pretty; }
+  h1, h2 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.02em; line-height: 0.98; }
+  :focus-visible { outline: 2px solid var(--color-signal-yellow); outline-offset: 3px; }
+  ::selection { background: var(--color-signal-yellow); color: var(--color-abyss); }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+}
+
+@layer components {
+  /* Engraved chart texture: faint depth contours and a bearing grid. */
+  .chart-ground {
+    background-color: var(--color-abyss);
+    background-image:
+      radial-gradient(circle at 70% 40%, rgb(36 86 214 / 0.18), transparent 55%),
+      repeating-radial-gradient(circle at 70% 40%, transparent 0 46px, rgb(42 59 82 / 0.35) 46px 47px),
+      linear-gradient(rgb(42 59 82 / 0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(42 59 82 / 0.18) 1px, transparent 1px);
+    background-size: auto, auto, 96px 96px, 96px 96px;
+  }
+
+  .readout { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: var(--color-mist); }
+
+  /* The sonar sweep: a conic wedge turning once every twelve seconds. */
+  .sweep {
+    background: conic-gradient(from 0deg, rgb(242 183 5 / 0.28), rgb(242 183 5 / 0.05) 40deg, transparent 70deg);
+    border-radius: 999px;
+    animation: sweep 12s linear infinite;
+  }
+  @keyframes sweep { to { transform: rotate(360deg); } }
+
+  /* Vessels hold station with a slow swell. */
+  .swell { animation: swell 7s ease-in-out infinite; }
+  .swell-late { animation-delay: -2.5s; }
+  .swell-later { animation-delay: -4.8s; }
+  @keyframes swell { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+  .ping { animation: ping 4s ease-out infinite; transform-origin: center; transform-box: fill-box; }
+  @keyframes ping { 0% { opacity: 0.8; transform: scale(0.4); } 100% { opacity: 0; transform: scale(2.4); } }
+
+  /* The cloak: values dissolve into redaction bars. */
+  .redacted {
+    color: transparent;
+    background: linear-gradient(90deg, #1d2a40 0%, #2a3b52 50%, #1d2a40 100%);
+    background-size: 200% 100%;
+    border-radius: 3px;
+    animation: shimmer 2.4s linear infinite;
+    user-select: none;
+  }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+
+  .hairline { border-color: rgb(42 59 82 / 0.9); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sweep, .swell, .ping, .redacted { animation: none; }
+  }
+}
