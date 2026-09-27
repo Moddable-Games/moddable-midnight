@@ -10,7 +10,8 @@
     "build": "tsc -p tsconfig.build.json",
     "deploy:preview": "npm run build && midnight contract deploy --managed src/managed/tournament_pass --network preview --wallet moddable-preview",
     "web": "npm run build -w api && npm run dev -w web",
-    "web:build": "npm run build -w web"
+    "web:build": "npm run build -w web",
+    "wallet": "npm run dev -w wallet-ui"
   },
   "dependencies": {
     "@midnight-ntwrk/compact-js": "^2.5.1",
@@ -26,7 +27,7 @@
     "@midnight-ntwrk/wallet-sdk-dust-wallet": "4.1.0",
     "@midnight-ntwrk/wallet-sdk-facade": "4.0.1",
     "@midnight-ntwrk/wallet-sdk-hd": "3.0.2",
-    "@midnight-ntwrk/wallet-sdk-shielded": "3.0.1",
+    "@midnight-ntwrk/wallet-sdk-shielded": "3.0.2",
     "@midnight-ntwrk/wallet-sdk-unshielded-wallet": "3.1.0"
   },
   "devDependencies": {
@@ -43,6 +44,7 @@
   },
   "workspaces": [
     "api",
-    "web"
+    "web",
+    "wallet-ui"
   ]
 }

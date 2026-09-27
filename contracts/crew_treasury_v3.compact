@@ -1,0 +1,282 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// Crew treasury v3: an organisation funds AI agents privately, within limits the chain
+// enforces.
+//
+// v2 (crew_treasury.compact, live) paid every agent the same fixed amount once per period.
+// v3 gives each agent its own terms, committed inside its mandate so nobody else learns them:
+//
+//   cap per draw        the most one draw may take (the agent's spending cap)
+//   draws per period    how many draws a period allows (the agent's session limit)
+//
+// A draw proves, in zero knowledge, that the caller holds some current mandate whose terms
+// allow this amount and this slot, and reveals a nullifier per (agent, period, slot). Nothing
+// on chain ties a draw to a mandate. The payee and amount are public, though: draws paid to
+// the same address are linked by that address, so an agent that wants unlinkable draws must
+// be paid at a fresh address each time (audit M-2). A draw of X shows some cap is at least X.
+//
+// Slots belong to the agent, not to the mandate: re-issuing an agent's mandate (after
+// revokeAll) does not give it fresh slots in the same period (audit M-1). An agent holds at
+// most one mandate per epoch, so new terms replace old ones only through revokeAll.
+//
+// The organiser also keeps a public list of payees the treasury will never pay (blocked
+// addresses), and can revoke every mandate at once by moving to a new epoch, after which
+// only mandates re-issued for that epoch can draw. v2's audit left single-mandate revocation
+// open (M-1): revoking one anonymous mandate would mean linking it; the epoch revokes all and
+// the organiser re-issues the rest.
+//
+// Contract whitelists and session tokens for the agents' off-chain actions are enforced by
+// the wallet daemon, not here: a contract cannot see what an agent does elsewhere. The blocked
+// list stops the treasury paying those addresses directly; it cannot stop an agent forwarding
+// funds it was paid elsewhere.
+//
+// Events and metadata use the ledger-8 approximations in lib/ (MIP-0002, MIP-0018).
+
+include "lib/Events";
+include "lib/TokenMetadata";
+
+import Events;
+import TokenMetadata;
+
+export { eventLog, eventCount, EventType, ContractEvent, tokenMetadata, TokenMetadataPayload, metadataSlot };
+
+export { MerkleTreePath };
+
+// ---------------------------------------------------------------------------
+// Ledger
+// ---------------------------------------------------------------------------
+
+export sealed ledger organiser: Bytes<32>;
+
+export sealed ledger crewId: Bytes<32>;
+
+export ledger treasuryColor: Bytes<32>;
+
+export ledger treasuryMinted: Uint<128>;
+
+export ledger mandates: HistoricMerkleTree<16, Bytes<32>>;
+
+export ledger mandateCount: Counter;
+
+// Leaves already issued, so each Agent Smart Contract NFT is one of one.
+export ledger issued: Set<Bytes<32>>;
+
+// One mandate per agent per epoch: hash(agent key, epoch). Organiser-side only; draws never
+// reveal the agent key.
+export ledger appointed: Set<Bytes<32>>;
+
+// Domains of the Agent Smart Contract NFTs, so metadata can only describe real ones.
+export ledger mandateNfts: Set<Bytes<32>>;
+
+// Mandates are valid only for the epoch they were issued in.
+export ledger epoch: Uint<32>;
+
+// The spending period, opened by the organiser. All zeros means none is open.
+export ledger currentPeriod: Bytes<32>;
+
+export ledger paused: Boolean;
+
+// One nullifier per (mandate, period, slot) drawn.
+export ledger spentDraws: Set<Bytes<32>>;
+
+export ledger drawCount: Counter;
+
+// UserAddress bytes the treasury refuses to pay.
+export ledger blockedPayees: Set<Bytes<32>>;
+
+// ---------------------------------------------------------------------------
+// Witnesses (implemented in ../src/crew-v3-witnesses.ts)
+// ---------------------------------------------------------------------------
+
+// `salt` is random and given to the agent with its terms, so a leaf cannot be matched to
+// terms by guessing (audit L-4).
+export struct MandateTerms {
+  capPerDraw: Uint<64>,
+  drawsPerPeriod: Uint<8>,
+  salt: Bytes<32>
+}
+
+witness localSecretKey(): Bytes<32>;
+
+// The terms the organiser appointed this agent under. Trusted only through the leaf: wrong
+// terms give a leaf that is not in the tree.
+witness mandateTerms(): MandateTerms;
+
+witness findMandatePath(leaf: Bytes<32>): MerkleTreePath<16, Bytes<32>>;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+export circuit organiserKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:crew3:organiser:"), sk]);
+}
+
+// What an agent hands the organiser to be appointed. The crew id is inside, so one secret
+// gives unrelated keys in different crews.
+export circuit agentKey(sk: Bytes<32>, cid: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "moddable:crew3:agent:"), cid, sk]);
+}
+
+struct MandateLeaf {
+  tag: Bytes<32>,
+  crew: Bytes<32>,
+  key: Bytes<32>,
+  epoch: Uint<32>,
+  terms: MandateTerms
+}
+
+export circuit mandateLeaf(cid: Bytes<32>, key: Bytes<32>, e: Uint<32>, terms: MandateTerms): Bytes<32> {
+  return persistentHash<MandateLeaf>(MandateLeaf { pad(32, "moddable:crew3:mandate:"), cid, key, e, terms });
+}
+
+struct DrawTicket {
+  tag: Bytes<32>,
+  crew: Bytes<32>,
+  period: Bytes<32>,
+  secret: Bytes<32>,
+  slot: Uint<8>
+}
+
+// No epoch inside: a re-issued mandate reuses the agent's slots (audit M-1).
+circuit drawNullifier(cid: Bytes<32>, period: Bytes<32>, sk: Bytes<32>, slot: Uint<8>): Bytes<32> {
+  return persistentHash<DrawTicket>(DrawTicket { pad(32, "moddable:crew3:draw:"), cid, period, sk, slot });
+}
+
+struct Appointment {
+  tag: Bytes<32>,
+  key: Bytes<32>,
+  epoch: Uint<32>
+}
+
+circuit assertOrganiser(): [] {
+  assert(disclose(organiser == organiserKey(localSecretKey())), "Caller is not the organiser");
+}
+
+constructor(cid: Bytes<32>) {
+  organiser = disclose(organiserKey(localSecretKey()));
+  crewId = disclose(cid);
+}
+
+// ---------------------------------------------------------------------------
+// Organiser
+// ---------------------------------------------------------------------------
+
+export circuit mintTreasury(amount: Uint<64>): Bytes<32> {
+  assertOrganiser();
+  const value = disclose(amount);
+  assert(value > 0, "Mint amount must be positive");
+  const domain = pad(32, "moddable:crew3:treasury");
+  const color = mintUnshieldedToken(domain, value, left<ContractAddress, UserAddress>(kernel.self()));
+  treasuryColor = color;
+  treasuryMinted = (treasuryMinted + value) as Uint<128>;
+  logEvent(EventType.UnshieldedMint, domain, color, value as Uint<128>, default<Bytes<32>>);
+  return color;
+}
+
+// Appoint an agent under private terms for the current epoch, and send it a one-of-a-kind
+// shielded NFT (its Agent Smart Contract) as a receipt. The key and terms are circuit inputs
+// that never reach the chain; only the leaf does.
+export circuit issueMandate(key: Bytes<32>, terms: MandateTerms, holder: ZswapCoinPublicKey): Bytes<32> {
+  assertOrganiser();
+  assert(terms.capPerDraw > 0, "Cap must be positive");
+  assert(terms.drawsPerPeriod > 0, "At least one draw per period");
+  const appointment = disclose(persistentHash<Appointment>(Appointment { pad(32, "moddable:crew3:appointed:"), key, epoch }));
+  assert(!appointed.member(appointment), "Agent already appointed this epoch");
+  appointed.insert(appointment);
+  const leaf = disclose(mandateLeaf(crewId, key, epoch, terms));
+  assert(!issued.member(leaf), "Mandate already issued");
+  issued.insert(leaf);
+  mandates.insert(leaf);
+  mandateCount.increment(1);
+  const domain = persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:crew3:mandate-nft:"), leaf]);
+  mandateNfts.insert(domain);
+  // The organiser's secret is inside the nonce, so nobody can find which wallet holds the
+  // NFT by trying known coin keys (audit L-3).
+  const nonce = disclose(persistentHash<Vector<3, Bytes<32>>>([pad(32, "moddable:crew3:nft-nonce:"), localSecretKey(), leaf]));
+  const coin = mintShieldedToken(domain, 1, nonce, left<ZswapCoinPublicKey, ContractAddress>(disclose(holder)));
+  logEvent(EventType.ShieldedMint, domain, coin.color, 1, default<Bytes<32>>);
+  return coin.color;
+}
+
+export circuit openPeriod(period: Bytes<32>): [] {
+  assertOrganiser();
+  const p = disclose(period);
+  assert(p != default<Bytes<32>>, "A period cannot be all zeros");
+  assert(p != currentPeriod, "That period is already open");
+  currentPeriod = p;
+}
+
+export circuit setPaused(value: Boolean): [] {
+  assertOrganiser();
+  paused = disclose(value);
+  if (disclose(value)) {
+    logEvent(EventType.Paused, default<Bytes<32>>, default<Bytes<32>>, 0, default<Bytes<32>>);
+  } else {
+    logEvent(EventType.Unpaused, default<Bytes<32>>, default<Bytes<32>>, 0, default<Bytes<32>>);
+  }
+}
+
+// Revoke every mandate at once. Mandates issued from here on carry the new epoch.
+export circuit revokeAll(): [] {
+  assertOrganiser();
+  epoch = (epoch + 1) as Uint<32>;
+  logEvent(EventType.Misc, default<Bytes<32>>, default<Bytes<32>>, epoch as Uint<128>, pad(32, "crew3:revoke-all"));
+}
+
+export circuit blockPayee(payee: UserAddress): [] {
+  assertOrganiser();
+  blockedPayees.insert(disclose(payee).bytes);
+  logEvent(EventType.Misc, default<Bytes<32>>, default<Bytes<32>>, 0, pad(32, "crew3:block-payee"));
+}
+
+export circuit unblockPayee(payee: UserAddress): [] {
+  assertOrganiser();
+  blockedPayees.remove(disclose(payee).bytes);
+  logEvent(EventType.Misc, default<Bytes<32>>, default<Bytes<32>>, 0, pad(32, "crew3:unblock-payee"));
+}
+
+// Metadata for MCC (kind 0) and the Agent Smart Contract NFTs (kind 1), and nothing else
+// (audit L-2).
+export circuit publishMetadata(payload: TokenMetadataPayload): [] {
+  assertOrganiser();
+  const p = disclose(payload);
+  assert((p.kind == 0 && p.domainSep == pad(32, "moddable:crew3:treasury")) ||
+         (p.kind == 1 && mandateNfts.member(p.domainSep)), "Not a token this treasury issued");
+  publishTokenMetadata(p, 0, 1);
+}
+
+// ---------------------------------------------------------------------------
+// Agents
+// ---------------------------------------------------------------------------
+
+// Draw `amount` using draw `slot` of this period, paid to `recipient`.
+export circuit draw(amount: Uint<64>, slot: Uint<8>, recipient: UserAddress): [] {
+  assert(!paused, "Draws are paused");
+  assert(currentPeriod != default<Bytes<32>>, "No period open");
+  assert(treasuryMinted > 0, "Treasury not funded");
+  const value = disclose(amount);
+  const payee = disclose(recipient);
+  assert(value > 0, "Amount must be positive");
+  assert(payee.bytes != default<Bytes<32>>, "Payee is the zero address");
+  assert(!blockedPayees.member(payee.bytes), "Payee is blocked");
+
+  const sk = localSecretKey();
+  const terms = mandateTerms();
+  const leaf = mandateLeaf(crewId, agentKey(sk, crewId), epoch, terms);
+  const supplied = findMandatePath(leaf);
+  const bound = MerkleTreePath<16, Bytes<32>> { leaf: leaf, path: supplied.path };
+  assert(mandates.checkRoot(disclose(merkleTreePathRoot<16, Bytes<32>>(bound))), "No current mandate");
+
+  assert(disclose(value <= terms.capPerDraw), "Over this mandate's cap per draw");
+  assert(disclose(slot < terms.drawsPerPeriod), "No draws left this period");
+  const nullifier = disclose(drawNullifier(crewId, currentPeriod, sk, slot));
+  assert(!spentDraws.member(nullifier), "That draw slot is used this period");
+  spentDraws.insert(nullifier);
+  drawCount.increment(1);
+
+  sendUnshielded(treasuryColor, value as Uint<128>, right<ContractAddress, UserAddress>(payee));
+  logEvent(EventType.UnshieldedSpend, pad(32, "moddable:crew3:treasury"), treasuryColor, value as Uint<128>, payee.bytes);
+}

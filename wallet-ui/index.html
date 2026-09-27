@@ -2,45 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Moddable Midnight Wallet</title>
-  <link rel="stylesheet" href="css/wallet.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0d2a">
+  <title>Moddable Wallet</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
 </head>
 <body>
-  <header class="bar">
-    <h1>Midnight wallet</h1>
-    <p class="sub">A browser wallet for Firefox, where no Midnight wallet extension exists. One organiser and three AI agents. Balances are live from the public indexer; every payment waits for your approval here.</p>
-    <p class="daemon" id="daemon">Looking for the wallet daemon…</p>
-  </header>
-
-  <main>
-    <details class="panel" id="approvals-panel">
-      <summary>
-        <h2>Approvals</h2>
-        <span class="badge" id="pending-count" hidden></span>
-        <span class="summary-hint" id="approvals-hint">nothing waiting</span>
-      </summary>
-      <p class="hint">Nothing leaves a wallet until you approve it. Requests from agents land here too.</p>
-      <ol class="requests" id="requests"></ol>
-    </details>
-
-    <section class="panel contract" id="contract-panel" hidden>
-      <h2>Crew treasury contract</h2>
-      <div id="contract"></div>
-    </section>
-
-    <section class="wallets" id="wallets"></section>
-
-    <section class="panel" id="log-panel">
-      <h2>Activity</h2>
-      <ol class="log" id="log"></ol>
-    </section>
-  </main>
-
-  <footer class="bar foot">
-    <p>Keys stay in the local wallet daemon. This page asks it for state and sends it your decisions. It answers only this page, on this machine.</p>
-  </footer>
-
-  <script type="module" src="js/wallet.js"></script>
+  <div id="root"></div>
+  <script type="module" src="./src/main.tsx"></script>
 </body>
 </html>

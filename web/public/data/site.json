@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": "Moddable on Midnight",
   "repo": "https://github.com/Moddable-Games/moddable-midnight",
   "nav": [
@@ -17,6 +17,11 @@
       "key": "treasury",
       "label": "Treasury",
       "href": "treasury.html"
+    },
+    {
+      "key": "tokens",
+      "label": "Tokens",
+      "href": "tokens.html"
     },
     {
       "key": "history",
@@ -60,13 +65,22 @@
       "summary": "The organiser mints Midnight City Credits (MCC) and appoints each agent with a shielded Agent Smart Contract NFT. Agents draw an allowance once per period by proving they hold a mandate, without revealing which. Audited with Midnight's own tools before deploy, which caught a way to drain it.",
       "page": "treasury.html",
       "pageLabel": "Check it against the chain"
+    },
+    {
+      "key": "tokens",
+      "number": 5,
+      "when": "27 September",
+      "title": "Every kind of token, and agents under limits",
+      "summary": "All four Midnight token types issued and moved on preview, fungible and NFT, from the latest token MIPs: public and private coins, public contract balances that convert between them, and a contract that keeps balances confidential. The treasury now enforces a private cap and draw limit for each agent, and the wallet became an app.",
+      "page": "tokens.html",
+      "pageLabel": "See the four types"
     }
   ],
   "documents": [
     {
       "title": "Friction log",
       "href": "notes/FRICTION-LOG.md",
-      "summary": "45 numbered findings from building on Midnight with its AI tooling, each with evidence and a suggested fix."
+      "summary": "49 numbered findings from building on Midnight with its AI tooling, each with evidence and a suggested fix."
     },
     {
       "title": "Midnight City findings",
@@ -77,6 +91,11 @@
       "title": "Security audit",
       "href": "notes/AUDIT-crew-treasury.md",
       "summary": "The crew treasury audited with Midnight's review and verification tools: what they caught, what they missed, what only the chain could answer."
+    },
+    {
+      "title": "Token contracts audit",
+      "href": "notes/AUDIT-token-contracts.md",
+      "summary": "Five contracts audited before deploy: one High (a private transfer that leaked its amounts), confirmed by running the attack, fixed, and checked again."
     },
     {
       "title": "Timeline",

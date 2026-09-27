@@ -1,0 +1,65 @@
+// MIP-0002 (Public Contract Log Emission), approximated for ledger 8.
+//
+// MIP-0002 adds an `emit` expression (CoIP-3) that compiles to the VM's Log opcode, and the
+// indexer serves the result as contractEvents. The preview indexer already has that query,
+// but `emit` needs Compact 0.33 or later, which targets ledger 9; preview, preprod and
+// mainnet run ledger 8, where the 0.31.1 compiler rejects `emit` as an unbound identifier.
+//
+// Until ledger 9 lands, each event is appended to public contract state instead, using the
+// standard event types from MIP-0002 Phase 1. Moving to ledger 9 means replacing each
+// `logEvent(...)` call with `emit(<standard event struct>)`.
+//
+// The fields of the CoIP-3 standard event structs share a small vocabulary, so one record
+// carries them all:
+//
+//   eventType  the LogEventType variant
+//   domainSep  the token within the contract (zero for lifecycle events)
+//   tokenType  the token's color when it is native, else zero
+//   amount     the amount when it is public, else zero (a shielded burn keeps it hidden)
+//   subject    the nullifier, commitment, recipient or Misc event name, per event type
+module Events {
+  import CompactStandardLibrary;
+
+  export enum EventType {
+    ShieldedSpend,
+    ShieldedReceive,
+    ShieldedMint,
+    ShieldedBurn,
+    UnshieldedSpend,
+    UnshieldedReceive,
+    UnshieldedMint,
+    UnshieldedBurn,
+    Paused,
+    Unpaused,
+    Misc
+  }
+
+  export struct ContractEvent {
+    eventType: EventType,
+    domainSep: Bytes<32>,
+    tokenType: Bytes<32>,
+    amount: Uint<128>,
+    subject: Bytes<32>
+  }
+
+  // Append-only. Keyed by position so consumers can page through it.
+  export ledger eventLog: Map<Uint<64>, ContractEvent>;
+
+  export ledger eventCount: Counter;
+
+  // Every field is already public where this is called: it is a disclosure site, exactly as
+  // `emit` will be.
+  export circuit logEvent(
+    eventType: EventType,
+    domainSep: Bytes<32>,
+    tokenType: Bytes<32>,
+    amount: Uint<128>,
+    subject: Bytes<32>
+  ): [] {
+    eventLog.insert(
+      eventCount.read(),
+      disclose(ContractEvent { eventType, domainSep, tokenType, amount, subject })
+    );
+    eventCount.increment(1);
+  }
+}

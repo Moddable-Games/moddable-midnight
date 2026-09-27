@@ -1,0 +1,138 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// Native unshielded token issuer, after MIP-0014 (Proposed).
+//
+// The contract mints and steps out: coins are protocol-level unshielded UTXOs, publicly
+// valued, owned by a UserAddress, and moved wallet to wallet with no contract involved.
+// Burning is native too: a holder sends coins to the all-zero UserAddress.
+//
+// Family profile: one contract issues many token types, one per domain separator, each with
+// color tokenType(domain, contract). Fungible tokens use any domain. A non-fungible token is
+// a domain derived from a serial number, minted exactly once with supply 1, so its color is
+// one of a kind. The two sets of domains cannot overlap.
+//
+// Deviations from MIP-0014, each deliberate:
+// - Minting is restricted to the issuer (hash-based authentication, never ownPublicKey()).
+//   MIP-0014 leaves authorisation to the issuer and forbids only ownPublicKey().
+// - Recipients are wallets only. MIP-0014 also allows the issuing contract itself.
+// - name/symbol/decimals describe the whole family (MIP-0011's Family-profile convention);
+//   per-token names are MIP-0018 metadata.
+// - Events and metadata use the ledger-8 approximations in lib/ (MIP-0002, MIP-0018).
+
+include "lib/Events";
+include "lib/TokenMetadata";
+
+import Events;
+import TokenMetadata;
+
+export { eventLog, eventCount, EventType, ContractEvent, tokenMetadata, TokenMetadataPayload, metadataSlot };
+
+// ---------------------------------------------------------------------------
+// Ledger
+// ---------------------------------------------------------------------------
+
+export sealed ledger _name: Opaque<"string">;
+
+export sealed ledger _symbol: Opaque<"string">;
+
+export sealed ledger _decimals: Uint<8>;
+
+// The issuer's identity: a hash of a secret held off-chain.
+export sealed ledger issuer: Bytes<32>;
+
+// MIP-0014's optional mint counter: exact and monotonic per domain, an upper bound on
+// circulating supply because burns happen outside the contract.
+export ledger mintedByDomain: Map<Bytes<32>, Uint<128>>;
+
+// Domains issued as one-of-a-kind tokens.
+export ledger nftDomains: Set<Bytes<32>>;
+
+// ---------------------------------------------------------------------------
+// Authentication
+// ---------------------------------------------------------------------------
+
+witness localSecretKey(): Bytes<32>;
+
+export circuit issuerKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:mip14:issuer:"), sk]);
+}
+
+circuit assertIssuer(): [] {
+  assert(disclose(issuer == issuerKey(localSecretKey())), "Caller is not the issuer");
+}
+
+constructor(tokenName: Opaque<"string">, tokenSymbol: Opaque<"string">, tokenDecimals: Uint<8>) {
+  _name = disclose(tokenName);
+  _symbol = disclose(tokenSymbol);
+  _decimals = disclose(tokenDecimals);
+  issuer = disclose(issuerKey(localSecretKey()));
+}
+
+// ---------------------------------------------------------------------------
+// Metadata (MIP-0014)
+// ---------------------------------------------------------------------------
+
+export circuit name(): Opaque<"string"> {
+  return _name;
+}
+
+export circuit symbol(): Opaque<"string"> {
+  return _symbol;
+}
+
+export circuit decimals(): Uint<8> {
+  return _decimals;
+}
+
+// Computed at call time: kernel.self() is a placeholder inside the constructor.
+export circuit tokenColor(domain: Bytes<32>): Bytes<32> {
+  return tokenType(disclose(domain), kernel.self());
+}
+
+export circuit nftDomain(serial: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:mip14:nft:"), serial]);
+}
+
+// ---------------------------------------------------------------------------
+// Issuance
+// ---------------------------------------------------------------------------
+
+circuit issue(domain: Bytes<32>, recipient: UserAddress, amount: Uint<64>): Bytes<32> {
+  assert(recipient.bytes != default<Bytes<32>>, "Recipient is the zero address");
+  assert(amount > 0, "Amount must be positive");
+  const color = mintUnshieldedToken(domain, amount, right<ContractAddress, UserAddress>(recipient));
+  const before = mintedByDomain.member(domain) ? mintedByDomain.lookup(domain) : 0 as Uint<128>;
+  mintedByDomain.insert(domain, (before + amount) as Uint<128>);
+  logEvent(EventType.UnshieldedMint, domain, color, amount as Uint<128>, recipient.bytes);
+  return color;
+}
+
+// Fungible supply under any domain that is not a one-of-a-kind token.
+export circuit mint(domain: Bytes<32>, recipient: UserAddress, amount: Uint<64>): Bytes<32> {
+  assertIssuer();
+  assert(!nftDomains.member(disclose(domain)), "That domain is a one-of-a-kind token");
+  return issue(disclose(domain), disclose(recipient), disclose(amount));
+}
+
+// A one-of-a-kind token: supply 1 under a domain no fungible mint has used.
+export circuit mintNft(serial: Bytes<32>, recipient: UserAddress): Bytes<32> {
+  assertIssuer();
+  const domain = nftDomain(disclose(serial));
+  assert(!nftDomains.member(domain), "That token already exists");
+  assert(!mintedByDomain.member(domain), "That domain already has fungible supply");
+  nftDomains.insert(domain);
+  return issue(domain, disclose(recipient), 1);
+}
+
+// ---------------------------------------------------------------------------
+// Metadata declarations (MIP-0018, kind 0: native unshielded)
+// ---------------------------------------------------------------------------
+
+// Only domains this contract has minted (audit L-2).
+export circuit publishMetadata(payload: TokenMetadataPayload): [] {
+  assertIssuer();
+  assert(mintedByDomain.member(disclose(payload).domainSep), "No token under that domain");
+  publishTokenMetadata(payload, 0, 0);
+}

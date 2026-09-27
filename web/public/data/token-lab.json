@@ -1,0 +1,224 @@
+{
+  "generatedAt": "2026-09-27T12:04:24.588Z",
+  "deployments": [
+    {
+      "address": "55d45f27b0d9d0cb86ece0827fd90fc387edf91f3a37a34a9f9226d7ac6d3295",
+      "standard": "native_unshielded",
+      "name": "Moddable Unshielded",
+      "symbol": "MOD",
+      "domain": "moddable:mod",
+      "block": 1046643,
+      "txHash": "d3a546d80c3a8945ce2c25233f7223bc3ee6186f47ab12e710954eb8656459a5"
+    },
+    {
+      "address": "45043f5f5e611afb08770b6fa498552a2819c87d06c9f4da75d165dec5b00219",
+      "standard": "native_shielded",
+      "name": "Moddable Shielded",
+      "symbol": "SHD",
+      "domain": "moddable:shd",
+      "block": 1046678,
+      "txHash": "32e5cb89be4479baf404d6cd4fd2ac0401565acfc74761878d054261a0d4d3d6"
+    },
+    {
+      "address": "118c4be1ba0b27a24bcbcd29cfd45bb00d94c93953809a365abec4a178ca57c0",
+      "standard": "private_ledger",
+      "name": "Moddable Veil",
+      "symbol": "VEIL",
+      "domain": "moddable:veil",
+      "block": 1046683,
+      "txHash": "f3250cf41bc31694a2e58be4ab63aa9f532080cfa490d3dff74d52cb6677e863"
+    },
+    {
+      "address": "7ec3e63b4a3dcc0dc37b3bf3843adb5682a0e2007835e66cae1c51f50b45f3d4",
+      "standard": "contract_token",
+      "name": "Moddable Contract Token",
+      "symbol": "MCT",
+      "domain": "moddable:mct",
+      "block": 1046705,
+      "txHash": "ea4b9f1abf38cac1044db5bd907e2afddc709d770564161dc2122cab6026406f"
+    }
+  ],
+  "treasuryV3": "1a72c3f456cb15c76bf148265bae9b28642e7d3120d3bc71f2574206466a8fe3",
+  "run": [
+    {
+      "step": 1,
+      "label": "MIP-0014 fungible mint to Floyd",
+      "txHash": "f7aa89922c4164cb512773696e4c7bdc85b7894fda082217aae9a365fb2d5521",
+      "block": 1046722
+    },
+    {
+      "step": 2,
+      "label": "MIP-0014 NFT to Tzilo",
+      "txHash": "f51818b487f8b33959ad3ada9723a270b7e79d2e45190b11b4a206ede9c1dda0",
+      "block": 1046727
+    },
+    {
+      "step": 3,
+      "label": "MIP-0011 fungible mint to Floyd",
+      "txHash": "184076674a1138e52acd307addc35f98a5322d95424c0e8d8737669ce5d5a6c7",
+      "block": 1046733
+    },
+    {
+      "step": 4,
+      "label": "MIP-0011 fungible mint to the organiser (for the burn)",
+      "txHash": "20bebb3df80ba9896cf695459f713896bb32fc4da2f70c10c18d3ba14b1c2f79",
+      "block": 1046738
+    },
+    {
+      "step": 5,
+      "label": "MIP-0011 NFT to FooFoo",
+      "txHash": "6cb4667783d5744969b9e6f7e18fb98e722cfa6b5dfb86c5e5499089879e5773",
+      "block": 1046743
+    },
+    {
+      "step": 6,
+      "label": "MIP-0011 burn 10 through the contract",
+      "txHash": "24d07812c4f7212dc05a4ddf410f4fec5a74bcf71b486f4e2f43a432ad4457e5",
+      "block": 1046751
+    },
+    {
+      "step": 7,
+      "label": "MIP-0004 mint 1000 to the organiser's account",
+      "txHash": "fb982dd73fc53dca8ce149af994103ec2a342f06e8143f79283c532d06d38004",
+      "block": 1046756
+    },
+    {
+      "step": 8,
+      "label": "MIP-0004 NFT to the organiser",
+      "txHash": "7c45d4d3088db30c9a0b55348e336741e8cd534fe83de5c54bba8cacf83cfe68",
+      "block": 1046761
+    },
+    {
+      "step": 9,
+      "label": "MIP-0004 transfer 25 to Floyd's account",
+      "txHash": "650b887444fcea29b0e580810f3764e87fd35476b9b99c3188632f1f73b0b6b5",
+      "block": 1046766
+    },
+    {
+      "step": 10,
+      "label": "MIP-0004 shield 100 (balance to shielded coin)",
+      "txHash": "7f35300bff991c858c05e5f05f57348869183abecc84d4ceadf3c5594634bd12",
+      "block": 1046771
+    },
+    {
+      "step": 11,
+      "label": "MIP-0004 toUtxo 100 (balance to unshielded UTXO)",
+      "txHash": "8634e049a8261558a9712bbb5be5bb06643140085c4c4eaf410cd68c9fb824a6",
+      "block": 1046775
+    },
+    {
+      "step": 12,
+      "label": "MIP-0004 unshield 50 (shielded coin back to balance)",
+      "txHash": "e203af366c3344590415dc708bf999365441eb81e3c8d31a5e2bc794c032cdc5",
+      "block": 1046858
+    },
+    {
+      "step": 13,
+      "label": "MIP-0004 fromUtxo 50 (unshielded UTXO back to balance)",
+      "txHash": "56b7c771c3cfacd674fcf96124428c0a1795c699286ac5dc398e9bd8d8003dcb",
+      "block": 1046863
+    },
+    {
+      "step": 14,
+      "label": "Kind 3 mint 1000 to the organiser",
+      "txHash": "c87a2867c7aabc7bf4a7d264b48e237822258d86244302223d376d2595a43619",
+      "block": 1046889
+    },
+    {
+      "step": 15,
+      "label": "Kind 3 NFT to the organiser",
+      "txHash": "068d77bba3c316df6c0d51b1bd2e4d9b2c2e301ad4222108789a726bfe60834e",
+      "block": 1046894
+    },
+    {
+      "step": 16,
+      "label": "Kind 3 private transfer 200 to Floyd",
+      "txHash": "6e865ec47f89f76ace33141450d6009a6ec5dff8f94779e652545cc5e098f570",
+      "block": 1046900
+    },
+    {
+      "step": 17,
+      "label": "Kind 3 toUtxo 100",
+      "txHash": "c771c58fc756a2338edeb49c5717b8042c7fa348c34cd8d6238eed5a01f98ff1",
+      "block": 1046912
+    },
+    {
+      "step": 18,
+      "label": "Kind 3 fromUtxo 50",
+      "txHash": "f5a3012040abc3928194c5216a39664308dc71c88cb8e0c881f53cf0e21dd92a",
+      "block": 1046928
+    },
+    {
+      "step": 19,
+      "label": "Kind 3 toShielded 100",
+      "txHash": "39962e9b2adaf5d6cda9d5b0969c15cdcb5ce42046ca301ad8bd064003de73dc",
+      "block": 1046935
+    },
+    {
+      "step": 20,
+      "label": "Kind 3 fromShielded 50",
+      "txHash": "a7dea7f80d1f50e96d61065a8681f2ebcea8ca82beb6bdd63070e63a22dd6b06",
+      "block": 1046941
+    },
+    {
+      "step": 21,
+      "label": "MIP-0018 name for the MIP-0014 token",
+      "txHash": "ab205836fee5d09abf03e7306a0eb9f75b9df060a452f4c2174c281a2d67e24f",
+      "block": 1046945
+    },
+    {
+      "step": 22,
+      "label": "MIP-0018 name for the MIP-0011 token",
+      "txHash": "fc19f6fe924c4fa97006107b7ebcaca61edcd091e22ac5d82e993051f4821a0d",
+      "block": 1046950
+    },
+    {
+      "step": 23,
+      "label": "MIP-0018 name for the MIP-0004 balance (kind 2)",
+      "txHash": "6bbf3abdcc6a2f0764f23b09e70956472ed53910a1ed4bbc7442eef69418cc48",
+      "block": 1046954
+    },
+    {
+      "step": 24,
+      "label": "MIP-0018 decimals for the MIP-0004 token",
+      "txHash": "cd05d27ca42e59d2851b647ae0d9bebe0b1ddeba1253d667e28ebec50c13d284",
+      "block": 1046959
+    },
+    {
+      "step": 25,
+      "label": "MIP-0018 name for the kind-3 token",
+      "txHash": "bf4d964bcb808c4144461edfd2ff5bc32cf12b18c908a6b7f3df23ff6f24b908",
+      "block": 1046964
+    },
+    {
+      "step": 26,
+      "label": "v3: mint 1,000,000 MCC into the treasury",
+      "txHash": "f16c187a3780d7a1f4ba8f78778f1599e3c90ac27d637ba1638b8ec4fdb6a9ae",
+      "block": 1046969
+    },
+    {
+      "step": 27,
+      "label": "v3: open period 2026-09-27",
+      "txHash": "1a8557cfb5b6186aee0d46c8231979e8db75ecbe2efdeba457d8b82685af9f07",
+      "block": 1046973
+    },
+    {
+      "step": 28,
+      "label": "v3: appoint Floyd (cap 100 a draw, 3 draws a period)",
+      "txHash": "46722c7aabd3722e637d659ab43f0a7a36f180b2f9db6f7915a474b3e9ccd753",
+      "block": 1046979
+    },
+    {
+      "step": 29,
+      "label": "v3: appoint Tzilo (cap 50, 1 draw)",
+      "txHash": "6021f200e57b555fb44021a91b0e351bc3e056ef252de0442bc41751716e9321",
+      "block": 1046984
+    },
+    {
+      "step": 30,
+      "label": "v3: appoint FooFoo (cap 50, 2 draws)",
+      "txHash": "8d1d42b35b61145586e4110bf733fb4a3b4c6a90920a7d996145e67e66eefebf",
+      "block": 1046989
+    }
+  ]
+}

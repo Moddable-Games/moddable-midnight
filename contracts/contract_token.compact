@@ -1,0 +1,304 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// Contract token with UTXO conversion, after MIP-0004 (Draft).
+//
+// Balances live in this contract's public state (MIP-0018 kind 2, a "ledger" token), and the
+// four MIP-0004 conversions move them in and out of native form under the token's color:
+//
+//   shield    balance -> a shielded coin in the recipient's wallet
+//   unshield  a shielded coin from the caller's wallet -> balance
+//   toUtxo    balance -> an unshielded UTXO at a wallet address
+//   fromUtxo  unshielded UTXOs from the caller's wallet -> balance
+//
+// Conversions never change totalSupply; utxoSupply counts what is out in native form. This is
+// also the route between shielded and unshielded: unshield, then toUtxo (or fromUtxo, then
+// shield). The ledger has no primitive that turns one coin into the other, because shielded and
+// unshielded tokens are different token types in separate pools.
+//
+// Family profile: the fungible token is the constructor's domain; non-fungible tokens are
+// serial-derived domains minted once with supply 1 (the ERC-1155 shape MIP-0018 describes).
+//
+// Deviations from MIP-0004, each deliberate:
+// - Accounts are hash-based: an account is H(tag, secret) and the caller proves the secret in
+//   the circuit. MIP-0004 inherits OpenZeppelin FungibleToken's accounts, whose caller is
+//   ownPublicKey(), a caller-supplied witness; with toUtxo that would let anyone move another
+//   account's balance to their own address. MIP-0004 already requires this pattern for admin.
+// - Because an account is not a coin key, shield takes the recipient's coin public key.
+// - Shielded coin nonces mix in the caller's secret, so a shield's recipient cannot be found
+//   by trying known keys (audit L-3). MIP-0004 derives them from public state.
+// - Conversions take a domain (validated against the fungible domain and the NFT set), so
+//   NFTs convert too. MIP-0004 reads one domain from state.
+// - approve/allowance/transferFrom and the optional burn are left out (no C2C yet).
+// - totalSupply and balanceOf are exported ledger state rather than circuits: with them the
+//   contract had 14 circuits, and preview refused the deploy ("1010: Invalid Transaction:
+//   Transaction would exhaust the block limits"; 12 deploy, 14 do not). Anyone reads
+//   supplyByDomain[d], or balances[balanceSlot(d, account)] with the pure balanceSlot().
+// - Events and metadata use the ledger-8 approximations in lib/ (MIP-0002, MIP-0018).
+
+include "lib/Events";
+include "lib/TokenMetadata";
+
+import Events;
+import TokenMetadata;
+
+export { eventLog, eventCount, EventType, ContractEvent, tokenMetadata, TokenMetadataPayload, metadataSlot };
+
+// ---------------------------------------------------------------------------
+// Ledger
+// ---------------------------------------------------------------------------
+
+export sealed ledger _name: Opaque<"string">;
+
+export sealed ledger _symbol: Opaque<"string">;
+
+export sealed ledger _decimals: Uint<8>;
+
+// The fungible token's domain separator (MIP-0004 `domain`).
+export sealed ledger domain: Bytes<32>;
+
+export sealed ledger admin: Bytes<32>;
+
+// Sealed: this deployment has no setMinter (MIP-0004's delegation is optional).
+export sealed ledger minter: Bytes<32>;
+
+// Balance per hash(domain, account).
+export ledger balances: Map<Bytes<32>, Uint<128>>;
+
+// Per domain: everything minted less burned, and the part of it held as native UTXOs.
+export ledger supplyByDomain: Map<Bytes<32>, Uint<128>>;
+
+export ledger utxoSupplyByDomain: Map<Bytes<32>, Uint<128>>;
+
+export ledger nftDomains: Set<Bytes<32>>;
+
+export ledger mintCounter: Counter;
+
+// ---------------------------------------------------------------------------
+// Accounts and roles
+// ---------------------------------------------------------------------------
+
+witness localSecretKey(): Bytes<32>;
+
+export circuit accountOf(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:mip4:account:"), sk]);
+}
+
+circuit caller(): Bytes<32> {
+  return disclose(accountOf(localSecretKey()));
+}
+
+export circuit nftDomain(serial: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:mip4:nft:"), serial]);
+}
+
+export circuit balanceSlot(d: Bytes<32>, account: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "moddable:mip4:balance:"), d, account]);
+}
+
+constructor(tokenName: Opaque<"string">, tokenSymbol: Opaque<"string">, tokenDecimals: Uint<8>, domainSep: Bytes<32>) {
+  _name = disclose(tokenName);
+  _symbol = disclose(tokenSymbol);
+  _decimals = disclose(tokenDecimals);
+  domain = disclose(domainSep);
+  const me = disclose(accountOf(localSecretKey()));
+  admin = me;
+  minter = me;
+}
+
+// ---------------------------------------------------------------------------
+// Internal accounting
+// ---------------------------------------------------------------------------
+
+circuit known(d: Bytes<32>): [] {
+  assert(d == domain || nftDomains.member(d), "Unknown token");
+}
+
+circuit readMap(m: Bytes<32>, which: Uint<8>): Uint<128> {
+  if (which == 0) {
+    return balances.member(m) ? balances.lookup(m) : 0 as Uint<128>;
+  }
+  if (which == 1) {
+    return supplyByDomain.member(m) ? supplyByDomain.lookup(m) : 0 as Uint<128>;
+  }
+  return utxoSupplyByDomain.member(m) ? utxoSupplyByDomain.lookup(m) : 0 as Uint<128>;
+}
+
+// MIP-0004 _creditBalance / _deductBalance: supply-neutral.
+circuit credit(d: Bytes<32>, account: Bytes<32>, amount: Uint<128>): [] {
+  const slot = balanceSlot(d, account);
+  balances.insert(slot, (readMap(slot, 0) + amount) as Uint<128>);
+}
+
+circuit deduct(d: Bytes<32>, account: Bytes<32>, amount: Uint<128>): [] {
+  const slot = balanceSlot(d, account);
+  const have = readMap(slot, 0);
+  assert(have >= amount, "Insufficient balance");
+  balances.insert(slot, (have - amount) as Uint<128>);
+}
+
+circuit addSupply(d: Bytes<32>, amount: Uint<128>): [] {
+  supplyByDomain.insert(d, (readMap(d, 1) + amount) as Uint<128>);
+}
+
+circuit addUtxoSupply(d: Bytes<32>, amount: Uint<128>): [] {
+  utxoSupplyByDomain.insert(d, (readMap(d, 2) + amount) as Uint<128>);
+}
+
+circuit subUtxoSupply(d: Bytes<32>, amount: Uint<128>): [] {
+  const have = readMap(d, 2);
+  assert(have >= amount, "More than is out as UTXOs");
+  utxoSupplyByDomain.insert(d, (have - amount) as Uint<128>);
+}
+
+struct NonceInput {
+  tag: Bytes<32>,
+  secret: Bytes<32>,
+  index: Uint<64>
+}
+
+// Unique (the counter never repeats) and secret (the caller's key is inside).
+circuit nextNonce(): Bytes<32> {
+  const index = mintCounter.read();
+  mintCounter.increment(1);
+  return disclose(persistentHash<NonceInput>(NonceInput { pad(32, "moddable:mip4:nonce:"), localSecretKey(), index }));
+}
+
+// ---------------------------------------------------------------------------
+// FungibleToken surface
+// ---------------------------------------------------------------------------
+
+export circuit name(): Opaque<"string"> {
+  return _name;
+}
+
+export circuit symbol(): Opaque<"string"> {
+  return _symbol;
+}
+
+export circuit decimals(): Uint<8> {
+  return _decimals;
+}
+
+export circuit tokenColor(d: Bytes<32>): Bytes<32> {
+  return tokenType(disclose(d), kernel.self());
+}
+
+export circuit transfer(d: Bytes<32>, to: Bytes<32>, amount: Uint<128>): [] {
+  const dd = disclose(d);
+  const recipient = disclose(to);
+  const value = disclose(amount);
+  known(dd);
+  assert(value > 0, "Amount must be positive");
+  assert(recipient != default<Bytes<32>>, "Recipient is the zero account");
+  deduct(dd, caller(), value);
+  credit(dd, recipient, value);
+  logEvent(EventType.Misc, dd, default<Bytes<32>>, value, pad(32, "mip-0004:transfer"));
+}
+
+// ---------------------------------------------------------------------------
+// Issuance (minter only)
+// ---------------------------------------------------------------------------
+
+circuit assertMinter(): [] {
+  assert(minter == caller(), "Caller is not the minter");
+}
+
+export circuit mint(to: Bytes<32>, amount: Uint<128>): [] {
+  assertMinter();
+  const recipient = disclose(to);
+  const value = disclose(amount);
+  assert(value > 0, "Amount must be positive");
+  assert(recipient != default<Bytes<32>>, "Recipient is the zero account");
+  credit(domain, recipient, value);
+  addSupply(domain, value);
+  logEvent(EventType.Misc, domain, default<Bytes<32>>, value, pad(32, "mip-0004:mint"));
+}
+
+export circuit mintNft(serial: Bytes<32>, to: Bytes<32>): Bytes<32> {
+  assertMinter();
+  const d = nftDomain(disclose(serial));
+  assert(d != domain, "Serial collides with the fungible domain");
+  assert(!nftDomains.member(d), "That token already exists");
+  assert(disclose(to) != default<Bytes<32>>, "Recipient is the zero account");
+  nftDomains.insert(d);
+  credit(d, disclose(to), 1);
+  addSupply(d, 1);
+  logEvent(EventType.Misc, d, default<Bytes<32>>, 1, pad(32, "mip-0004:mint"));
+  return d;
+}
+
+// ---------------------------------------------------------------------------
+// MIP-0004 conversions
+// ---------------------------------------------------------------------------
+
+// Returns the color only: the coin's nonce is secret (audit L-A). The daemon hands the
+// recipient its coin through the call's encryption-key mapping.
+export circuit shield(d: Bytes<32>, amount: Uint<64>, recipient: ZswapCoinPublicKey): Bytes<32> {
+  const dd = disclose(d);
+  const value = disclose(amount);
+  const to = disclose(recipient);
+  known(dd);
+  assert(value > 0, "Amount must be positive");
+  assert(to.bytes != default<Bytes<32>>, "Recipient is the zero key");
+  deduct(dd, caller(), value as Uint<128>);
+  addUtxoSupply(dd, value as Uint<128>);
+  const coin = mintShieldedToken(dd, value, nextNonce(), left<ZswapCoinPublicKey, ContractAddress>(to));
+  logEvent(EventType.ShieldedMint, dd, coin.color, value as Uint<128>, default<Bytes<32>>);
+  return coin.color;
+}
+
+export circuit toUtxo(d: Bytes<32>, amount: Uint<64>, recipient: UserAddress): Bytes<32> {
+  const dd = disclose(d);
+  const value = disclose(amount);
+  const to = disclose(recipient);
+  known(dd);
+  assert(value > 0, "Amount must be positive");
+  assert(to.bytes != default<Bytes<32>>, "Recipient is the zero address");
+  deduct(dd, caller(), value as Uint<128>);
+  addUtxoSupply(dd, value as Uint<128>);
+  const color = mintUnshieldedToken(dd, value, right<ContractAddress, UserAddress>(to));
+  logEvent(EventType.UnshieldedMint, dd, color, value as Uint<128>, to.bytes);
+  return color;
+}
+
+// The amount credited is the coin's own value, so it cannot disagree with what was paid in.
+// The color check stops a coin of any other token being credited here.
+export circuit unshield(d: Bytes<32>, coin: ShieldedCoinInfo): [] {
+  const dd = disclose(d);
+  const c = disclose(coin);
+  known(dd);
+  assert(c.value > 0, "Amount must be positive");
+  assert(c.color == tokenType(dd, kernel.self()), "Coin is not this token");
+  receiveShielded(c);
+  credit(dd, caller(), c.value);
+  subUtxoSupply(dd, c.value);
+  logEvent(EventType.ShieldedReceive, dd, c.color, c.value, default<Bytes<32>>);
+}
+
+export circuit fromUtxo(d: Bytes<32>, amount: Uint<128>): [] {
+  const dd = disclose(d);
+  const value = disclose(amount);
+  known(dd);
+  assert(value > 0, "Amount must be positive");
+  const color = tokenType(dd, kernel.self());
+  receiveUnshielded(color, value);
+  credit(dd, caller(), value);
+  subUtxoSupply(dd, value);
+  logEvent(EventType.UnshieldedReceive, dd, color, value, default<Bytes<32>>);
+}
+
+// ---------------------------------------------------------------------------
+// Metadata declarations (MIP-0018: kind 2 for balances; kinds 0 and 1 describe the same
+// domain's native forms, which MIP-0018 section 4 links as one asset)
+// ---------------------------------------------------------------------------
+
+// Only tokens this contract issued (audit L-2).
+export circuit publishMetadata(payload: TokenMetadataPayload): [] {
+  assert(admin == caller(), "Caller is not the admin");
+  const p = disclose(payload);
+  assert(p.kind <= 2, "This contract does not issue kind 3");
+  known(p.domainSep);
+  publishTokenMetadata(p, p.kind, 2);
+}

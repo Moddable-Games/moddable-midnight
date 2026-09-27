@@ -3,17 +3,22 @@
 //
 //   node wallet-daemon/request.mjs '<request json>'            queue it for approval in the page
 //   node wallet-daemon/request.mjs '<request json>' --approve  queue and approve (operator use)
+//   node wallet-daemon/request.mjs '<json>' --to /api/token-actions --approve
+//                                         any route that queues a request (token actions,
+//                                         /api/treasury-v3, /api/agents/<wallet>/appoint, ...)
 //
 // The daemon accepts writes only from the wallet page's origin, so this sends that origin.
 // It is for the operator on this machine; agents get their own route with limits.
 const DAEMON = "http://127.0.0.1:9900";
 const ORIGIN = "http://localhost:5173";
 
-const [json, flag] = process.argv.slice(2);
+const [json, ...flags] = process.argv.slice(2);
 if (!json) {
-  console.error("usage: node wallet-daemon/request.mjs '<request json>' [--approve]");
+  console.error("usage: node wallet-daemon/request.mjs '<request json>' [--to <route>] [--approve]");
   process.exit(2);
 }
+const route = flags.includes("--to") ? flags[flags.indexOf("--to") + 1] : "/api/requests";
+const flag = flags.includes("--approve") ? "--approve" : null;
 
 async function post(path, body) {
   const res = await fetch(DAEMON + path, {
@@ -26,7 +31,7 @@ async function post(path, body) {
   return out;
 }
 
-const request = await post("/api/requests", JSON.parse(json));
+const request = await post(route, JSON.parse(json));
 console.log(`queued ${request.id}`);
 if (flag !== "--approve") process.exit(0);
 

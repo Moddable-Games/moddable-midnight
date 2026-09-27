@@ -50,28 +50,64 @@
   ],
   "features": [
     {
-      "title": "Four wallets, one process",
-      "body": "The organiser's wallet and the three agents', built exactly as Midnight's wallet CLI builds them, with sync progress saved and resumed so a restart takes seconds, not minutes."
+      "id": "prices",
+      "title": "Valued like a real treasury",
+      "body": "Balances in dollars, not just token counts. NIGHT is priced live, your own tokens at the prices you set, and every figure says it is simulated until mainnet.",
+      "points": [
+        "Live NIGHT price",
+        "Your own prices for your own tokens",
+        "The same totals for every person and agent"
+      ],
+      "image": "img/wallet-app-settings.png",
+      "alt": "Settings: the live NIGHT price from CoinGecko, a fallback price, and a price for each of the organisation's own tokens"
     },
     {
-      "title": "Nothing moves without a human",
-      "body": "Every payment, deploy and contract call waits in the page's Approvals panel. The page is the only thing allowed to approve, and only from this machine."
+      "id": "operator",
+      "title": "One key in charge",
+      "body": "The operator holds the master key. Launching an agent takes four steps: fund it, register it for fees, appoint it to the treasury, give it a session.",
+      "points": [
+        "New agent wallets made on your machine",
+        "A checklist per agent, not a manual",
+        "Treasury pause and revoke-all in one place"
+      ],
+      "image": "img/wallet-app-operator.png",
+      "alt": "The operator view: the master key card with NIGHT, DUST and addresses, and a setup checklist for each agent"
     },
     {
-      "title": "Agents with spending limits",
-      "body": "Each agent has its own token and can spend only from its own wallet. Small transfers to the crew and treasury draws run at once; anything larger, or to an outside address, waits for the organiser."
+      "id": "agents",
+      "title": "Limits an agent cannot talk its way past",
+      "body": "Spending caps, the contracts an agent may call and the addresses it may never pay are checked before anything is signed. Treasury limits go further: the contract itself enforces them.",
+      "points": [
+        "Per-payment and daily caps",
+        "Whitelisted contracts, blocked addresses",
+        "Private treasury terms, checked in zero knowledge"
+      ],
+      "image": "img/wallet-app-agents.png",
+      "alt": "An agent's page: its balances, spending limits, the contracts it may call, its private treasury terms and its sessions"
     },
     {
-      "title": "NIGHT, MCC and shielded NFTs",
-      "body": "Send NIGHT and Midnight City Credits to any address, and Agent Smart Contracts to shielded addresses, which carry the recipient's key so they can see what arrives."
+      "id": "activity",
+      "title": "A record you can search",
+      "body": "Every request from every wallet, with who asked, which rule decided it and the transaction it became. Filter it, search it, approve from it.",
+      "points": [
+        "Refused requests never reach your queue",
+        "Each entry links to the public explorer",
+        "Search by agent, contract or transaction"
+      ],
+      "image": "img/wallet-app-activity.png",
+      "alt": "The activity log with search, status filters and a list of confirmed treasury and metadata requests"
     },
     {
-      "title": "Balances nobody has to host",
-      "body": "Balances stream from Midnight's public indexer, so they show even with the wallet process stopped. Token names and images appear only once checked against digests stored on-chain."
-    },
-    {
-      "title": "Contracts too",
-      "body": "The same wallets deploy and call contracts with Midnight's standard libraries: they deployed the crew treasury, minted its supply and appointed the agents."
+      "id": "tokens",
+      "title": "Issue any kind of token",
+      "body": "Public or private, as coins or as balances inside a contract, fungible or one of a kind. Deploy, mint, convert between private and public, and publish metadata without leaving the app.",
+      "points": [
+        "All four Midnight token types",
+        "NFTs for every type",
+        "Built on the latest token proposals"
+      ],
+      "image": "img/wallet-app-tokens.png",
+      "alt": "The tokens view: contract cards for each token type with mint, NFT, burn and metadata actions and their token lists"
     }
   ],
   "transactions": [
@@ -119,6 +155,113 @@
       "what": "The same NFT sent back to Floyd",
       "block": 993666,
       "hash": "00d288db018f31bc44ed3b7940852e4e17b4464477df5cb94bcb8c302266cf2f"
+    }
+  ],
+  "hero": {
+    "title": "The wallet for teams that run AI agents",
+    "body": "One private treasury for your people and your agents. Every agent gets its own wallet, its own limits and its own sessions, and nothing leaves a wallet without a rule or a person saying yes.",
+    "primary": {
+      "label": "Run it yourself",
+      "href": "#run"
+    },
+    "secondary": {
+      "label": "See how it works",
+      "href": "#features"
+    }
+  },
+  "phone": [
+    {
+      "image": "img/wallet-app-phone.png",
+      "alt": "The dashboard on a phone, with the tab bar at the bottom"
+    },
+    {
+      "image": "img/wallet-app-phone-deploy.png",
+      "alt": "Deploying a token on a phone: a bottom sheet with the four token types"
+    }
+  ],
+  "controls": [
+    {
+      "icon": "gauge",
+      "title": "Spending caps",
+      "where": "Wallet",
+      "body": "What an agent may pay without asking, per payment and per day."
+    },
+    {
+      "icon": "file-check",
+      "title": "Whitelisted contracts",
+      "where": "Wallet",
+      "body": "The only contracts an agent may call."
+    },
+    {
+      "icon": "ban",
+      "title": "Blocked addresses",
+      "where": "Wallet and chain",
+      "body": "Payees no agent may reach, also written into the treasury contract."
+    },
+    {
+      "icon": "timer",
+      "title": "Sessions",
+      "where": "Wallet",
+      "body": "Tokens that expire, with their own budget of requests and NIGHT."
+    },
+    {
+      "icon": "lock",
+      "title": "Private caps",
+      "where": "Chain",
+      "body": "Each agent's cap per draw, committed in its mandate and proven on every draw."
+    },
+    {
+      "icon": "rotate",
+      "title": "Revoke all",
+      "where": "Chain",
+      "body": "One transaction ends every mandate; re-appoint the agents you keep."
+    }
+  ],
+  "multisig": {
+    "title": "Shared control is next",
+    "body": "Today one operator key approves what agents cannot do alone. Next, approvals can take a quorum: of people, of agents, or of both.",
+    "items": [
+      {
+        "title": "Operators together",
+        "body": "Two of three people approve a large payment or a new agent."
+      },
+      {
+        "title": "Agents that co-sign",
+        "body": "An agent's spend clears when a second agent agrees, within limits people set."
+      },
+      {
+        "title": "Mixed quorums",
+        "body": "An agent proposes, another checks, a person has the final say above a threshold."
+      }
+    ],
+    "note": "Planned, not built. The treasury's anonymous mandates are the starting point: a quorum is a set of mandates that must all prove the same request."
+  },
+  "audiences": [
+    {
+      "title": "Game studios",
+      "body": "Pay the agents that run in your worlds, and keep their spending inside the rules of the game."
+    },
+    {
+      "title": "Treasuries and DAOs",
+      "body": "Give working groups and their agents budgets that the chain enforces, without publishing who holds which budget."
+    },
+    {
+      "title": "Agent platforms",
+      "body": "Hand each agent a wallet and a session, and let people step in only when a rule says so."
+    }
+  ],
+  "run": [
+    {
+      "label": "Get the code",
+      "command": "git clone https://github.com/Moddable-Games/moddable-midnight && cd moddable-midnight && npm install"
+    },
+    {
+      "label": "Start the wallet process",
+      "command": "node wallet-daemon/server.mjs"
+    },
+    {
+      "label": "Open the app",
+      "command": "npm run wallet"
     }
   ]
 }

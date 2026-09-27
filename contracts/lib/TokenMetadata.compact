@@ -1,0 +1,54 @@
+// MIP-0018 (On-Chain Token Metadata Emission), approximated for ledger 8.
+//
+// MIP-0018 publishes metadata as MIP-0002 `Misc` events named
+// pad(32, "mip-0018:token-metadata[v1]"), each carrying a 256-byte TokenMetadataPayload.
+// Events need ledger 9 (see Events.compact), so here the same payload struct is kept in
+// contract state, last write wins per (domainSep, kind, key) as MIP-0018 section 6.2 folds
+// it, and every write is also logged as a Misc event carrying the event name.
+//
+// The payload layout and validation follow MIP-0018 sections 2, 3 and 5:
+//   kind     0 native unshielded, 1 native shielded, 2 ledger unshielded, 3 ledger shielded
+//   valType  0 opaque, 1 UTF-8 string, 2 unsigned integer, 3 JSON, 4 URI, 5 null
+//   valLen   meaningful bytes of `value`, at most 189
+// UTF-8, JSON and URI well-formedness are consumer-side checks; a circuit cannot parse them.
+module TokenMetadata {
+  import CompactStandardLibrary;
+  // Events must be included by the contract before this module.
+  import Events;
+
+  export struct TokenMetadataPayload {
+    domainSep: Bytes<32>,
+    kind: Uint<8>,
+    key: Bytes<32>,
+    valType: Uint<8>,
+    valLen: Uint<8>,
+    value: Bytes<189>
+  }
+
+  // Current value per hash(domainSep, kind, key).
+  export ledger tokenMetadata: Map<Bytes<32>, TokenMetadataPayload>;
+
+  struct MetadataSlot {
+    tag: Bytes<32>,
+    domainSep: Bytes<32>,
+    kind: Uint<8>,
+    key: Bytes<32>
+  }
+
+  export circuit metadataSlot(domainSep: Bytes<32>, kind: Uint<8>, key: Bytes<32>): Bytes<32> {
+    return persistentHash<MetadataSlot>(MetadataSlot { pad(32, "mip-0018:slot"), domainSep, kind, key });
+  }
+
+  // Validates and stores one declaration. The caller authorises it and decides which kinds
+  // this contract may describe: a contract only speaks for its own tokens (MIP-0018 6.1).
+  export circuit publishTokenMetadata(p: TokenMetadataPayload, allowedKindA: Uint<8>, allowedKindB: Uint<8>): [] {
+    const payload = disclose(p);
+    assert(payload.kind == allowedKindA || payload.kind == allowedKindB, "This contract does not issue that kind");
+    assert(payload.valType <= 5, "Reserved val-type");
+    assert(payload.valLen <= 189, "val-len over 189");
+    assert(payload.key != default<Bytes<32>>, "Empty key");
+    assert(payload.valType != 5 || payload.valLen == 0, "Null carries no bytes");
+    tokenMetadata.insert(metadataSlot(payload.domainSep, payload.kind, payload.key), payload);
+    logEvent(EventType.Misc, payload.domainSep, default<Bytes<32>>, 0, pad(32, "mip-0018:token-metadata[v1]"));
+  }
+}

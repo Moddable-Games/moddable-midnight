@@ -280,6 +280,66 @@ our wallet to the city's ShieldedToken Broker, which publishes only a shielded a
 refusals are correct behaviour, not a wallet bug. The broker's real route, a trade by the
 agent inside the game, fails with "sender wallet not found" (city finding 25).
 
+### 14. Moving a token between shielded and unshielded form (27 September)
+
+**Asked:** "What are Midnight Improvement Proposals MIP-0011 shielded native tokens and MIP-0014
+unshielded native tokens?"
+
+**Returned:** the docs' token-type matrix (shielded and unshielded, ledger and contract), and the
+tokens overview: "There is no mechanism to move a token between shielded and unshielded state,
+shielded and unshielded tokens are distinct token types, tracked in separate pools." The MIPs
+themselves were read in full from `midnightntwrk/midnight-improvement-proposals`: MIP-0014 says
+the same and leaves conversion "to a conversion-focused proposal"; MIP-0004's `unshield` and
+`toUtxo` are that conversion, through a contract's balance.
+
+**What it changed:** the answer to "can a token move from shielded to unshielded" is "not by
+itself; through a MIP-0004 contract, yes", run on preview (the Tokens page, steps 10 to 13).
+
+### 15. Depositing a shielded coin into a contract
+
+**Asked:** "How does a DApp call a Compact circuit that uses receiveShielded(coin) so that the
+user's wallet deposits a shielded coin into the contract, and how does midnight-js balance the
+transaction?"
+
+**Returned:** midnight-js's own e2e test "should deposit shielded coin via receiveShielded (issue
+#686)", the runtime's `receiveShielded` creating the contract-owned output, the ledger's
+token-vault tests, and a midnight-node toolkit change that only recently learned to fund such
+calls. Issue #686 was read: fixed in midnight-js after 4.0.1 (our 4.1.1 has the fix, checked in
+the installed `dist`).
+
+**What it changed:** the deposit path was expected to work, and on preview it did, once the
+shielded wallet was moved to 3.0.2 (friction finding 48).
+
+### 16. receiveUnshielded from a wallet
+
+**Asked:** "How does receiveUnshielded work in a Compact contract and how does the wallet supply
+the unshielded tokens when calling the circuit?"
+
+**Returned:** midnight-js's `receiveUnshieldedTest` e2e: `submitCallTx` alone, the wallet adding
+the inputs while balancing. **What it changed:** `fromUtxo` needed no special handling (step 13).
+
+### 17. Is there a deploy size limit?
+
+**Asked:** "What is the maximum transaction size or block limit that restricts how many circuits
+(verifier keys) a contract deployment can include on Midnight?"
+
+**Returned:** the usage-limits page: 1 MiB per transaction, and per block 200,000 broadcast
+bytes, 50,000 persistent bytes written, 1 s read and 1 s compute. Verifier keys are about 2.1 KB
+each and persist in contract state. **What it changed:** it explained MIP-0004's "15 verifier
+keys, at the devnet block limit"; preview then refused our 14-circuit contract (friction 47).
+
+### 18. Which toolchain runs `emit`, and on which network?
+
+**Asked:** "What is the current compatibility support matrix for compact compiler 0.34.0,
+compact-runtime 0.19.0, ledger version and midnight-js version on preview and preprod networks?"
+
+**Returned:** the 0.34.0 release notes ("works with a Midnight ledger 9 blockchain ... not yet
+deployed") and the support matrix (preview, preprod and mainnet: compiler 0.31.1, runtime 0.16.0,
+Midnight.js 4.1.1). The docs' contract-call page confirms the three public networks run ledger 8.
+
+**What it changed:** MIP-0002 and MIP-0018 are approximated in contract state rather than emitted
+(friction 46), and the contracts stay on 0.31.1.
+
 ## Assessment so far
 
 **Strong:**

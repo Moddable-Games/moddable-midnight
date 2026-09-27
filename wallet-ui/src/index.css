@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/* Moddable Wallet tokens. Brand colours and faces from web/src/index.css (moddable-web _mg.css);
+   the app palette is cool paper and navy ink, with cosmic navy reserved for the vault card. */
+@font-face { font-family: "Rajdhani"; font-weight: 600; font-display: swap; src: url("./assets/fonts/rajdhani-600.woff2") format("woff2"); }
+@font-face { font-family: "Rajdhani"; font-weight: 700; font-display: swap; src: url("./assets/fonts/rajdhani-700.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 400; font-display: swap; src: url("./assets/fonts/barlow-400.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 500; font-display: swap; src: url("./assets/fonts/barlow-500.woff2") format("woff2"); }
+@font-face { font-family: "Barlow"; font-weight: 600; font-display: swap; src: url("./assets/fonts/barlow-600.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 400; font-display: swap; src: url("./assets/fonts/jetbrains-mono-400.woff2") format("woff2"); }
+
+@theme {
+  --font-sans: "Barlow", system-ui, sans-serif;
+  --font-display: "Rajdhani", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-paper: #eef1f7;
+  --color-surface: #ffffff;
+  --color-sunken: #f5f7fb;
+  --color-ink: #10132b;
+  --color-ink-soft: #4a5170;
+  --color-ink-faint: #8a90a8;
+  --color-line: #e1e5ef;
+
+  --color-vault: #0a0d2a;
+  --color-vault-2: #131a46;
+  --color-cosmic: #1a3680;
+  --color-cosmic-soft: #e7ecf8;
+  --color-glow: #6fb5ff;
+
+  --color-ok: #3a9928;
+  --color-ok-soft: #e7f4e3;
+  --color-wait: #c98a14;
+  --color-wait-soft: #fbf1dc;
+  --color-bad: #d11a1a;
+  --color-bad-soft: #fbe5e5;
+
+  --radius-vault: 1.75rem;
+  --radius-panel: 1.25rem;
+  --radius-control: 0.875rem;
+}
+
+@layer base {
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, p, li { text-wrap: pretty; }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.005em; line-height: 1.1; }
+  :focus-visible { outline: 2px solid var(--color-glow); outline-offset: 2px; border-radius: 6px; }
+  button { cursor: pointer; }
+  button:disabled { cursor: not-allowed; }
+}
+
+@layer components {
+  /* Money and counts: Rajdhani's squared figures, aligned in columns. */
+  .figure { font-family: var(--font-display); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: 0.01em; }
+
+  /* The one bold surface: the vault card, with the Moddable hex grid drifting behind. */
+  .vault {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    background: radial-gradient(120% 140% at 85% 0%, var(--color-vault-2) 0%, var(--color-vault) 60%);
+    color: #fff;
+    border-radius: var(--radius-vault);
+  }
+  .vault::before {
+    content: "";
+    position: absolute;
+    inset: -30% -10%;
+    z-index: -1;
+    background-image: url("./assets/hex-grid-blue.svg");
+    background-size: 56px 64px;
+    opacity: 0.28;
+    animation: hex-drift 40s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) { .vault::before { animation: none; } }
+
+  /* DUST fill and similar meters, drawn with <meter> so no inline widths are needed. */
+  meter.gauge { appearance: none; width: 100%; height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.14); overflow: hidden; }
+  meter.gauge::-webkit-meter-bar { background: rgba(255, 255, 255, 0.14); border: 0; border-radius: 999px; }
+  meter.gauge::-webkit-meter-optimum-value { background: var(--color-glow); border-radius: 999px; }
+  meter.gauge::-moz-meter-bar { background: var(--color-glow); border-radius: 999px; }
+  meter.gauge.on-light { background: var(--color-line); }
+  meter.gauge.on-light::-webkit-meter-bar { background: var(--color-line); }
+  meter.gauge.on-light::-webkit-meter-optimum-value { background: var(--color-cosmic); }
+  meter.gauge.on-light::-moz-meter-bar { background: var(--color-cosmic); }
+
+  .scroll-x { overflow-x: auto; scrollbar-width: none; overscroll-behavior-x: contain; }
+  .scroll-x::-webkit-scrollbar { display: none; }
+
+  .safe-bottom { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+}
+
+@keyframes hex-drift {
+  from { background-position: 0 0; }
+  to { background-position: 56px 64px; }
+}
+
+@keyframes sheet-in-right { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes sheet-in-up { from { transform: translateY(32px); opacity: 0; } to { transform: none; opacity: 1; } }
+.sheet-enter { animation: sheet-in-up 180ms ease-out; }
+@media (min-width: 768px) { .sheet-enter { animation: sheet-in-right 180ms ease-out; } }
+@media (prefers-reduced-motion: reduce) { .sheet-enter { animation: none; } }

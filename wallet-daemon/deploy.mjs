@@ -8,12 +8,14 @@
 // Contracts resolve the repo's single copy of compact-runtime and the ledger, the same one
 // the wallet uses (finding 25). Each wallet keeps its own private state per contract.
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { randomBytes } from "node:crypto";
+import { randomBytes, createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
 import { setNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
 import { deployContract, submitCallTx } from "@midnight-ntwrk/midnight-js-contracts";
 import { createCircuitContext } from "@midnight-ntwrk/compact-runtime";
 import { crewWitnesses, createCrewPrivateState } from "../src/crew-witnesses.ts";
+import { secretWitnesses, secretState, noteBookWitnesses, noteBookState, crewV3Witnesses, crewV3State } from "../src/token-witnesses.ts";
+import { notesOf, mandateTermsOf } from "./books.mjs";
 import { CompiledContract } from "@midnight-ntwrk/compact-js";
 import { NodeZkConfigProvider } from "@midnight-ntwrk/midnight-js-node-zk-config-provider";
 import { httpClientProofProvider } from "@midnight-ntwrk/midnight-js-http-client-proof-provider";
@@ -28,15 +30,53 @@ const ROOT = new URL("../", import.meta.url).pathname;
 const STATE_DIR = new URL("./state/", import.meta.url).pathname;
 const CREW_SECRETS_FILE = STATE_DIR + "crew-secrets.json";
 
-/** Every contract the daemon can deploy or call, and where each wallet's private state comes from. */
-const CONTRACTS = {
-  mint_spike: { dir: CONTRACTS_DIR + "mint_spike", witnesses: null, privateState: () => ({}) },
+/**
+ * Every contract the daemon can deploy or call, and where each wallet's private state comes
+ * from. `privateState(wallet, contractAddress, extra)` is rebuilt before every call, so note
+ * books and mandate terms are always current. `extra.nextNonce` is a nonce chosen for this
+ * call, when the call creates a note.
+ */
+const managed = (name) => ROOT + `src/managed/${name}`;
+export const CONTRACTS = {
+  // `keepStored`: private state written once and kept (v1 and v2 behaviour).
+  mint_spike: { dir: CONTRACTS_DIR + "mint_spike", witnesses: null, keepStored: true, privateState: () => ({}) },
   crew_treasury: {
-    dir: ROOT + "src/managed/crew_treasury",
+    dir: managed("crew_treasury"),
     witnesses: crewWitnesses,
+    keepStored: true,
     privateState: (walletName) => crewSecrets(walletName),
   },
+  native_unshielded: {
+    dir: managed("native_unshielded"), witnesses: secretWitnesses,
+    privateState: (wallet) => secretState(contractSecret(wallet, "native_unshielded")),
+  },
+  native_shielded: {
+    dir: managed("native_shielded"), witnesses: secretWitnesses,
+    privateState: (wallet) => secretState(contractSecret(wallet, "native_shielded")),
+  },
+  contract_token: {
+    dir: managed("contract_token"), witnesses: secretWitnesses,
+    privateState: (wallet) => secretState(contractSecret(wallet, "contract_token")),
+  },
+  private_ledger: {
+    dir: managed("private_ledger"), witnesses: noteBookWitnesses,
+    privateState: (wallet, address, extra = {}) =>
+      noteBookState(contractSecret(wallet, "private_ledger"), address ? notesOf(address, wallet) : [], extra.nextNonce ?? randomBytes(32)),
+  },
+  crew_treasury_v3: {
+    dir: managed("crew_treasury_v3"), witnesses: crewV3Witnesses,
+    privateState: (wallet, address) => crewV3State(contractSecret(wallet, "crew_treasury_v3"), address ? mandateTermsOf(address, wallet) : undefined),
+  },
 };
+
+/**
+ * A wallet's secret for one contract type, derived from its crew secret so each contract
+ * type sees an unrelated value. Never leaves the daemon.
+ */
+export function contractSecret(walletName, contractName) {
+  const { secretKey } = crewSecrets(walletName);
+  return new Uint8Array(createHash("sha256").update(`moddable:contract-secret:${contractName}:`).update(secretKey).digest());
+}
 
 /**
  * Each wallet's crew secret and mandate nonce, made once and kept only in the daemon's state
@@ -129,14 +169,14 @@ function providersFor(handle, managedDir, name, onPhase) {
 const privateStateIdFor = (name, handle) => `${name}:${handle.name}`;
 
 /** Deploys a contract. Returns its address and the deploy transaction. */
-export async function deploy(handle, name, { args = [], onPhase = () => {} } = {}) {
+export async function deploy(handle, name, { args = [], onPhase = () => {}, extra = {} } = {}) {
   const { entry, managedDir, compiledContract } = await loadContract(name);
   const providers = providersFor(handle, managedDir, name, onPhase);
   onPhase("building");
   const deployed = await deployContract(providers, {
     compiledContract,
     privateStateId: privateStateIdFor(name, handle),
-    initialPrivateState: entry.privateState(handle.name),
+    initialPrivateState: entry.privateState(handle.name, null, extra),
     args,
   });
   const pub = deployed.deployTxData.public;
@@ -148,13 +188,18 @@ export async function deploy(handle, name, { args = [], onPhase = () => {} } = {
  * call sends shielded coins to: without their encryption keys the coins are created but the
  * recipients can never see them (notes/KAPA-QUERIES.md, query 11).
  */
-export async function call(handle, name, contractAddress, circuit, args = [], { onPhase = () => {}, recipients = [] } = {}) {
+export async function call(handle, name, contractAddress, circuit, args = [], { onPhase = () => {}, recipients = [], extra = {} } = {}) {
   const { entry, managedDir, compiledContract } = await loadContract(name);
   const providers = providersFor(handle, managedDir, name, onPhase);
   const privateStateId = privateStateIdFor(name, handle);
   providers.privateStateProvider.setContractAddress(contractAddress);
-  if (!(await providers.privateStateProvider.get(privateStateId))) {
-    await providers.privateStateProvider.set(privateStateId, entry.privateState(handle.name));
+  // The newer contracts rebuild private state from the daemon's books before every call.
+  if (entry.keepStored) {
+    if (!(await providers.privateStateProvider.get(privateStateId))) {
+      await providers.privateStateProvider.set(privateStateId, entry.privateState(handle.name));
+    }
+  } else {
+    await providers.privateStateProvider.set(privateStateId, entry.privateState(handle.name, contractAddress, extra));
   }
   const additionalCoinEncPublicKeyMappings = recipients.length
     ? new Map(recipients.map((r) => [r.zswapKeys.coinPublicKey, r.zswapKeys.encryptionPublicKey]))
@@ -173,6 +218,7 @@ export async function call(handle, name, contractAddress, circuit, args = [], { 
  * Nothing is submitted; the agent's secret never leaves this process.
  */
 export async function mandateCommitment(agentName, contractAddress) {
+  // v2 only; v3 appointments use agentKeyV3.
   const { module } = await loadContract("crew_treasury");
   const publicData = indexerPublicDataProvider(PREVIEW.indexer, PREVIEW.indexerWS);
   const onChain = await publicData.queryContractState(contractAddress);
@@ -181,4 +227,19 @@ export async function mandateCommitment(agentName, contractAddress) {
   const context = createCircuitContext(contractAddress, "0".repeat(64), onChain.data, crewSecrets(agentName));
   const out = await contract.circuits.makeMandateCommitment(context);
   return out.result;
+}
+
+/** The key an agent hands the v3 organiser to be appointed: agentKey(secret, crewId). */
+export async function agentKeyV3(agentName, crewId) {
+  const { module } = await loadContract("crew_treasury_v3");
+  return module.pureCircuits.agentKey(contractSecret(agentName, "crew_treasury_v3"), crewId);
+}
+
+/** Reads a deployed contract's public state through its compiled ledger() decoder. */
+export async function readLedger(name, contractAddress) {
+  const { module } = await loadContract(name);
+  const publicData = indexerPublicDataProvider(PREVIEW.indexer, PREVIEW.indexerWS);
+  const onChain = await publicData.queryContractState(contractAddress);
+  if (!onChain) throw new Error(`no contract at ${contractAddress}`);
+  return { ledger: module.ledger(onChain.data), module };
 }

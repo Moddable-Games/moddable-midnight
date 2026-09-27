@@ -1,0 +1,193 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// Native shielded token issuer, after MIP-0011 (Proposed), Family profile with the supply
+// accounting and derived-nonce extensions.
+//
+// The contract mints and burns; it is not a balance keeper. Coins are Zswap shielded UTXOs
+// that move wallet to wallet with no contract involved. Amounts and owners of those moves
+// are hidden; mint amounts are public (the ledger's shieldedMints effect).
+//
+// Fungible tokens use any domain. A non-fungible token is a domain derived from a serial,
+// minted exactly once with value 1.
+//
+// Contract-minted coins carry no ciphertext of their own. A wallet sees one only if the
+// minting transaction was built with the recipient's encryption key (midnight-js
+// additionalCoinEncPublicKeyMappings), which the wallet daemon supplies (Kapa query 11).
+//
+// Deviations from MIP-0011, each deliberate:
+// - Mint and burn are gated by hash-based issuer authentication, as MIP-0011 requires of a
+//   consuming contract.
+// - Only the derived-nonce mint is exposed, and the issuer's secret is inside the nonce, so the
+//   recipient cannot be found by trying known keys (audit L-C). MIP-0011's derived nonce comes
+//   from public state and is recipient-public.
+// - Recipients are wallets only; minting to another contract fails until contract-to-contract
+//   calls land, as MIP-0011 notes.
+// - Events and metadata use the ledger-8 approximations in lib/ (MIP-0002, MIP-0018).
+
+include "lib/Events";
+include "lib/TokenMetadata";
+
+import Events;
+import TokenMetadata;
+
+export { eventLog, eventCount, EventType, ContractEvent, tokenMetadata, TokenMetadataPayload, metadataSlot };
+
+// ---------------------------------------------------------------------------
+// Ledger
+// ---------------------------------------------------------------------------
+
+export sealed ledger _name: Opaque<"string">;
+
+export sealed ledger _symbol: Opaque<"string">;
+
+export sealed ledger _decimals: Uint<8>;
+
+export sealed ledger issuer: Bytes<32>;
+
+// Derived-nonce chain: a counter that never repeats, hashed with the issuer's secret.
+export ledger nonceCounter: Counter;
+
+// Supply accounting: minted is exact, burned counts contract-mediated burns only, so
+// minted - burned is an upper bound on what circulates.
+export ledger mintedByDomain: Map<Bytes<32>, Uint<128>>;
+
+export ledger burnedByDomain: Map<Bytes<32>, Uint<128>>;
+
+export ledger nftDomains: Set<Bytes<32>>;
+
+// ---------------------------------------------------------------------------
+// Authentication
+// ---------------------------------------------------------------------------
+
+witness localSecretKey(): Bytes<32>;
+
+export circuit issuerKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:mip11:issuer:"), sk]);
+}
+
+circuit assertIssuer(): [] {
+  assert(disclose(issuer == issuerKey(localSecretKey())), "Caller is not the issuer");
+}
+
+constructor(tokenName: Opaque<"string">, tokenSymbol: Opaque<"string">, tokenDecimals: Uint<8>) {
+  _name = disclose(tokenName);
+  _symbol = disclose(tokenSymbol);
+  _decimals = disclose(tokenDecimals);
+  issuer = disclose(issuerKey(localSecretKey()));
+}
+
+// ---------------------------------------------------------------------------
+// Metadata (MIP-0011)
+// ---------------------------------------------------------------------------
+
+export circuit name(): Opaque<"string"> {
+  return _name;
+}
+
+export circuit symbol(): Opaque<"string"> {
+  return _symbol;
+}
+
+export circuit decimals(): Uint<8> {
+  return _decimals;
+}
+
+export circuit tokenColor(domain: Bytes<32>): Bytes<32> {
+  return tokenType(disclose(domain), kernel.self());
+}
+
+export circuit nftDomain(serial: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:mip11:nft:"), serial]);
+}
+
+// Supply extension: an upper bound on circulating supply.
+export circuit totalSupply(domain: Bytes<32>): Uint<128> {
+  const d = disclose(domain);
+  const minted = mintedByDomain.member(d) ? mintedByDomain.lookup(d) : 0 as Uint<128>;
+  const burned = burnedByDomain.member(d) ? burnedByDomain.lookup(d) : 0 as Uint<128>;
+  return (minted - burned) as Uint<128>;
+}
+
+// ---------------------------------------------------------------------------
+// Issuance
+// ---------------------------------------------------------------------------
+
+struct NonceInput {
+  tag: Bytes<32>,
+  secret: Bytes<32>,
+  index: Uint<64>
+}
+
+// Tagged, so derived nonces never collide with ones a caller could pick; secret, because the
+// issuer's key is inside; unique, because the counter never repeats.
+circuit nextNonce(): Bytes<32> {
+  const index = nonceCounter.read();
+  nonceCounter.increment(1);
+  return disclose(persistentHash<NonceInput>(NonceInput { pad(32, "moddable:mip11:nonce:"), localSecretKey(), index }));
+}
+
+circuit issue(domain: Bytes<32>, recipient: ZswapCoinPublicKey, amount: Uint<64>): Bytes<32> {
+  assert(recipient.bytes != default<Bytes<32>>, "Recipient is the zero key");
+  assert(amount > 0, "Amount must be positive");
+  const coin = mintShieldedToken(domain, amount, nextNonce(), left<ZswapCoinPublicKey, ContractAddress>(recipient));
+  const before = mintedByDomain.member(domain) ? mintedByDomain.lookup(domain) : 0 as Uint<128>;
+  mintedByDomain.insert(domain, (before + amount) as Uint<128>);
+  // The commitment is what the ledger records; the owner stays out of the log.
+  logEvent(EventType.ShieldedMint, domain, coin.color, amount as Uint<128>, default<Bytes<32>>);
+  return coin.color;
+}
+
+export circuit mint(domain: Bytes<32>, recipient: ZswapCoinPublicKey, amount: Uint<64>): Bytes<32> {
+  assertIssuer();
+  assert(!nftDomains.member(disclose(domain)), "That domain is a one-of-a-kind token");
+  return issue(disclose(domain), disclose(recipient), disclose(amount));
+}
+
+export circuit mintNft(serial: Bytes<32>, recipient: ZswapCoinPublicKey): Bytes<32> {
+  assertIssuer();
+  const domain = nftDomain(disclose(serial));
+  assert(!nftDomains.member(domain), "That token already exists");
+  assert(!mintedByDomain.member(domain), "That domain already has fungible supply");
+  nftDomains.insert(domain);
+  return issue(domain, disclose(recipient), 1);
+}
+
+// ---------------------------------------------------------------------------
+// Burn (MIP-0011 _burn: a coin supplied in this transaction)
+// ---------------------------------------------------------------------------
+
+// The caller's wallet pays `coin` into the contract in this transaction; `amount` of it
+// goes to the shielded burn address and any change goes back to `refundTo`. Composing the
+// supply extension makes the burned amount public; a bare burn would keep it hidden.
+export circuit burn(domain: Bytes<32>, coin: ShieldedCoinInfo, amount: Uint<128>, refundTo: ZswapCoinPublicKey): [] {
+  assertIssuer();
+  const d = disclose(domain);
+  const c = disclose(coin);
+  const a = disclose(amount);
+  const refund = disclose(refundTo);
+  assert(c.color == tokenType(d, kernel.self()), "Coin is not this token");
+  assert(a > 0, "Amount must be positive");
+  assert(a <= c.value, "Amount exceeds the coin");
+  assert(refund.bytes != default<Bytes<32>>, "Refund would burn the change");
+  receiveShielded(c);
+  const sent = sendImmediateShielded(c, shieldedBurnAddress(), a);
+  if (sent.change.is_some) {
+    sendImmediateShielded(sent.change.value, left<ZswapCoinPublicKey, ContractAddress>(refund), sent.change.value.value);
+  }
+  const before = burnedByDomain.member(d) ? burnedByDomain.lookup(d) : 0 as Uint<128>;
+  burnedByDomain.insert(d, (before + a) as Uint<128>);
+  logEvent(EventType.ShieldedBurn, d, c.color, a, default<Bytes<32>>);
+}
+
+// ---------------------------------------------------------------------------
+// Metadata declarations (MIP-0018, kind 1: native shielded)
+// ---------------------------------------------------------------------------
+
+// Only domains this contract has minted (audit L-2).
+export circuit publishMetadata(payload: TokenMetadataPayload): [] {
+  assertIssuer();
+  assert(mintedByDomain.member(disclose(payload).domainSep), "No token under that domain");
+  publishTokenMetadata(payload, 1, 1);
+}

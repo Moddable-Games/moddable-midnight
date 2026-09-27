@@ -1,21 +1,22 @@
 import { type PageKey, SITE, pageHref } from "@/lib/site";
 
 /**
- * Where this page sits in the story: the four chapters in order, the current one marked,
- * each linking to its live page.
+ * Where this page sits in the story: the chapters in order, the current one marked, each
+ * linking to its live page.
  */
+const WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight"];
 export function StoryStrip({ current }: { current?: PageKey }) {
   return (
     <section aria-label="The story so far" className="rounded-2xl border bg-card p-4">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-          Part of one story, in four chapters
+          Part of one story, in {WORDS[SITE.chapters.length] ?? SITE.chapters.length} chapters
         </p>
         <a href={pageHref("history.html")} className="text-sm underline underline-offset-4 hover:text-primary">
           Read the whole history
         </a>
       </div>
-      <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      <ol className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {SITE.chapters.map((chapter) => {
           const here = chapter.key === current;
           return (

@@ -1,8 +1,34 @@
 {
   "crewTreasury": "e412fa7fa89433c2d37bbf350eba95e61db6075d5189f0dc5f45c07583cac4b4",
+  "crewTreasuryV3": "1a72c3f456cb15c76bf148265bae9b28642e7d3120d3bc71f2574206466a8fe3",
+  "blockedAddresses": [],
   "agents": {
-    "agent-floyd": { "autoApproveNight": "2", "dailyAutoNight": "10", "autoDraw": true },
-    "agent-tzilo": { "autoApproveNight": "1", "dailyAutoNight": "5", "autoDraw": true },
-    "agent-foofoo": { "autoApproveNight": "1", "dailyAutoNight": "5", "autoDraw": true }
+    "agent-floyd": {
+      "spendCaps": {
+        "perTransferNight": "2",
+        "dailyNight": "10"
+      },
+      "whitelistedContracts": [],
+      "blockedAddresses": [],
+      "autoDraw": true
+    },
+    "agent-tzilo": {
+      "spendCaps": {
+        "perTransferNight": "1",
+        "dailyNight": "5"
+      },
+      "whitelistedContracts": [],
+      "blockedAddresses": [],
+      "autoDraw": true
+    },
+    "agent-foofoo": {
+      "spendCaps": {
+        "perTransferNight": "1",
+        "dailyNight": "5"
+      },
+      "whitelistedContracts": [],
+      "blockedAddresses": [],
+      "autoDraw": true
+    }
   }
 }

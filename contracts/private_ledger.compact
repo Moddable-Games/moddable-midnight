@@ -1,0 +1,332 @@
+pragma language_version >= 0.23;
+
+import CompactStandardLibrary;
+
+// A shielded contract token: balances kept confidential in contract state (MIP-0018 kind 3).
+//
+// No MIP standardises this type yet; MIP-0018 names it ("contract-state balances the contract
+// keeps confidential") and the token-standards discussion lists it. This is our approximation:
+// Zerocash-style notes held by the contract rather than by the Zswap pool.
+//
+//   note        (domain, owner, amount), committed with a nonce into a Merkle tree
+//   owner       H(tag, secret): the key a recipient shares to be paid
+//   spend       prove a note is in the tree and reveal its nullifier H(tag, secret, nonce)
+//
+// A transfer reveals one nullifier and two new commitments. Not the amount, not the parties,
+// not even which of this contract's tokens moved. Every new note's nonce mixes in a secret
+// (the spender's key, or a fresh random value), so its commitment cannot be opened by guessing
+// the owner and amount; the audit found an earlier draft whose nonces derived from the public
+// nullifier alone (notes/AUDIT-token-contracts.md, H-1). Conversions to native form (toUtxo,
+// toShielded) and back (fromUtxo, fromShielded) reveal the token and amount, because the
+// native side needs them.
+//
+// Note openings are delivered out of band: the wallet daemon holds every wallet in this
+// demo, so it records each note for its owner. A production design would add encrypted memos.
+//
+// Fungible tokens use the constructor's domain; non-fungible tokens are serial-derived domains
+// minted once with amount 1. Events and metadata use the ledger-8 approximations in lib/.
+
+include "lib/Events";
+include "lib/TokenMetadata";
+
+import Events;
+import TokenMetadata;
+
+export { eventLog, eventCount, EventType, ContractEvent, tokenMetadata, TokenMetadataPayload, metadataSlot };
+
+export { MerkleTreePath };
+
+// ---------------------------------------------------------------------------
+// Ledger
+// ---------------------------------------------------------------------------
+
+export sealed ledger _name: Opaque<"string">;
+
+export sealed ledger _symbol: Opaque<"string">;
+
+export sealed ledger _decimals: Uint<8>;
+
+export sealed ledger domain: Bytes<32>;
+
+export sealed ledger issuer: Bytes<32>;
+
+// Every note ever created. Historic, so a path computed before later inserts stays valid.
+// Depth 20 (about a million notes): a full tree would freeze every note, since each spend
+// inserts new ones (audit M-4).
+export ledger notes: HistoricMerkleTree<20, Bytes<32>>;
+
+// Nullifiers of spent notes.
+export ledger spent: Set<Bytes<32>>;
+
+// Every commitment ever inserted, so no note can be created twice (audit L-B): a duplicate
+// would share its original's nullifier while supply counted both.
+export ledger commitments: Set<Bytes<32>>;
+
+// Hashes of the random nonces used by mints and deposits, so no nonce is ever used twice
+// (two notes sharing a nonce could destroy each other; audit M-3). The hash hides the nonce.
+export ledger usedNonces: Set<Bytes<32>>;
+
+// Public per domain: minted, and the part currently out in native form.
+export ledger mintedByDomain: Map<Bytes<32>, Uint<128>>;
+
+export ledger utxoSupplyByDomain: Map<Bytes<32>, Uint<128>>;
+
+export ledger nftDomains: Set<Bytes<32>>;
+
+// ---------------------------------------------------------------------------
+// Notes
+// ---------------------------------------------------------------------------
+
+export struct Note {
+  domain: Bytes<32>,
+  owner: Bytes<32>,
+  amount: Uint<128>
+}
+
+// What a holder keeps privately to spend a note.
+export struct NoteOpening {
+  domain: Bytes<32>,
+  amount: Uint<128>,
+  nonce: Bytes<32>
+}
+
+witness localSecretKey(): Bytes<32>;
+
+// A fresh random 32 bytes, for notes created from public input (mint and deposits).
+witness freshNonce(): Bytes<32>;
+
+// One of the caller's unspent notes of `d` worth at least `atLeast`.
+witness noteToSpend(d: Bytes<32>, atLeast: Uint<128>): NoteOpening;
+
+// Its authentication path. Only the siblings are trusted: the leaf is recomputed in-circuit.
+witness findNotePath(commitment: Bytes<32>): MerkleTreePath<20, Bytes<32>>;
+
+export circuit ownerKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:kind3:owner:"), sk]);
+}
+
+export circuit issuerKey(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:kind3:issuer:"), sk]);
+}
+
+export circuit noteCommitment(note: Note, nonce: Bytes<32>): Bytes<32> {
+  return persistentCommit<Note>(note, nonce);
+}
+
+export circuit nftDomain(serial: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:kind3:nft:"), serial]);
+}
+
+// Bound to the note itself, so two notes can never share a nullifier (audit M-3).
+export circuit nullifierOf(sk: Bytes<32>, commitment: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([pad(32, "moddable:kind3:nullifier:"), sk, commitment]);
+}
+
+// The nonce of a note created by spending the note with nonce `spentNonce`. The spender's
+// secret is inside, so nobody else can compute it (audit H-1); it is unique because each note
+// is spent once.
+export circuit outputNonce(tag: Bytes<32>, sk: Bytes<32>, spentNonce: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<3, Bytes<32>>>([tag, sk, spentNonce]);
+}
+
+// A per-output nonce from spend()'s secret seed.
+export circuit tagged(tag: Bytes<32>, seed: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([tag, seed]);
+}
+
+// A caller-chosen random nonce, accepted once only.
+circuit freshUniqueNonce(): Bytes<32> {
+  const nonce = freshNonce();
+  const seen = disclose(persistentHash<Vector<2, Bytes<32>>>([pad(32, "moddable:kind3:used-nonce:"), nonce]));
+  assert(!usedNonces.member(seen), "Nonce already used");
+  usedNonces.insert(seen);
+  return nonce;
+}
+
+circuit addNote(note: Note, nonce: Bytes<32>): [] {
+  const commitment = disclose(noteCommitment(note, nonce));
+  assert(!commitments.member(commitment), "Note already exists");
+  commitments.insert(commitment);
+  notes.insert(commitment);
+}
+
+// Spends the caller's note of `d` worth at least `amount`, and keeps the change as a new
+// note for the caller. Returns the spent note's nonce mixed with the caller's secret, from
+// which the call's other outputs derive their own nonces.
+circuit spend(d: Bytes<32>, amount: Uint<128>): Bytes<32> {
+  assert(amount > 0, "Amount must be positive");
+  const sk = localSecretKey();
+  const me = ownerKey(sk);
+  const opening = noteToSpend(d, amount);
+  assert(opening.domain == d, "Note is for another token");
+  assert(opening.amount >= amount, "Note is too small");
+  const commitment = noteCommitment(Note { d, me, opening.amount }, opening.nonce);
+  const supplied = findNotePath(commitment);
+  const bound = MerkleTreePath<20, Bytes<32>> { leaf: commitment, path: supplied.path };
+  assert(notes.checkRoot(disclose(merkleTreePathRoot<20, Bytes<32>>(bound))), "No such note");
+  const nullifier = disclose(nullifierOf(sk, commitment));
+  assert(!spent.member(nullifier), "Note already spent");
+  spent.insert(nullifier);
+  addNote(Note { d, me, (opening.amount - amount) as Uint<128> }, outputNonce(pad(32, "moddable:kind3:change:"), sk, opening.nonce));
+  return outputNonce(pad(32, "moddable:kind3:out:"), sk, opening.nonce);
+}
+
+// ---------------------------------------------------------------------------
+// Construction and metadata
+// ---------------------------------------------------------------------------
+
+circuit assertIssuer(): [] {
+  assert(disclose(issuer == issuerKey(localSecretKey())), "Caller is not the issuer");
+}
+
+constructor(tokenName: Opaque<"string">, tokenSymbol: Opaque<"string">, tokenDecimals: Uint<8>, domainSep: Bytes<32>) {
+  _name = disclose(tokenName);
+  _symbol = disclose(tokenSymbol);
+  _decimals = disclose(tokenDecimals);
+  domain = disclose(domainSep);
+  issuer = disclose(issuerKey(localSecretKey()));
+}
+
+export circuit name(): Opaque<"string"> {
+  return _name;
+}
+
+export circuit symbol(): Opaque<"string"> {
+  return _symbol;
+}
+
+export circuit decimals(): Uint<8> {
+  return _decimals;
+}
+
+export circuit tokenColor(d: Bytes<32>): Bytes<32> {
+  return tokenType(disclose(d), kernel.self());
+}
+
+circuit known(d: Bytes<32>): [] {
+  assert(d == domain || nftDomains.member(d), "Unknown token");
+}
+
+circuit readMap(d: Bytes<32>, which: Uint<8>): Uint<128> {
+  if (which == 0) {
+    return mintedByDomain.member(d) ? mintedByDomain.lookup(d) : 0 as Uint<128>;
+  }
+  return utxoSupplyByDomain.member(d) ? utxoSupplyByDomain.lookup(d) : 0 as Uint<128>;
+}
+
+// ---------------------------------------------------------------------------
+// Issuance (issuer only). The amount is public, as every mint is; the owner is hidden in the
+// commitment by a fresh nonce the recipient receives out of band.
+// ---------------------------------------------------------------------------
+
+export circuit mint(to: Bytes<32>, amount: Uint<128>): [] {
+  assertIssuer();
+  const value = disclose(amount);
+  assert(value > 0, "Amount must be positive");
+  assert(to != default<Bytes<32>>, "Recipient is the zero key");
+  addNote(Note { domain, to, value }, freshUniqueNonce());
+  mintedByDomain.insert(domain, (readMap(domain, 0) + value) as Uint<128>);
+  logEvent(EventType.Misc, domain, default<Bytes<32>>, value, pad(32, "kind3:mint"));
+}
+
+export circuit mintNft(serial: Bytes<32>, to: Bytes<32>): Bytes<32> {
+  assertIssuer();
+  const d = nftDomain(disclose(serial));
+  assert(d != domain, "Serial collides with the fungible domain");
+  assert(!nftDomains.member(d), "That token already exists");
+  assert(to != default<Bytes<32>>, "Recipient is the zero key");
+  nftDomains.insert(d);
+  addNote(Note { d, to, 1 }, freshUniqueNonce());
+  mintedByDomain.insert(d, 1);
+  logEvent(EventType.Misc, d, default<Bytes<32>>, 1, pad(32, "kind3:mint"));
+  return d;
+}
+
+// ---------------------------------------------------------------------------
+// Private transfer
+// ---------------------------------------------------------------------------
+
+// Nothing about the token, amount, sender or recipient is disclosed: only the nullifier and
+// two commitments reach the chain. No check that `d` is known: it would reveal the token, and
+// a spendable note of `d` can only exist if this contract issued `d`.
+export circuit transfer(d: Bytes<32>, to: Bytes<32>, amount: Uint<128>): [] {
+  assert(disclose(to != default<Bytes<32>>), "Recipient is the zero key");
+  const seed = spend(d, amount);
+  addNote(Note { d, to, amount }, tagged(pad(32, "moddable:kind3:pay:"), seed));
+  logEvent(EventType.Misc, default<Bytes<32>>, default<Bytes<32>>, 0, pad(32, "kind3:transfer"));
+}
+
+// ---------------------------------------------------------------------------
+// Conversions to and from native form
+// ---------------------------------------------------------------------------
+
+export circuit toUtxo(d: Bytes<32>, amount: Uint<64>, recipient: UserAddress): Bytes<32> {
+  const dd = disclose(d);
+  const value = disclose(amount);
+  const to = disclose(recipient);
+  known(dd);
+  assert(to.bytes != default<Bytes<32>>, "Recipient is the zero address");
+  spend(dd, value as Uint<128>);
+  utxoSupplyByDomain.insert(dd, (readMap(dd, 1) + value) as Uint<128>);
+  const color = mintUnshieldedToken(dd, value, right<ContractAddress, UserAddress>(to));
+  logEvent(EventType.UnshieldedMint, dd, color, value as Uint<128>, to.bytes);
+  return color;
+}
+
+export circuit toShielded(d: Bytes<32>, amount: Uint<64>, recipient: ZswapCoinPublicKey): Bytes<32> {
+  const dd = disclose(d);
+  const value = disclose(amount);
+  const to = disclose(recipient);
+  known(dd);
+  assert(to.bytes != default<Bytes<32>>, "Recipient is the zero key");
+  const seed = spend(dd, value as Uint<128>);
+  utxoSupplyByDomain.insert(dd, (readMap(dd, 1) + value) as Uint<128>);
+  const coinNonce = tagged(pad(32, "moddable:kind3:coin:"), seed);
+  // Secret nonce: the recipient cannot be found by trying known keys (MIP-0011's
+  // recipient-private mint). disclose() marks the mint argument; the coin commitment hides it.
+  const coin = mintShieldedToken(dd, value, disclose(coinNonce), left<ZswapCoinPublicKey, ContractAddress>(to));
+  logEvent(EventType.ShieldedMint, dd, coin.color, value as Uint<128>, default<Bytes<32>>);
+  return coin.color;
+}
+
+circuit returned(d: Bytes<32>, amount: Uint<128>): [] {
+  const out = readMap(d, 1);
+  assert(out >= amount, "More than is out in native form");
+  utxoSupplyByDomain.insert(d, (out - amount) as Uint<128>);
+  addNote(Note { d, ownerKey(localSecretKey()), amount }, freshUniqueNonce());
+}
+
+export circuit fromUtxo(d: Bytes<32>, amount: Uint<128>): [] {
+  const dd = disclose(d);
+  const value = disclose(amount);
+  known(dd);
+  assert(value > 0, "Amount must be positive");
+  const color = tokenType(dd, kernel.self());
+  receiveUnshielded(color, value);
+  returned(dd, value);
+  logEvent(EventType.UnshieldedReceive, dd, color, value, default<Bytes<32>>);
+}
+
+export circuit fromShielded(d: Bytes<32>, coin: ShieldedCoinInfo): [] {
+  const dd = disclose(d);
+  const c = disclose(coin);
+  known(dd);
+  assert(c.value > 0, "Amount must be positive");
+  assert(c.color == tokenType(dd, kernel.self()), "Coin is not this token");
+  receiveShielded(c);
+  returned(dd, c.value);
+  logEvent(EventType.ShieldedReceive, dd, c.color, c.value, default<Bytes<32>>);
+}
+
+// ---------------------------------------------------------------------------
+// Metadata declarations (MIP-0018: kind 3, plus kinds 0 and 1 for the native forms)
+// ---------------------------------------------------------------------------
+
+// Only tokens this contract issued (audit L-2), only kinds it issues (audit L-1).
+export circuit publishMetadata(payload: TokenMetadataPayload): [] {
+  assertIssuer();
+  const p = disclose(payload);
+  assert(p.kind == 0 || p.kind == 1 || p.kind == 3, "This contract does not issue that kind");
+  known(p.domainSep);
+  publishTokenMetadata(p, p.kind, 3);
+}

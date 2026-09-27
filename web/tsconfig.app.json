@@ -27,6 +27,21 @@
       ],
       "@crew": [
         "../src/managed/crew_treasury/contract/index.d.ts"
+      ],
+      "@native-unshielded": [
+        "../src/managed/native_unshielded/contract/index.d.ts"
+      ],
+      "@native-shielded": [
+        "../src/managed/native_shielded/contract/index.d.ts"
+      ],
+      "@contract-token": [
+        "../src/managed/contract_token/contract/index.d.ts"
+      ],
+      "@private-ledger": [
+        "../src/managed/private_ledger/contract/index.d.ts"
+      ],
+      "@crew-v3": [
+        "../src/managed/crew_treasury_v3/contract/index.d.ts"
       ]
     },
     "noEmit": true

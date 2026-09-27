@@ -22,20 +22,28 @@ So this repo runs its own wallet process.
   keeps its own private state per contract (secrets in `state/crew-secrets.json`). A call
   that sends shielded coins to another wallet passes that wallet's encryption key.
 - `wallet-daemon/agents.mjs` and `agent-policy.json` are the agents' own route, with
-  limits (below).
+  limits and sessions (below).
+- `wallet-daemon/roster.json` lists the wallets; `roster.mjs` launches new agents (a fresh
+  seed in the wallet CLI's file format, in `~/.midnight/wallets/`).
+- `wallet-daemon/token-actions.mjs` turns the app's token actions (deploy, mint, NFT,
+  transfer, convert, burn, metadata) into ordinary requests for each standard;
+  `token-reader.mjs` describes every token contract from its on-chain state;
+  `books.mjs` keeps what is not on chain: kind-3 notes and v3 mandate terms (both secret,
+  in `state/`) and the public list of deployments (`deployments.json`).
+- `wallet-daemon/settings.mjs` holds app settings and prices: NIGHT live from CoinGecko,
+  the organisation's own tokens at prices set in the app. All USD figures are simulated.
 - `wallet-daemon/metadata.mjs` serves token names and images only after checking them
   against digests stored in the contract.
 - `wallet-daemon/request.mjs` (operator) and `agent-request.mjs` (agents) are
   command-line clients.
-- `wallet-ui/` is the page (`http://localhost:5173`). Balances come live from the public
-  indexer's `unshieldedTransactions(address)` subscription, so they show even with the
-  daemon stopped; the daemon adds DUST, sending and approvals.
+- `wallet-ui/` is the app (Vite, React, Tailwind, `http://localhost:5173`): Dashboard,
+  Operator, Agents, Activity, Tokens and Settings. It talks only to the daemon.
 
 Run it:
 
 ```
 node wallet-daemon/server.mjs                 # the daemon
-python3 -m http.server 5173 -d wallet-ui      # the page
+npm run wallet                                # the app, on http://localhost:5173
 ```
 
 The proof server must be running on `localhost:6300` for anything that writes.
@@ -125,15 +133,22 @@ Pages. It does the same checks entirely in the visitor's browser:
 
 ## Agents' route and limits
 
-`POST /api/agent/requests`, with a per-agent bearer token (made on first start, kept in
-`state/agent-tokens.json`). The token binds the agent to its own wallet. Any request from
-a browser origin is refused. `agent-policy.json` decides:
+`POST /api/agent/requests`, with a bearer token that binds the agent to its own wallet:
+either its standing token (made on first start, `state/agent-tokens.json`) or a session made
+in the app (expires, has its own request and NIGHT budget, revocable; only its hash is kept,
+in `state/agent-sessions.json`). Any request from a browser origin is refused.
+`agent-policy.json` (edited from the app) decides, before anything reaches the queue:
 
-- **transfer** to another crew wallet, within `autoApproveNight` each and `dailyAutoNight`
-  a day: runs at once
-- **transfer** that is larger, or to an address outside the crew: waits in the page's
-  Approvals panel, with the reason shown
-- **draw** from the treasury: runs at once, since the contract allows one per period
+- **refused**: a recipient on the operator's or the agent's blocked list, a contract not on
+  its whitelist, or a session over its limits. Refused requests never reach the queue.
+- **automatic**: NIGHT to a crew wallet within the agent's per-payment and daily caps; a
+  treasury draw when auto-draw is on (the v3 contract enforces the agent's own terms).
+- **approval**: anything else waits in the app, with the reason shown.
+
+Tested on preview, 27 September: a session payment to a blocked address, a payment over a
+session's 1 NIGHT budget, and a call to a contract off the whitelist were all refused; Floyd
+drew 60 MCC from the v3 treasury automatically (block 1,048,770), and a 150 MCC draw against
+his 100 cap was refused by the circuit ("Over this mandate's cap per draw").
 
 Tested on preview with Tzilo:
 
@@ -179,4 +194,24 @@ was not recorded, which the daemon now does at submission.
 - The crew Worker runs in Cloudflare and cannot reach this machine. For the city agents to
   request spends themselves, the daemon should pull their requests from the Worker (with a
   shared secret) and pass them through the same policy.
-- Revoking a single mandate (audit M-1); only a pause of all draws exists.
+- Revoking a single mandate (audit M-1): v3 revokes all by epoch; the organiser re-appoints the rest.
+- Shared control (multisig) for operators and agents: planned, not built.
+
+## v3: tokens and agent limits, 27 September 2026
+
+Four token contracts and a new treasury, audited (`notes/AUDIT-token-contracts.md`) and
+deployed from the organiser's wallet. Every step was queued, approved and confirmed through
+the daemon; the run is `scripts/token-lab-run.mjs`, its record `notes/token-lab-run.json`.
+
+| Contract | Standard | Address | Block |
+|---|---|---|---|
+| `native_unshielded` | MIP-0014 | `55d45f27b0d9d0cb86ece0827fd90fc387edf91f3a37a34a9f9226d7ac6d3295` | 1,046,643 |
+| `native_shielded` | MIP-0011 | `45043f5f5e611afb08770b6fa498552a2819c87d06c9f4da75d165dec5b00219` | 1,046,678 |
+| `private_ledger` | kind 3 | `118c4be1ba0b27a24bcbcd29cfd45bb00d94c93953809a365abec4a178ca57c0` | 1,046,683 |
+| `contract_token` | MIP-0004 | `7ec3e63b4a3dcc0dc37b3bf3843adb5682a0e2007835e66cae1c51f50b45f3d4` | 1,046,705 |
+| `crew_treasury_v3` | | `1a72c3f456cb15c76bf148265bae9b28642e7d3120d3bc71f2574206466a8fe3` | 1,046,710 |
+
+Two things the daemon needed: `wallet-sdk-shielded` 3.0.2, since 3.0.1 cannot fund a
+shielded coin paid into a contract (finding 48), and the whole error chain in its log, since
+the node's reason for a refused deploy sat three causes down (finding 47).
+

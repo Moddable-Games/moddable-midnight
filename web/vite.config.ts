@@ -27,18 +27,25 @@ export default defineConfig({
         __dirname,
         "../src/managed/crew_treasury/contract/index.js",
       ),
+      // The token contracts, read live on the Tokens page.
+      "@native-unshielded": path.resolve(__dirname, "../src/managed/native_unshielded/contract/index.js"),
+      "@native-shielded": path.resolve(__dirname, "../src/managed/native_shielded/contract/index.js"),
+      "@contract-token": path.resolve(__dirname, "../src/managed/contract_token/contract/index.js"),
+      "@private-ledger": path.resolve(__dirname, "../src/managed/private_ledger/contract/index.js"),
+      "@crew-v3": path.resolve(__dirname, "../src/managed/crew_treasury_v3/contract/index.js"),
     },
   },
   build: {
     rollupOptions: {
-      // The React pages: home, the crew treasury check, the history, and chapter one's
-      // tournament pass. The crew page (city.html) is static, in public/.
+      // The React pages: home, the crew treasury check, the token types, the history, and
+      // chapter one's tournament pass. The crew page (city.html) is static, in public/.
       input: {
         index: path.resolve(__dirname, "index.html"),
         treasury: path.resolve(__dirname, "treasury.html"),
         wallet: path.resolve(__dirname, "wallet.html"),
         history: path.resolve(__dirname, "history.html"),
         tournament: path.resolve(__dirname, "tournament.html"),
+        tokens: path.resolve(__dirname, "tokens.html"),
       },
     },
     target: "esnext",

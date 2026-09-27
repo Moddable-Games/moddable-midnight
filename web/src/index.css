@@ -20,6 +20,9 @@
   --color-cosmic-glow: #6fb5ff;
   --color-mg-green: #3a9928;
   --color-mg-red: #d11a1a;
+  --color-cosmic-bright: #3a7be8;
+  --color-mg-elevated: #161721;
+  --color-mg-canvas: #f5f4ef;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -138,5 +141,59 @@
 
 @media (prefers-reduced-motion: reduce) {
   .mg-hero-hex { animation: none; }
+}
+
+/* The wallet page: a product homepage in Moddable's palette. */
+@layer components {
+  /* Stripe-style angled band behind the hero, in cosmic blues with the hex grid over it. */
+  .wl-band {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 100%;
+    z-index: -1;
+    background:
+      linear-gradient(118deg, #0a0d2a 0%, #0a0d2a 38%, #1a3680 62%, #3a7be8 84%, #6fb5ff 100%);
+    clip-path: polygon(0 0, 100% 0, 100% 78%, 0 100%);
+  }
+  .wl-band::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("./assets/hex-grid-blue.svg");
+    background-size: 56px 64px;
+    opacity: 0.22;
+    mask-image: linear-gradient(90deg, transparent 0%, #000 55%);
+  }
+
+  .wl-browser {
+    border-radius: 14px;
+    background: #161721;
+    padding: 28px 0 0;
+    position: relative;
+    box-shadow: 0 30px 60px -20px rgb(10 13 42 / 0.55), 0 0 0 1px rgb(255 255 255 / 0.08);
+    overflow: hidden;
+  }
+  .wl-browser::before {
+    content: "";
+    position: absolute;
+    top: 10px;
+    left: 14px;
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: #d11a1a;
+    box-shadow: 14px 0 0 #6fb5ff, 28px 0 0 #3a9928;
+  }
+  .wl-browser img { display: block; width: 100%; }
+
+  .wl-phone {
+    border-radius: 34px;
+    background: #161721;
+    padding: 10px;
+    box-shadow: 0 30px 60px -18px rgb(10 13 42 / 0.6);
+  }
+  .wl-phone img { display: block; width: 100%; border-radius: 24px; }
+
+  .wl-pixel { font-family: var(--font-pixel); font-size: 10px; letter-spacing: 1.5px; }
 }
 

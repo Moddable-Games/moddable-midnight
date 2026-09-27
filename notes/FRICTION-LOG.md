@@ -1025,3 +1025,100 @@ the one search engines and the Tools menu lead to.
 
 **Suggested fix:** grant the verifier write access to its output directory; link the Compact
 flow from the Tools menu; accept contract addresses with or without `0x`.
+
+## Token standards and agent limits (27 September 2026)
+
+### 46. `emit` compiles only for ledger 9, which no public network runs
+
+MIP-0002 (Accepted) and MIP-0018 (Proposed, which builds on it) describe contract events as
+"shipping": `emit` in Compact, the Log opcode, and the indexer's `contractEvents`. Each piece is
+real. Compiler 0.34.0 compiles `emit(Misc { ... })`, and the preview indexer (4.3.5) already
+answers `contractEvents` with all eleven standard event types. The 0.31.1 compiler, the one the
+public networks support, rejects it:
+
+```
+Exception: e.compact line 7 char 3:
+  unbound identifier emit
+```
+
+0.34.0 targets ledger 9, and preview, preprod and mainnet run ledger 8 (support matrix; 0.34.0
+release notes: "Ledger version 9 will be, but is not yet, deployed"). So nothing on a public
+network can emit an event today, and a reader of MIP-0018 ("The pipeline exists ... is
+shipping") has no way to tell. CoIP-3 (`emit`) was merged on 23 September, and it says the facility
+"was released in Compact language 0.25", which is correct only for ledger 9 toolchains.
+
+We approximated both: events are appended to contract state in MIP-0002's standard event shapes
+(`contracts/lib/Events.compact`), and MIP-0018 payloads are stored with the same 256-byte layout
+(`contracts/lib/TokenMetadata.compact`), so moving to ledger 9 means replacing one call with
+`emit(...)`.
+
+**Suggested fix:** state the ledger requirement in MIP-0002 and MIP-0018 ("requires ledger 9;
+not on public networks yet"), and have the 0.31.x compiler say "emit requires compiler 0.33 or
+later (ledger 9)" instead of "unbound identifier".
+
+### 47. A 14-circuit contract is refused: "Transaction would exhaust the block limits"
+
+`contracts/contract_token.compact` implemented MIP-0004 with the full FungibleToken surface: 14
+circuits. The deploy built, balanced and proved, then the node refused it:
+
+```
+SubmissionError: Transaction submission failed
+  [cause]: RpcError: 1010: Invalid Transaction: Transaction would exhaust the block limits
+```
+
+The same pipeline deployed 7, 9 and 12 circuits (blocks 1,046,643, 1,046,678 and 1,046,683). The
+unproven deploy was 28,040 bytes; each verifier key is about 2.1 KB and is written to state, and
+the block limit for persistent writes is 50,000 bytes (usage-limits page). MIP-0004's reference
+notes "15 verifier keys, at the local devnet block limit", so the standard's own interface sits
+at the edge of what one deploy can carry. We moved `totalSupply` and `balanceOf` to public state
+(12 circuits, deployed at block 1,046,705). midnight-js has `submitInsertVerifierKeyTx` for
+adding circuits later, but its deploy (compact-js) insists on every verifier key up front
+(`ZKConfigurationReadError: Failed to read verifier key for contract_token#name` when one is
+withheld), so a two-step deploy is not possible through the SDK.
+
+Two further costs: the daemon's first error was only "Transaction submission error"; the reason
+was three `cause`s down, and appeared only once the whole chain was logged.
+
+**Suggested fix:** document the practical circuit ceiling per deploy on each network, let
+deploys carry a subset of verifier keys (the rest inserted by the maintenance authority), and
+surface the node's 1010 reason in the top-level error.
+
+### 48. The pinned shielded wallet cannot fund a coin paid into a contract
+
+MIP-0004's `unshield` takes a shielded coin from the caller's wallet (`receiveShielded`). With
+`wallet-sdk-shielded` 3.0.1, the version the wallet CLI uses and this repo pinned, balancing
+failed:
+
+```
+Wallet.Other: Could not create a valid guaranteed offer
+```
+
+The wallet held the coins (100 of the token, shown in its shielded balance). In 3.0.1,
+`balanceTransaction` always builds a guaranteed-section offer, and `#prepareOffer` returns none
+when that section has nothing to balance, which it turns into this error. Here the coin output
+sat in a fallible segment, so the guaranteed section was empty. `main` changed
+`#balanceGuaranteedSection` to allow an empty offer (18 June) and 3.0.2 shipped it (22 June);
+the facade accepts `^3.0.1`. With 3.0.2 the same call succeeded (block 1,046,858), then
+`fromUtxo` and the kind-3 contract's `fromShielded` too. Earlier, the smaller MIP-0011 burn, whose
+receive stayed in the guaranteed section, had worked on 3.0.1.
+
+**Suggested fix:** release notes for 3.0.2 that name this ("contract calls that take a shielded
+coin"), and a wallet CLI release that picks it up; the error text could say which segment was
+empty.
+
+### 49. MIP-0004's accounts inherit `ownPublicKey()` from OpenZeppelin's FungibleToken
+
+MIP-0004 extends OpenZeppelin's `FungibleToken` and debits "the caller's Map balance" in
+`shield` and `toUtxo`. FungibleToken's caller is `ownPublicKey()`, a caller-supplied witness
+that MIP-0004 itself says "MUST NOT be used to verify the caller" and bans for `admin` and
+`minter`. The conversions carry it anyway: a prover can claim any account's public key, and
+`toUtxo(amount, recipient)` pays to an address of their choosing. MIP-0011 notes, for comparison,
+that the OZ AccessControl module "SHOULD NOT be used until it migrates to the same hash-based
+pattern".
+
+Our contract (`contracts/contract_token.compact`) makes accounts hash-based,
+`accountOf(secret)`, the pattern MIP-0004 requires for admin, so every debit is proven in the
+circuit. Our tests include "nobody can spend another account's balance".
+
+**Suggested fix:** MIP-0004 should require hash-based accounts for every debiting circuit, or
+state plainly that the OZ base is unsafe for `toUtxo` until OZ migrates.

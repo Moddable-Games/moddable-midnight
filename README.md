@@ -143,12 +143,12 @@ throughout the build.
 |---|---|
 | [`contracts/`](contracts/README.md) | Compact source |
 | [`src/`](src/README.md) | Witnesses, simulator harness and tests |
-| [`scripts/`](scripts/) | Helpers for on-chain use: a pass commitment, and building token metadata |
-| [`wallet-daemon/`](wallet-daemon/) | Local wallet process: the four wallets, approvals, contract calls, agents' route |
-| [`wallet-ui/`](wallet-ui/) | The browser wallet page |
+| [`scripts/`](scripts/) | Helpers for on-chain use: a pass commitment, token metadata, the token run (`token-lab-run.mjs`) and its data for the site |
+| [`wallet-daemon/`](wallet-daemon/) | Local wallet process: the wallets, approvals, contract calls and token actions, agent policy and sessions, the agents' route |
+| [`wallet-ui/`](wallet-ui/) | The wallet app (Vite, React, Tailwind): Dashboard, Operator, Agents, Activity, Tokens, Settings; `npm run wallet` |
 | [`metadata/`](metadata/) | Token artwork and metadata documents, addressed by IPFS CID |
 | [`spikes/`](spikes/) | Throwaway proofs, such as the minting spike and the drain regression |
-| [`web/`](web/) | The site (Vite, React, shadcn, Tailwind, scaffolded with `midnight-dapp-dev`): home, treasury check, history, tournament pass, and the static crew page; shared data in `public/data/site.json`, version via `bump.sh` |
+| [`web/`](web/) | The site (Vite, React, shadcn, Tailwind, scaffolded with `midnight-dapp-dev`): home, wallet, treasury check, tokens, history, tournament pass, and the static crew page; shared data in `public/data/site.json`, version via `bump.sh` |
 | [`api/`](api/) | Provider wiring for browser writes, from the same scaffold |
 | [`docs/`](docs/INTEGRATION.md) | Integration guide |
 | [`notes/`](notes/) | Friction log, timeline, knowledge base queries, audit and wallet notes |
@@ -163,6 +163,17 @@ reviewed as reference points and are the route to real token behaviour:
 - [Midnight example NFT contracts](https://github.com/midnightntwrk/example-nft-contracts)
 
 ## Changelog
+
+#### 2026-09-27
+- All four Midnight token types issued and moved on preview, each with fungible supplies and NFTs: native public (MIP-0014), native private (MIP-0011), contract public with shield, unshield, toUtxo and fromUtxo (MIP-0004), and a contract that keeps balances confidential as notes (MIP-0018 kind 3)
+- A token moved from private to public form and back through contract balances, since the ledger has no direct conversion; both directions confirmed on chain
+- Contract events and token metadata in MIP-0002 and MIP-0018 shapes, kept in contract state because `emit` needs ledger 9, which no public network runs
+- Crew treasury v3: each agent's cap per draw and draws per period committed privately in its mandate and enforced in zero knowledge, blocked payees, and revoke-all by epoch
+- The five contracts audited before deploy; a High (a private transfer that leaked amounts and parties) confirmed by running the attack, fixed, and checked again
+- The wallet daemon gained agent policy (spending caps, whitelisted contracts, blocked addresses), expiring sessions with their own budgets, agent launch and DUST registration, token actions and live NIGHT pricing
+- The wallet became an app: Dashboard, Operator, Agents, Activity, Tokens and Settings, responsive from phone to desktop
+- New Tokens page reading every token contract live in the browser; the Wallet page rewritten as a product homepage with shared control for people and agents as the next step
+- Four friction findings: `emit` only on ledger 9, a 14-circuit deploy refused for block limits, a wallet SDK patch needed to pay a private coin into a contract, and MIP-0004 accounts inheriting `ownPublicKey()`
 
 #### 2026-09-24
 - Token artwork and metadata pinned on the public IPFS network under the exact CIDs the treasury contract vouches for, verified byte-for-byte through an independent gateway; the IPFS links on the site are live
