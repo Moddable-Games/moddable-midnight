@@ -1,10 +1,14 @@
 {
   "brand": "Midnight Armada",
   "hero": {
-    "title": "Command the fleet, stay in the dark",
-    "body": "Your AI agents are already a fleet: trading, buying, negotiating, paying. Midnight Armada is the private command deck that funds them, governs them and shields them, so thousands of autonomous agents can work in unison without exposing a single line of your enterprise data.",
-    "primary": "Request a commission",
-    "secondary": "Tour the deck"
+    "eyebrow": "PRIVATE COMMAND FOR AI AGENT FLEETS",
+    "title": [
+      "Command every agent",
+      "Expose nothing"
+    ],
+    "body": "Your AI agents already trade, buy, negotiate and pay. Midnight Armada is the private command deck that funds them, sets their orders and proves every move, so thousands of agents work as one without exposing a line of your data.",
+    "primary": "Commission",
+    "secondary": "Explore"
   },
   "manifesto": {
     "quote": "In the physical world, an armada is a fleet of warships working in perfect, disciplined unison. In the digital economy, your AI agents are your fleet.",
@@ -83,23 +87,42 @@
     "transaction": [
       {
         "label": "Flotilla",
-        "value": "Arbitrage 04"
+        "value": "Arbitrage 04",
+        "seen": [
+          "auditor",
+          "commander"
+        ]
       },
       {
         "label": "Counterparty",
-        "value": "mn_addr_1q8…f3k2"
+        "value": "mn_addr_1q8…f3k2",
+        "seen": [
+          "commander"
+        ]
       },
       {
         "label": "Amount",
-        "value": "184,250.00 USDC"
+        "value": "184,250.00 USDC",
+        "seen": [
+          "auditor",
+          "commander"
+        ]
       },
       {
         "label": "Route",
-        "value": "Desk 7 → Venue B"
+        "value": "Desk 7 → Venue B",
+        "seen": [
+          "commander"
+        ]
       },
       {
         "label": "Policy",
-        "value": "Within mandate"
+        "value": "Within mandate",
+        "seen": [
+          "public",
+          "auditor",
+          "commander"
+        ]
       }
     ]
   },
@@ -156,7 +179,8 @@
   "commission": {
     "title": "Commission your fleet",
     "body": "Midnight Armada is being prepared for service. Tell us about your fleet and we will be in touch as the first commissions open.",
-    "note": "This is a preview. The form does not send anything yet."
+    "note": "This is a preview. The form does not send anything yet.",
+    "cta": "Commission Fleet"
   },
   "deck": {
     "title": "The command deck",
@@ -192,23 +216,53 @@
     "signals": [
       {
         "from": "Arbitrage 04",
-        "what": "Settlement proven",
-        "when": "now"
+        "what": "Settlement proven"
       },
       {
         "from": "Procurement 11",
-        "what": "Supplier paid within mandate",
-        "when": "12s"
+        "what": "Supplier paid within mandate"
       },
       {
         "from": "Market making 02",
-        "what": "Quote refreshed",
-        "when": "40s"
+        "what": "Quote refreshed"
       },
       {
         "from": "Research 01",
-        "what": "Session ended on schedule",
-        "when": "2m"
+        "what": "Session ended on schedule"
+      }
+    ],
+    "stream": [
+      {
+        "from": "Arbitrage 07",
+        "what": "Spread captured, proof filed"
+      },
+      {
+        "from": "Procurement 03",
+        "what": "Invoice settled within cap"
+      },
+      {
+        "from": "Market making 02",
+        "what": "Inventory rebalanced"
+      },
+      {
+        "from": "Research 01",
+        "what": "Dataset licensed, receipt proven"
+      },
+      {
+        "from": "Arbitrage 04",
+        "what": "Order refused: over daily cap"
+      },
+      {
+        "from": "Procurement 08",
+        "what": "Freight booked within budget"
+      },
+      {
+        "from": "Market making 05",
+        "what": "Quote refreshed"
+      },
+      {
+        "from": "Arbitrage 02",
+        "what": "Settlement proven"
       }
     ]
   },
@@ -228,6 +282,71 @@
     {
       "phase": "Grand fleet",
       "body": "Fleets of tens of thousands, cooperating across organisations, each still dark to the others."
+    }
+  ],
+  "nav": [
+    {
+      "id": "manifesto",
+      "label": "Manifesto"
+    },
+    {
+      "id": "fleet",
+      "label": "Fleet"
+    },
+    {
+      "id": "deck",
+      "label": "Deck"
+    },
+    {
+      "id": "missions",
+      "label": "Missions"
+    },
+    {
+      "id": "cloak",
+      "label": "Cloak"
+    },
+    {
+      "id": "rules",
+      "label": "Rules"
+    },
+    {
+      "id": "commanders",
+      "label": "Commanders"
+    },
+    {
+      "id": "course",
+      "label": "Course"
+    }
+  ],
+  "rules_intro": {
+    "title": "Rules of engagement",
+    "body": "Send an order and watch it meet the articles. The first one it breaks stops it, before anything is signed."
+  },
+  "orders": [
+    {
+      "label": "Pay a supplier 8,000",
+      "stop": null,
+      "result": "Cleared all four articles. Signed and proven."
+    },
+    {
+      "label": "Move 250,000 on one key",
+      "stop": 0,
+      "result": "Stopped at Article I: needs a second officer."
+    },
+    {
+      "label": "Spend 14,000 of a 10,000 cap",
+      "stop": 1,
+      "result": "Stopped at Article II: over the daily ceiling."
+    },
+    {
+      "label": "Pay a blockaded address",
+      "stop": 2,
+      "result": "Stopped at Article III: counterparty is barred."
+    },
+    {
+      "label": "Recall the fleet",
+      "stop": 3,
+      "result": "Article IV: every flotilla halts and sails home."
     }
   ]
 }
