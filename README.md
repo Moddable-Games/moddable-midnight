@@ -9,7 +9,7 @@ developer tools and written down as it went.**
 | **[The crew](https://moddable-games.github.io/moddable-midnight/city.html)** | The Moddable Atomic Crew (MAC): three AI agents in Midnight City, live, with their real wallets and balances |
 | **[The wallet](https://moddable-games.github.io/moddable-midnight/wallet.html)** | The Midnight wallet built for Firefox, shared by a human and the three agents, and the findings behind it |
 | **[The treasury](https://moddable-games.github.io/moddable-midnight/treasury.html)** | Midnight City Credits (MCC) and the agents' Agent Smart Contract NFTs, checked against the chain in your browser |
-| **[The history](https://moddable-games.github.io/moddable-midnight/history.html)** | The whole story in four chapters, with every finding, the audit and the clock |
+| **[The history](https://moddable-games.github.io/moddable-midnight/history.html)** | The whole story in six chapters, with every finding, the audit and the clock |
 | [The tournament pass](https://moddable-games.github.io/moddable-midnight/tournament.html) | Chapter one: the first contract, still live |
 
 A proof of concept on [Midnight](https://midnight.network), the data-protection
@@ -21,7 +21,7 @@ game mechanics need a player to prove something without revealing everything:
 that they are entitled to enter, that a result is genuine, that a prize is owed.
 That is the shape Midnight is built for, so this repository tests it directly.
 
-The story so far, in four chapters:
+The story so far, in six chapters:
 
 1. **A private tournament pass** (17 September): the tournament-pass Compact contract below,
    deployed to the `preview` network with a private claim made on-chain.
@@ -31,6 +31,12 @@ The story so far, in four chapters:
    browser wallet, with spending limits for the agents. See [the wallet page](https://moddable-games.github.io/moddable-midnight/wallet.html) and [notes/WALLET-DAEMON.md](notes/WALLET-DAEMON.md).
 4. **A private crew treasury** (23 September): MCC and Agent Smart Contracts, audited with
    Midnight's tools before deploy. See [notes/AUDIT-crew-treasury.md](notes/AUDIT-crew-treasury.md).
+5. **Every kind of token, and agents under limits** (27 September): all four Midnight token types
+   on preview, and a treasury that enforces a private cap for each agent. See
+   [the tokens page](https://moddable-games.github.io/moddable-midnight/tokens.html) and
+   [notes/AUDIT-token-contracts.md](notes/AUDIT-token-contracts.md).
+6. **Midnight Armada** (29 September): where it leads, a product and a business. A private command
+   deck for fleets of AI agents, with its own site at [midnightarmada.com](https://midnightarmada.com).
 
 More from Moddable: [moddable.games](https://moddable.games/) ·
 [Moddable Chess](https://chess.moddable.games/) · [Rulebooks](https://rules.moddable.games/) ·
@@ -163,6 +169,11 @@ reviewed as reference points and are the route to real token behaviour:
 - [Midnight example NFT contracts](https://github.com/midnightntwrk/example-nft-contracts)
 
 ## Changelog
+
+#### 2026-09-29
+- Chapter six: the story now ends at Midnight Armada, the product it leads to, which has its own site and repository
+- The Armada concept page and its wallet moved out of this repository; the wallet daemon still serves the Armada wallet on port 5175
+- Story strip, History and home copy count their chapters from the data file instead of saying four
 
 #### 2026-09-27
 - All four Midnight token types issued and moved on preview, each with fungible supplies and NFTs: native public (MIP-0014), native private (MIP-0011), contract public with shield, unshield, toUtxo and fromUtxo (MIP-0004), and a contract that keeps balances confidential as notes (MIP-0018 kind 3)

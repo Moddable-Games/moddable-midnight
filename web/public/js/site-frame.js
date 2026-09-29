@@ -13,7 +13,10 @@ export async function renderFrame(current) {
     return; // the static fallback links in the page stay in place
   }
   const repo = (path) => `${site.repo}/blob/main/${path}`;
+  const external = (href) => /^https?:\/\//.test(href);
   const page = (href) => href || "./";
+  const words = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+  const count = (words[site.chapters.length] ?? String(site.chapters.length)).toUpperCase();
 
   const nav = document.getElementById("sitenav");
   if (nav) {
@@ -25,9 +28,10 @@ export async function renderFrame(current) {
   const story = document.getElementById("story");
   if (story) {
     story.innerHTML = `
-      <div class="story-head"><span>PART OF ONE STORY, IN FOUR CHAPTERS</span><a href="history.html">Read the whole history</a></div>
+      <div class="story-head"><span>PART OF ONE STORY, IN ${count} CHAPTERS</span><a href="history.html">Read the whole history</a></div>
       <ol>${site.chapters.map((c) => {
-        return `<li><a href="${esc(page(c.page))}"${c.key === current ? ' aria-current="page"' : ""}>
+        const target = external(c.page) ? ' target="_blank" rel="noopener"' : "";
+        return `<li><a href="${esc(page(c.page))}"${target}${c.key === current ? ' aria-current="page"' : ""}>
           <span class="when">${c.number}. ${esc(c.when)}</span><span class="title">${esc(c.title)}</span></a></li>`;
       }).join("")}</ol>`;
   }

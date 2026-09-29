@@ -34,7 +34,9 @@ import { rawTokenType } from "@midnight-ntwrk/compact-runtime";
 import { readSettings, writeSettings, prices } from "./settings.mjs";
 
 const PORT = 9900;
-const ALLOWED_ORIGINS = new Set(["http://localhost:5173", "http://127.0.0.1:5173"]);
+// 5173 is this repo's wallet app; 5175 is the Armada wallet (github.com/msmalley/armada, wallet/),
+// a restyled build of the same client.
+const ALLOWED_ORIGINS = new Set(["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5175", "http://127.0.0.1:5175"]);
 const NIGHT = "0".repeat(64);
 const STAR_PER_NIGHT = 1_000_000n;
 const REQUESTS_FILE = new URL("./state/requests.json", import.meta.url).pathname;

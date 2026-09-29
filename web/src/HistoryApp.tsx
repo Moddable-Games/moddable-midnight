@@ -4,10 +4,10 @@ import { SiteFooter } from "@/components/site-footer";
 import { SiteNav } from "@/components/site-nav";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { SITE, pageHref, repoHref } from "@/lib/site";
+import { ChapterCount, SITE, linkProps, pageHref, repoHref } from "@/lib/site";
 
 /**
- * The whole story on one page: why this exists, the four chapters in order, the notes
+ * The whole story on one page: why this exists, the chapters in order, the notes
  * behind them, the findings worth reading first, and where to find the rest of Moddable.
  */
 export function HistoryApp() {
@@ -42,7 +42,7 @@ export function HistoryApp() {
 
       <main className="container mx-auto space-y-14 px-4 py-12">
         <section className="space-y-6">
-          <h2 className="font-display text-3xl font-semibold">Four chapters</h2>
+          <h2 className="font-display text-3xl font-semibold">{ChapterCount} chapters</h2>
           <ol className="relative space-y-6 border-l-2 border-primary/30 pl-6">
             {SITE.chapters.map((chapter) => (
               <li key={chapter.key} className="relative">
@@ -53,7 +53,7 @@ export function HistoryApp() {
                 <h3 className="font-display text-2xl font-semibold">{chapter.title}</h3>
                 <p className="mt-1 max-w-3xl text-muted-foreground text-pretty">{chapter.summary}</p>
                 <p className="mt-2">
-                  <a href={pageHref(chapter.page)} className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline">
+                  <a {...linkProps(chapter.page)} className="inline-flex items-center gap-1.5 font-semibold text-primary hover:underline">
                     {chapter.pageLabel} <ArrowRight className="size-4" />
                   </a>
                 </p>

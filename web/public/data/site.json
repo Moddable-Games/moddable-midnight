@@ -1,5 +1,5 @@
 {
-  "version": "1.2.1",
+  "version": "1.2.2",
   "name": "Moddable on Midnight",
   "repo": "https://github.com/Moddable-Games/moddable-midnight",
   "nav": [
@@ -74,6 +74,15 @@
       "summary": "All four Midnight token types issued and moved on preview, fungible and NFT, from the latest token MIPs: public and private coins, public contract balances that convert between them, and a contract that keeps balances confidential. The treasury now enforces a private cap and draw limit for each agent, and the wallet became an app.",
       "page": "tokens.html",
       "pageLabel": "See the four types"
+    },
+    {
+      "key": "armada",
+      "number": 6,
+      "when": "29 September",
+      "title": "Midnight Armada",
+      "summary": "Where it all leads: a product and a business. Midnight Armada is a private command deck for fleets of AI agents, built on everything in the chapters before it: agent wallets under limits, a treasury that pays without revealing who drew, and every Midnight token type. It has its own site and its own wallet.",
+      "page": "https://midnightarmada.com",
+      "pageLabel": "Visit Midnight Armada"
     }
   ],
   "documents": [

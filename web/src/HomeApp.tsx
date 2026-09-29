@@ -5,7 +5,7 @@ import { SiteNav } from "@/components/site-nav";
 import { StoryStrip } from "@/components/story-strip";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { SITE, pageHref } from "@/lib/site";
+import { ChapterCount, SITE, pageHref } from "@/lib/site";
 
 const CREW = [
   { name: "Floyd", img: "img/floyd.png" },
@@ -39,7 +39,7 @@ const DOORS = [
     href: "history.html",
     eyebrow: "READ",
     title: "The whole story",
-    body: "Four chapters from an empty repository, with every finding, the security audit and the timed clock behind them.",
+    body: `${ChapterCount} chapters, from an empty repository to Midnight Armada, with every finding, the security audit and the timed clock behind them.`,
     cta: "The history",
   },
 ];
